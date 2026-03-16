@@ -12,7 +12,7 @@
  *   - Pode demorar alguns minutos em tabelas grandes
  */
 
-require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/../.env' });
 const mysql = require('mysql2/promise');
 
 const config = {
