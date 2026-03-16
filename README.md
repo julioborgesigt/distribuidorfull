@@ -34,7 +34,7 @@ npm run dev:back    # http://localhost:3000 (ou porta configurada)
 ## Build
 
 ```bash
-npm run build:front
+npm run build
 ```
 
 ## Testes (back-end)

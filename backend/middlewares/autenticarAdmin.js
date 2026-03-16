@@ -8,16 +8,18 @@ const { getRealIP } = require('../utils/helpers');
 const JWT_SECRET = process.env.JWT_SECRET; 
 
 const autenticarAdmin = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Token não fornecido' });
+  // Prioridade: cookie httpOnly > header Authorization (fallback)
+  let token = req.cookies?.token;
+
+  if (!token) {
+    const authHeader = req.headers['authorization'];
+    if (authHeader) {
+      token = authHeader.split(' ')[1];
+    }
   }
 
-  const token = authHeader.split(' ')[1];
-  
   if (!token) {
-    return res.status(401).json({ error: 'Token mal formatado' });
+    return res.status(401).json({ error: 'Token não fornecido' });
   }
 
   try {

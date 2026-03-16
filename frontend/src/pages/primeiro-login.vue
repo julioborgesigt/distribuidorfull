@@ -18,7 +18,9 @@ meta:
         label="Nova Senha"
         type="password"
         variant="outlined"
-        :rules="[v => !!v || 'A nova senha é obrigatória']"
+        :rules="senhaRules"
+        hint="Mínimo 8 caracteres, com maiúscula, minúscula e número"
+        persistent-hint
       ></v-text-field>
 
       <v-btn 
@@ -44,10 +46,18 @@ const loading = ref(false);
 const error = ref(null);
 const authStore = useAuthStore();
 
+const senhaRules = [
+  v => !!v || 'A nova senha é obrigatória',
+  v => (v && v.length >= 8) || 'Mínimo de 8 caracteres',
+  v => /[A-Z]/.test(v) || 'Deve conter ao menos uma letra maiúscula',
+  v => /[a-z]/.test(v) || 'Deve conter ao menos uma letra minúscula',
+  v => /[0-9]/.test(v) || 'Deve conter ao menos um número',
+];
+
 // Função que chama a action da store
 const handleFirstLogin = async () => {
-  if (!novaSenha.value) {
-    error.value = 'Por favor, digite uma nova senha.';
+  if (!novaSenha.value || senhaRules.some(rule => rule(novaSenha.value) !== true)) {
+    error.value = 'Por favor, preencha a senha seguindo os requisitos.';
     return;
   }
 

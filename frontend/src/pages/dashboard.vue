@@ -558,6 +558,19 @@
 
 
 
+  <!-- Dialog de confirmação (substitui confirm() nativo) -->
+  <v-dialog v-model="dialogConfirm" max-width="450px">
+    <v-card>
+      <v-card-title class="text-h6">Confirmação</v-card-title>
+      <v-card-text>{{ dialogConfirmText }}</v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn variant="text" @click="dialogConfirm = false">Cancelar</v-btn>
+        <v-btn color="primary" variant="flat" @click="onDialogConfirm">Confirmar</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <v-snackbar
     v-model="snackbar"
     :color="snackbarColor"
@@ -895,8 +908,7 @@ const fetchTableData = async () => {
       };
     });
     totalItems.value = response.data.totalItems;
-  } catch (error) {
-    console.error('Erro ao buscar dados da tabela:', error);
+  } catch {
     snackbarText.value = 'Erro ao carregar processos da tabela.';
     snackbarColor.value = 'error';
     snackbar.value = true;
@@ -912,8 +924,7 @@ const fetchChartData = async () => {
   try {
     const response = await apiClient.get('/admin/stats/dashboard', { params });
     statsResponse.value = response.data;
-  } catch (error) {
-    console.error('Erro ao buscar dados dos gráficos:', error);
+  } catch {
     snackbarText.value = 'Erro ao carregar dados dos gráficos.';
     snackbarColor.value = 'error';
     snackbar.value = true;
@@ -930,8 +941,8 @@ const checkUnassignedProcesses = async () => {
     if (unassignedCount.value > 0) {
       showUnassignedAlert.value = true;
     }
-  } catch (error) {
-    console.error("Erro ao verificar processos não atribuídos:", error);
+  } catch {
+    // Silenciado: alerta de não atribuídos é informativo, não crítico
   }
 };
 
@@ -940,8 +951,7 @@ const fetchAllUsers = async () => {
   try {
     const response = await apiClient.get('/admin/users');
     allUsersList.value = response.data;
-  } catch (error) {
-    console.error("Erro ao buscar lista de usuários:", error);
+  } catch {
     snackbarText.value = 'Erro ao carregar lista de usuários.';
     snackbarColor.value = 'error';
     snackbar.value = true;
@@ -955,16 +965,18 @@ const fetchFilterOptions = async () => {
     allClassesList.value = data.classes;
     allAssuntosList.value = data.assuntos;
     allTarjasList.value = data.tarjas;
-  } catch (error) {
-    console.error("Erro ao buscar opções de filtros:", error);
+  } catch {
+    // Silenciado: filtros usarão valores em cache ou ficarão vazios
   }
 };
 
-// Recarrega todos os dados da página
+// Recarrega todos os dados da página (em paralelo para melhor performance)
 const reloadAllData = async () => {
-  await fetchTableData();
-  await fetchChartData();
-  await checkUnassignedProcesses();
+  await Promise.all([
+    fetchTableData(),
+    fetchChartData(),
+    checkUnassignedProcesses(),
+  ]);
 };
 
 // =================================================================
@@ -978,25 +990,46 @@ const handleSalvarObservacoes = async (itemEditado) => {
     const { id, observacoes } = itemEditado;
     await apiClient.put(`/admin/processes/${id}/observacoes`, { observacoes });
     await reloadAllData(); // Recarrega para refletir mudança
-  } catch (error) {
-    console.error("Erro ao salvar observação:", error);
+  } catch {
+    snackbarText.value = 'Erro ao salvar observação.';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
   }
 };
 
-const handleMarcarComoCumprido = async (item) => {
-  const acao = item.cumprido ? 'desfazer-cumprir' : 'cumprir';
-  // Usei um modal customizado ou snackbar de confirmação em vez de confirm()
-  // Por simplicidade, vou manter o confirm() que você tinha,
-  // mas o ideal seria trocar por um v-dialog de confirmação.
-  const confirmar = confirm(`Deseja realmente ${item.cumprido ? 'DESMARCAR' : 'MARCAR'} o processo ${item.numero_processo} como cumprido?`);
-  if (!confirmar) return;
+// Dialog de confirmação genérico (substitui confirm() nativo)
+const dialogConfirm = ref(false);
+const dialogConfirmText = ref('');
+let dialogConfirmCallback = null;
 
-  try {
-    await apiClient.patch(`/admin/processes/${item.id}/${acao}`);
-    await reloadAllData(); // Recarrega para refletir mudança
-  } catch (error) {
-    console.error(`Erro ao ${acao} processo:`, error);
+const openConfirmDialog = (text, callback) => {
+  dialogConfirmText.value = text;
+  dialogConfirmCallback = callback;
+  dialogConfirm.value = true;
+};
+
+const onDialogConfirm = async () => {
+  dialogConfirm.value = false;
+  if (dialogConfirmCallback) {
+    await dialogConfirmCallback();
+    dialogConfirmCallback = null;
   }
+};
+
+const handleMarcarComoCumprido = (item) => {
+  const acao = item.cumprido ? 'desfazer-cumprir' : 'cumprir';
+  const texto = `Deseja realmente ${item.cumprido ? 'DESMARCAR' : 'MARCAR'} o processo ${item.numero_processo} como cumprido?`;
+
+  openConfirmDialog(texto, async () => {
+    try {
+      await apiClient.patch(`/admin/processes/${item.id}/${acao}`);
+      await reloadAllData();
+    } catch {
+      snackbarText.value = `Erro ao ${acao} processo.`;
+      snackbarColor.value = 'error';
+      snackbar.value = true;
+    }
+  });
 };
 
 // --- Handlers da UI ---
@@ -1350,14 +1383,17 @@ const handleBulkAssign = async () => {
 // Dispara quando 'options' (página, itensPorPagina, sortBy) muda
 watch(options, fetchTableData, { deep: true });
 
-// Dispara quando 'filters' ou 'search' mudam
+// Dispara quando 'filters' ou 'search' mudam (com debounce de 400ms)
+let filterDebounceTimer = null;
 watch(
   [filters, search],
   () => {
-    // Quando um filtro muda, reseta a paginação e busca novos dados
-    fetchTableData();
-    fetchChartData();
-    checkUnassignedProcesses(); // Re-verifica o alerta também
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(() => {
+      fetchTableData();
+      fetchChartData();
+      checkUnassignedProcesses();
+    }, 400);
   },
   { deep: true }
 );
