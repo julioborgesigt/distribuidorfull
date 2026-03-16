@@ -1,0 +1,18 @@
+{
+  "name": "distribuidorfull",
+  "version": "1.0.0",
+  "description": "Projeto completo: front-end Vue 3 + back-end Node.js/Express",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
+    "dev:front": "cd frontend && npm run dev",
+    "dev:back": "cd backend && npm run dev",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "build:front": "cd frontend && npm run build",
+    "start:back": "cd backend && npm start",
+    "test:back": "cd backend && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
