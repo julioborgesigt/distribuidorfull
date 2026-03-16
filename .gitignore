@@ -7,4 +7,3 @@ backend/coverage/
 backend/.env
 frontend/.env
 .env
-backend/.env

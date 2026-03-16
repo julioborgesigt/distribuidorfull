@@ -8,25 +8,27 @@ passenger:
   # Passenger procura app.js na raiz por padrão — app.js delega para backend/server.js
   app_start_command: node app.js
   env_var_list:
-    - JWT_SECRET=b7f8a2d4e3f7c78e8e9a3d0b5f6d8a3e7c9f2b8e4d1a5c0e2d3f9b6a7d8e4c1f
-    - DB_HOST=sao.domcloud.co
-    - DB_USER=distribuidor
-    - DB_PASS=-C)W1aQ6nG9(Vbr1s7
-    - DB_NAME=distribuidor_proc
-    - FRONTEND_URL=https://SEU_DOMINIO.domcloud.dev
+    # IMPORTANTE: Substitua os valores abaixo pelas suas credenciais reais
+    # no painel do DomCloud. NUNCA commite credenciais reais no repositório.
+    - JWT_SECRET=${JWT_SECRET}
+    - DB_HOST=${DB_HOST}
+    - DB_USER=${DB_USER}
+    - DB_PASS=${DB_PASS}
+    - DB_NAME=${DB_NAME}
+    - FRONTEND_URL=${FRONTEND_URL}
     - NODE_ENV=production
 
 commands:
-  # 1. Cria backend/.env com as variáveis de ambiente
-  #    (env_var_list só está disponível no runtime do Passenger, não nos commands)
+  # 1. Cria backend/.env a partir de variáveis de ambiente do servidor
+  #    Configure as variáveis reais no painel do DomCloud (Environment Variables)
   - |
-    cat > backend/.env <<'EOF'
-    JWT_SECRET=b7f8a2d4e3f7c78e8e9a3d0b5f6d8a3e7c9f2b8e4d1a5c0e2d3f9b6a7d8e4c1f
-    DB_HOST=sao.domcloud.co
-    DB_USER=distribuidor
-    DB_PASS=-C)W1aQ6nG9(Vbr1s7
-    DB_NAME=distribuidor_proc
-    FRONTEND_URL=https://distribuidorigt.domcloud.dev
+    cat > backend/.env <<EOF
+    JWT_SECRET=${JWT_SECRET}
+    DB_HOST=${DB_HOST}
+    DB_USER=${DB_USER}
+    DB_PASS=${DB_PASS}
+    DB_NAME=${DB_NAME}
+    FRONTEND_URL=${FRONTEND_URL}
     NODE_ENV=production
     EOF
   # 2. Instala dependências do backend

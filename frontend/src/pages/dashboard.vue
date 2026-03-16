@@ -895,8 +895,7 @@ const fetchTableData = async () => {
       };
     });
     totalItems.value = response.data.totalItems;
-  } catch (error) {
-    console.error('Erro ao buscar dados da tabela:', error);
+  } catch {
     snackbarText.value = 'Erro ao carregar processos da tabela.';
     snackbarColor.value = 'error';
     snackbar.value = true;
@@ -912,8 +911,7 @@ const fetchChartData = async () => {
   try {
     const response = await apiClient.get('/admin/stats/dashboard', { params });
     statsResponse.value = response.data;
-  } catch (error) {
-    console.error('Erro ao buscar dados dos gráficos:', error);
+  } catch {
     snackbarText.value = 'Erro ao carregar dados dos gráficos.';
     snackbarColor.value = 'error';
     snackbar.value = true;
@@ -930,8 +928,8 @@ const checkUnassignedProcesses = async () => {
     if (unassignedCount.value > 0) {
       showUnassignedAlert.value = true;
     }
-  } catch (error) {
-    console.error("Erro ao verificar processos não atribuídos:", error);
+  } catch {
+    // Silenciado: alerta de não atribuídos é informativo, não crítico
   }
 };
 
@@ -940,8 +938,7 @@ const fetchAllUsers = async () => {
   try {
     const response = await apiClient.get('/admin/users');
     allUsersList.value = response.data;
-  } catch (error) {
-    console.error("Erro ao buscar lista de usuários:", error);
+  } catch {
     snackbarText.value = 'Erro ao carregar lista de usuários.';
     snackbarColor.value = 'error';
     snackbar.value = true;
@@ -955,16 +952,18 @@ const fetchFilterOptions = async () => {
     allClassesList.value = data.classes;
     allAssuntosList.value = data.assuntos;
     allTarjasList.value = data.tarjas;
-  } catch (error) {
-    console.error("Erro ao buscar opções de filtros:", error);
+  } catch {
+    // Silenciado: filtros usarão valores em cache ou ficarão vazios
   }
 };
 
-// Recarrega todos os dados da página
+// Recarrega todos os dados da página (em paralelo para melhor performance)
 const reloadAllData = async () => {
-  await fetchTableData();
-  await fetchChartData();
-  await checkUnassignedProcesses();
+  await Promise.all([
+    fetchTableData(),
+    fetchChartData(),
+    checkUnassignedProcesses(),
+  ]);
 };
 
 // =================================================================
@@ -978,8 +977,10 @@ const handleSalvarObservacoes = async (itemEditado) => {
     const { id, observacoes } = itemEditado;
     await apiClient.put(`/admin/processes/${id}/observacoes`, { observacoes });
     await reloadAllData(); // Recarrega para refletir mudança
-  } catch (error) {
-    console.error("Erro ao salvar observação:", error);
+  } catch {
+    snackbarText.value = 'Erro ao salvar observação.';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
   }
 };
 
@@ -994,8 +995,10 @@ const handleMarcarComoCumprido = async (item) => {
   try {
     await apiClient.patch(`/admin/processes/${item.id}/${acao}`);
     await reloadAllData(); // Recarrega para refletir mudança
-  } catch (error) {
-    console.error(`Erro ao ${acao} processo:`, error);
+  } catch {
+    snackbarText.value = `Erro ao ${acao} processo.`;
+    snackbarColor.value = 'error';
+    snackbar.value = true;
   }
 };
 
@@ -1350,14 +1353,17 @@ const handleBulkAssign = async () => {
 // Dispara quando 'options' (página, itensPorPagina, sortBy) muda
 watch(options, fetchTableData, { deep: true });
 
-// Dispara quando 'filters' ou 'search' mudam
+// Dispara quando 'filters' ou 'search' mudam (com debounce de 400ms)
+let filterDebounceTimer = null;
 watch(
   [filters, search],
   () => {
-    // Quando um filtro muda, reseta a paginação e busca novos dados
-    fetchTableData();
-    fetchChartData();
-    checkUnassignedProcesses(); // Re-verifica o alerta também
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(() => {
+      fetchTableData();
+      fetchChartData();
+      checkUnassignedProcesses();
+    }, 400);
   },
   { deep: true }
 );
