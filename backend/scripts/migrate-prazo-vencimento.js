@@ -7,10 +7,7 @@
  * USO:
  *   node scripts/migrate-prazo-vencimento.js
  *
- * PRÉ-REQUISITO:
- *   A coluna prazo_vencimento já deve existir na tabela processos
- *   (criada automaticamente pelo Sequelize sync ou manualmente:
- *    ALTER TABLE processos ADD COLUMN prazo_vencimento DATE NULL)
+ * O script cria a coluna prazo_vencimento automaticamente caso não exista.
  */
 
 require('dotenv').config({ path: __dirname + '/../.env' });
@@ -35,6 +32,23 @@ async function main() {
     console.log('→ Conectando ao banco de dados...');
     connection = await mysql.createConnection(config);
     console.log('✓ Conectado com sucesso!\n');
+
+    // Verifica se a coluna prazo_vencimento já existe
+    const [columns] = await connection.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'processos' AND COLUMN_NAME = 'prazo_vencimento'`,
+      [config.database]
+    );
+
+    if (columns.length === 0) {
+      console.log('→ Coluna prazo_vencimento não existe. Criando...');
+      await connection.query(
+        `ALTER TABLE processos ADD COLUMN prazo_vencimento DATE NULL`
+      );
+      console.log('✓ Coluna prazo_vencimento criada com sucesso!\n');
+    } else {
+      console.log('✓ Coluna prazo_vencimento já existe.\n');
+    }
 
     // Verifica quantos registros precisam ser atualizados
     const [countResult] = await connection.query(
