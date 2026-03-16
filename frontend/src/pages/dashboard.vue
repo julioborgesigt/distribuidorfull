@@ -400,7 +400,7 @@
                   placeholder="Digite o nome ou matrícula..."
                 ></v-autocomplete>
                 <div class="text-caption pa-1">
-                  A senha do usuário selecionado será redefinida para "12345678".
+                  Uma nova senha temporária será gerada automaticamente.
                 </div>
               </v-col>
             </v-row>
@@ -576,9 +576,10 @@
   <v-snackbar
     v-model="snackbar"
     :color="snackbarColor"
-    :timeout="3000"
+    :timeout="snackbarTimeout"
     location="top right"
     multi-line
+    @update:model-value="val => { if (!val) snackbarTimeout = 3000; }"
   >
     {{ snackbarText }}
     <template v-slot:actions>
@@ -662,6 +663,7 @@ const allTarjasList = ref([]); // Lista de todas as tarjas disponíveis
 const snackbar = ref(false);
 const snackbarText = ref('');
 const snackbarColor = ref('success');
+const snackbarTimeout = ref(3000);
 const menuInicio = ref(false);
 const menuFim = ref(false);
 
@@ -1310,13 +1312,14 @@ const handleResetarSenha = async () => {
   if (!valid) return;
   loadingReset.value = true;
   try {
-    await apiClient.post('/admin/reset-password', { matricula: matriculaParaReset.value });
-    snackbarText.value = 'Senha resetada com sucesso para "12345678"!';
+    const { data } = await apiClient.post('/admin/reset-password', { matricula: matriculaParaReset.value });
+    snackbarText.value = `Senha resetada! Nova senha temporária: ${data.senhaTemporaria}`;
     snackbarColor.value = 'success';
+    snackbarTimeout.value = 15000;
     snackbar.value = true;
     fecharModalReset();
   } catch (error) {
-    snackbarText.value = error.response?.data || 'Erro ao resetar senha.';
+    snackbarText.value = error.response?.data?.error || 'Erro ao resetar senha.';
     snackbarColor.value = 'error';
     snackbar.value = true;
   } finally {

@@ -73,19 +73,16 @@ router.post('/login', loginLimiter, validateLogin, authController.login);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [userId, novaSenha, loginType]
+ *             required: [firstLoginToken, novaSenha]
  *             properties:
- *               userId:
- *                 type: integer
- *                 example: 1
+ *               firstLoginToken:
+ *                 type: string
+ *                 description: Token temporário recebido no login quando senha_padrao é true
+ *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *               novaSenha:
  *                 type: string
  *                 format: password
  *                 example: NovaSenhaForte123
- *               loginType:
- *                 type: string
- *                 enum: [admin_padrao, admin_super]
- *                 example: admin_super
  *     responses:
  *       200:
  *         description: Senha alterada com sucesso

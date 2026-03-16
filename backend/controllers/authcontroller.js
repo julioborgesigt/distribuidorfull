@@ -1,4 +1,5 @@
 // /controllers/authController.js (Apenas Admin)
+const crypto = require('crypto');
 const { User } = require('../models');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -26,7 +27,7 @@ exports.login = async (req, res) => {
       logger.logAuthAttempt(false, matricula, clientIP, 'Usuário não encontrado');
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
-    
+
     // --- 2. VALIDAÇÃO DE PERMISSÃO (MODIFICADO) ---
     // Verifica se o usuário TEM a permissão que ele ESTÁ PEDINDO
     let effectiveLoginType = null;
@@ -52,11 +53,18 @@ exports.login = async (req, res) => {
       logger.logAuthAttempt(false, matricula, clientIP, 'Senha incorreta');
       return res.status(401).json({ error: 'Senha incorreta' });
     }
-    
+
     // Lógica de primeiro login
     if (user.senha_padrao) {
+      // Gera um token JWT de curta duração (5 min) vinculado ao userId
+      // para garantir que apenas quem fez o login pode trocar a senha
+      const firstLoginToken = jwt.sign(
+        { id: user.id, loginType: effectiveLoginType, purpose: 'first_login' },
+        JWT_SECRET,
+        { expiresIn: '5m' }
+      );
       logger.info('Primeiro login detectado', { userId: user.id, matricula });
-      return res.json({ firstLogin: true, userId: user.id, loginType: effectiveLoginType });
+      return res.json({ firstLogin: true, firstLoginToken, loginType: effectiveLoginType });
     } else {
       logger.logAuthAttempt(true, matricula, clientIP);
       const token = jwt.sign({ id: user.id, loginType: effectiveLoginType }, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
@@ -96,19 +104,47 @@ exports.logout = (req, res) => {
 };
 
 exports.firstLogin = async (req, res) => {
-  const { userId, novaSenha, loginType } = req.body;
-  const clientIP = getRealIP(req); 
+  const { firstLoginToken, novaSenha } = req.body;
+  const clientIP = getRealIP(req);
 
-  // --- VALIDAÇÃO DO TIPO DE LOGIN (NOVO) ---
-  if (!loginType || (loginType !== 'admin_super' && loginType !== 'admin_padrao')) {
-    return res.status(400).json({ error: 'Tipo de login (loginType) inválido.' });
+  if (!firstLoginToken) {
+    return res.status(400).json({ error: 'Token de primeiro login é obrigatório.' });
   }
 
   try {
+    // Verifica e decodifica o token temporário gerado no login
+    let decoded;
+    try {
+      decoded = jwt.verify(firstLoginToken, JWT_SECRET);
+    } catch (tokenErr) {
+      if (tokenErr.name === 'TokenExpiredError') {
+        logger.warn('Token de primeiro login expirado', { ip: clientIP });
+        return res.status(401).json({ error: 'Sessão de primeiro login expirada. Faça login novamente.' });
+      }
+      logger.warn('Token de primeiro login inválido', { ip: clientIP, error: tokenErr.message });
+      return res.status(401).json({ error: 'Token de primeiro login inválido.' });
+    }
+
+    // Valida que o token foi emitido para o propósito correto
+    if (decoded.purpose !== 'first_login') {
+      logger.logSecurityEvent('Token com propósito inválido usado no primeiro login', { ip: clientIP, purpose: decoded.purpose });
+      return res.status(403).json({ error: 'Token inválido para esta operação.' });
+    }
+
+    const userId = decoded.id;
+    const loginType = decoded.loginType;
+
     const user = await User.findByPk(userId);
     if (!user) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
+
+    // Verifica que o usuário ainda está com senha padrão (previne replay)
+    if (!user.senha_padrao) {
+      logger.warn('Tentativa de primeiro login em conta já ativada', { userId, ip: clientIP });
+      return res.status(400).json({ error: 'Esta conta já teve a senha alterada. Faça login normalmente.' });
+    }
+
     user.senha = await bcryptjs.hash(novaSenha, 10);
     user.senha_padrao = false;
     await user.save();
@@ -141,7 +177,6 @@ exports.firstLogin = async (req, res) => {
     logger.error('Erro no primeiro login', {
       error: error.message,
       stack: error.stack,
-      userId,
       ip: clientIP
     });
     return res.status(500).json({ error: 'Erro interno' });
