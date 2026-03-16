@@ -23,14 +23,15 @@ commands:
   #    Configure as variáveis reais no painel do DomCloud (Environment Variables)
   - |
     cat > backend/.env <<EOF
-    JWT_SECRET=${JWT_SECRET}
-    DB_HOST=${DB_HOST}
-    DB_USER=${DB_USER}
-    DB_PASS=${DB_PASS}
-    DB_NAME=${DB_NAME}
-    FRONTEND_URL=${FRONTEND_URL}
+    JWT_SECRET=$JWT_SECRET
+    DB_HOST=$DB_HOST
+    DB_USER=$DB_USER
+    DB_PASS=$DB_PASS
+    DB_NAME=$DB_NAME
+    FRONTEND_URL=$FRONTEND_URL
     NODE_ENV=production
     EOF
+  - sed -i 's/^[[:space:]]*//' backend/.env
   # 2. Instala dependências do backend
   - npm install --prefix backend
   # 3. Instala dependências do frontend e gera o build
@@ -38,5 +39,5 @@ commands:
   - npm run build --prefix frontend
   # 4. Garante que a pasta de logs existe para o Winston
   - mkdir -p backend/logs
-  # 5. Reinicia o Passenger
-  - mkdir -p backend/tmp && touch backend/tmp/restart.txt
+  # 5. Reinicia o Passenger (restart.txt deve estar na raiz do app, não em backend/)
+  - mkdir -p tmp && touch tmp/restart.txt
