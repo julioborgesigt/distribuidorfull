@@ -8,8 +8,8 @@
     "dev:front": "cd frontend && npm run dev",
     "dev:back": "cd backend && npm run dev",
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "build:front": "cd frontend && npm run build",
-    "start:back": "cd backend && npm start",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
     "test:back": "cd backend && npm test"
   },
   "devDependencies": {

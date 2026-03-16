@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./utils/swagger');
 const { sequelize } = require('./models');
@@ -147,21 +148,13 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Distribuidor API Docs'
 }));
 
-// --- 2. ROTA RAIZ ---
-/**
- * @swagger
- * /:
- *   get:
- *     summary: Rota raiz
- *     description: Verifica se o servidor está respondendo
- *     tags: [Sistema]
- *     security: []
- *     responses:
- *       200:
- *         description: Servidor está rodando
- */
-app.get('/', (req, res) => {
-  res.send('Seu back está rodando');
+// --- 2. ARQUIVOS ESTÁTICOS DO FRONT-END ---
+const frontendDist = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendDist));
+
+// SPA fallback: rotas não-API retornam o index.html do Vue
+app.get(/^(?!\/api|\/api-docs|\/health).*$/, (req, res) => {
+  res.sendFile(path.join(frontendDist, 'index.html'));
 });
 
 /**

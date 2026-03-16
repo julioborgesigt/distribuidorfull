@@ -72,13 +72,11 @@ export default defineConfig({
 
   // --- SEÇÃO CORRIGIDA ---
   server: {
-    port: 3001, // 1. MUDAMOS A PORTA DO FRONTEND
+    port: 3001,
     proxy: {
-      // 2. ADICIONAMOS O PROXY
       '/api': {
-        target: 'https://distribuidor.domcloud.dev', // Aponta para o seu backend
+        target: 'http://localhost:3000', // Backend local em desenvolvimento
         changeOrigin: true,
-        secure: false
       }
     }
   },
