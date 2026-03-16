@@ -176,9 +176,9 @@ const headers = ref([
   { title: 'Assunto', key: 'assunto_principal', width: '140px' },
   { title: 'Tarjas', key: 'tarjas', width: '120px' },
   { title: 'Prazo', key: 'prazoRestanteNum', width: '120px' },
-  { title: 'Reit.', key: 'reiteracoes', width: '65px', align: 'center' },
-  { title: 'Obs', key: 'observacoes', width: '180px', sortable: false },
-  { title: 'Cumprir', key: 'acaoCumprido', width: '70px', align: 'center', sortable: false },
+  { title: 'Reit.', key: 'reiteracoes', width: '70px', align: 'center' },
+  { title: 'Obs', key: 'observacoes', width: '130px', sortable: false },
+  { title: 'Cumprir', key: 'acaoCumprido', width: '85px', align: 'center', sortable: false },
 ]);
 
 // --- 5. FUNÇÕES AUXILIARES (Sem alteração) ---
