@@ -5,7 +5,7 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const csvParser = require('csv-parser');
 const { sequelize, User, Process } = require('../models');
-const { Op, literal } = require('sequelize');
+const { Op } = require('sequelize');
 const iconv = require('iconv-lite');
 const logger = require('../utils/logger');
 const { getRealIP, parseArrayFilter } = require('../utils/helpers');
@@ -173,7 +173,8 @@ exports.listProcesses = async (req, res) => {
     }
 
     if (search) {
-      options.where.numero_processo = { [Op.like]: `%${search}%` };
+      // Busca por prefixo usa o índice UNIQUE (muito mais rápido que %search%)
+      options.where.numero_processo = { [Op.like]: `${search}%` };
     }
 
     if (cumprido && cumprido !== 'null') {
@@ -229,14 +230,13 @@ exports.listProcesses = async (req, res) => {
     }
 
     if (prazo) {
-      const prazoQuery = `DATE_ADD(data_intimacao, INTERVAL CAST(prazo_processual AS UNSIGNED) DAY)`;
-      options.where.data_intimacao = { [Op.not]: null };
-      options.where[Op.and] = (options.where[Op.and] || []);
+      options.where.prazo_vencimento = { [Op.not]: null };
+      const today = new Date().toISOString().split('T')[0];
 
       if (prazo === 'vencido') {
-        options.where[Op.and].push(literal(`${prazoQuery} < CURDATE()`));
+        options.where.prazo_vencimento = { [Op.lt]: today };
       } else if (prazo === 'a_vencer') {
-        options.where[Op.and].push(literal(`${prazoQuery} >= CURDATE()`));
+        options.where.prazo_vencimento = { [Op.gte]: today };
       }
     }
 
@@ -247,8 +247,7 @@ exports.listProcesses = async (req, res) => {
           return [User, 'nome', s.order];
         }
         if (s.key === 'prazoRestanteNum') {
-          const prazoQuery = `DATE_ADD(data_intimacao, INTERVAL CAST(prazo_processual AS UNSIGNED) DAY)`;
-          return [literal(prazoQuery), s.order];
+          return ['prazo_vencimento', s.order];
         }
         return [s.key, s.order];
       });
