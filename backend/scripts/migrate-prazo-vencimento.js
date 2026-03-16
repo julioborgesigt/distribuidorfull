@@ -69,7 +69,7 @@ async function main() {
     console.log('→ Executando UPDATE em batch...');
     const [result] = await connection.query(
       `UPDATE processos
-       SET prazo_vencimento = DATE_ADD(data_intimacao, INTERVAL CAST(prazo_processual AS UNSIGNED) DAY)
+       SET prazo_vencimento = DATE_ADD(data_intimacao, INTERVAL (prazo_processual + 0) DAY)
        WHERE prazo_vencimento IS NULL
        AND data_intimacao IS NOT NULL
        AND prazo_processual IS NOT NULL`
