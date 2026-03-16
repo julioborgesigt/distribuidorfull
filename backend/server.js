@@ -60,11 +60,8 @@ app.use(compression());
 // Configuração de CORS Segura
 // Lista de origens permitidas
 const allowedOrigins = [
-  'https://distribuidorvue.onrender.com',
-  'http://localhost:8080',
   'http://localhost:3000',
   'http://localhost:3001',
-  'http://127.0.0.1:8080',
   process.env.FRONTEND_URL,
   process.env.FRONTEND_URL_2,
   process.env.FRONTEND_URL_3
@@ -150,7 +147,16 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 
 // --- 2. ARQUIVOS ESTÁTICOS DO FRONT-END ---
 const frontendDist = path.join(__dirname, '../frontend/dist');
-app.use(express.static(frontendDist));
+app.use(express.static(frontendDist, {
+  maxAge: '1y', // Vite gera nomes com hash → cache longo é seguro
+  etag: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) {
+      // index.html nunca deve ser cacheado (ponto de entrada do SPA)
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
 
 // SPA fallback: rotas não-API retornam o index.html do Vue
 app.get(/^(?!\/api|\/api-docs|\/health).*$/, (req, res) => {

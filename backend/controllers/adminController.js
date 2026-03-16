@@ -1055,3 +1055,40 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
   }
 };
+// Retorna valores únicos para os filtros do dashboard (classe, assunto, tarjas)
+exports.getFilterOptions = async (req, res) => {
+  try {
+    const [classes, assuntos, tarjas] = await Promise.all([
+      Process.findAll({
+        attributes: [[sequelize.fn('DISTINCT', sequelize.col('classe_principal')), 'value']],
+        where: { classe_principal: { [Op.ne]: null, [Op.ne]: '' } },
+        raw: true
+      }),
+      Process.findAll({
+        attributes: [[sequelize.fn('DISTINCT', sequelize.col('assunto_principal')), 'value']],
+        where: { assunto_principal: { [Op.ne]: null, [Op.ne]: '' } },
+        raw: true
+      }),
+      Process.findAll({
+        attributes: [[sequelize.fn('DISTINCT', sequelize.col('tarjas')), 'value']],
+        where: { tarjas: { [Op.ne]: null, [Op.ne]: '' } },
+        raw: true
+      })
+    ]);
+
+    // tarjas podem ser múltiplas por processo (separadas por vírgula)
+    const tarjasSet = new Set();
+    tarjas.forEach(({ value }) => {
+      value.split(',').map(t => t.trim()).filter(t => t).forEach(t => tarjasSet.add(t));
+    });
+
+    res.json({
+      classes: classes.map(r => r.value).sort(),
+      assuntos: assuntos.map(r => r.value).sort(),
+      tarjas: Array.from(tarjasSet).sort()
+    });
+  } catch (error) {
+    logger.error('Erro ao buscar opções de filtros', { error: error.message });
+    res.status(500).json({ error: 'Erro ao buscar opções de filtros' });
+  }
+};

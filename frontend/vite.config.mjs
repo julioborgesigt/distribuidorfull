@@ -71,6 +71,19 @@ export default defineConfig({
   },
 
   // --- SEÇÃO CORRIGIDA ---
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-vue': ['vue', 'vue-router', 'pinia'],
+          'vendor-vuetify': ['vuetify'],
+          'vendor-charts': ['chart.js', 'vue-chartjs'],
+          'vendor-utils': ['axios', 'date-fns'],
+        }
+      }
+    }
+  },
+
   server: {
     port: 3001,
     proxy: {

@@ -4,9 +4,9 @@ import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 
 
-// Em produção (servidor único), as requisições vão para a mesma origem (baseURL vazio).
-// Em desenvolvimento, use VITE_API_BASE_URL no .env ou o proxy do Vite cuida disso.
-const baseURL = import.meta.env.VITE_API_BASE_URL || '';
+// Em produção (servidor único) e desenvolvimento (via proxy Vite), baseURL aponta para /api.
+// Para sobrescrever (ex: backend remoto), defina VITE_API_BASE_URL=https://meubackend.com/api
+const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 // 1. Cria uma instância do Axios
 
 const apiClient = axios.create({

@@ -59,9 +59,8 @@ const validateOriginForCriticalOps = (req, res, next) => {
 
   const origin = req.headers.origin || req.headers.referer;
   const allowedOrigins = [
-    'https://distribuidorvue.onrender.com',
-    'http://localhost:8080',
     'http://localhost:3000',
+    'http://localhost:3001',
     process.env.FRONTEND_URL,
     process.env.FRONTEND_URL_2,
     process.env.FRONTEND_URL_3

@@ -439,4 +439,19 @@ router.patch('/processes/:id/cumprir', adminController.markAsCumprido);
  *         description: Cumprimento desfeito com sucesso
  */
 router.patch('/processes/:id/desfazer-cumprir', adminController.unmarkAsCumprido);
+
+/**
+ * @swagger
+ * /api/admin/filter-options:
+ *   get:
+ *     summary: Retorna valores únicos para os filtros do dashboard
+ *     tags: [Administração - Processos]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Listas de classes, assuntos e tarjas únicas
+ */
+router.get('/filter-options', autenticarAdmin, adminController.getFilterOptions);
+
 module.exports = router;

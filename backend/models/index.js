@@ -16,8 +16,13 @@ const sequelize = new Sequelize(
       charset: 'utf8mb4',
     },
     port: 3306,
-    // ✅ LOGGING HABILITADO - Usa logger customizado
-    logging: (msg) => logger.debug(msg)
+    logging: (msg) => logger.debug(msg),
+    pool: {
+      max: 10,   // máximo de conexões simultâneas
+      min: 2,    // conexões mantidas ativas
+      acquire: 30000, // ms para tentar adquirir conexão antes de erro
+      idle: 10000     // ms sem uso antes de liberar a conexão
+    }
   }
 );
 

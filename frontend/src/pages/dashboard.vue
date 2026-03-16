@@ -588,8 +588,7 @@ import TabelaProcessos from '../components/TabelaProcessos.vue';
 import StatsGrid from '../components/StatsGrid.vue';
 import CumpridosChart from '../components/CumpridosChart.vue';
 import { addDays, differenceInDays, startOfToday, parseISO, format, subDays } from 'date-fns';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF e autoTable são carregados sob demanda (lazy) para não aumentar o bundle inicial
 import { useDisplay } from 'vuetify';
 const { mdAndUp } = useDisplay(); // mdAndUp será 'true' se a tela for >= 960px
 // import { useTheme } from 'vuetify'; // REMOVIDO - Movido para default.vue
@@ -949,49 +948,15 @@ const fetchAllUsers = async () => {
   }
 };
 
-// Busca todas as opções disponíveis para os filtros (classe, assunto, tarjas)
+// Busca valores únicos para os filtros via endpoint dedicado (SELECT DISTINCT no backend)
 const fetchFilterOptions = async () => {
   try {
-    // Busca uma grande quantidade de processos SEM filtros para obter todas as opções
-    const params = new URLSearchParams();
-    params.append('page', 1);
-    params.append('itemsPerPage', 10000); // Número alto para pegar todos os valores únicos
-    params.append('cumprido', false); // Apenas não cumpridos para options relevantes
-
-    const response = await apiClient.get('/admin/processes', { params });
-    const processos = response.data.items || [];
-
-    // Extrai classes únicas
-    const classesSet = new Set();
-    processos.forEach(proc => {
-      if (proc.classe_principal) {
-        classesSet.add(proc.classe_principal);
-      }
-    });
-    allClassesList.value = Array.from(classesSet).sort();
-
-    // Extrai assuntos únicos
-    const assuntosSet = new Set();
-    processos.forEach(proc => {
-      if (proc.assunto_principal) {
-        assuntosSet.add(proc.assunto_principal);
-      }
-    });
-    allAssuntosList.value = Array.from(assuntosSet).sort();
-
-    // Extrai tarjas únicas (separando por vírgula se necessário)
-    const tarjasSet = new Set();
-    processos.forEach(proc => {
-      if (proc.tarjas) {
-        const tarjasArray = proc.tarjas.split(',').map(t => t.trim()).filter(t => t);
-        tarjasArray.forEach(t => tarjasSet.add(t));
-      }
-    });
-    allTarjasList.value = Array.from(tarjasSet).sort();
-
+    const { data } = await apiClient.get('/admin/filter-options');
+    allClassesList.value = data.classes;
+    allAssuntosList.value = data.assuntos;
+    allTarjasList.value = data.tarjas;
   } catch (error) {
     console.error("Erro ao buscar opções de filtros:", error);
-    // Não mostra erro ao usuário pois não é crítico
   }
 };
 
@@ -1045,7 +1010,7 @@ const filterUnassigned = () => {
 
 // --- Handlers de PDF ---
 // (MANTIDOS)
-const downloadPDF = (dataToExport) => {
+const downloadPDF = async (dataToExport) => {
   let processesToExport;
   if (dataToExport === selected.value) {
     processesToExport = [...dataToExport];
@@ -1066,6 +1031,10 @@ const downloadPDF = (dataToExport) => {
     return;
   }
   
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable')
+  ]);
   const doc = new jsPDF('l', 'mm', 'a4');
 
   // --- CABEÇALHO DO PDF ---
