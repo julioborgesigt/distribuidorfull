@@ -5,10 +5,8 @@ features:
 
 passenger:
   enabled: "on"
-  # app_root aponta para backend/ onde está o server.js
-  # O caminho '../frontend/dist' dentro do server.js resolve corretamente a partir daqui
-  app_root: backend
-  app_start_command: node server.js
+  # Passenger procura app.js na raiz por padrão — app.js delega para backend/server.js
+  app_start_command: node app.js
   env_var_list:
     - JWT_SECRET=b7f8a2d4e3f7c78e8e9a3d0b5f6d8a3e7c9f2b8e4d1a5c0e2d3f9b6a7d8e4c1f
     - DB_HOST=sao.domcloud.co
