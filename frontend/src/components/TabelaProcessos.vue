@@ -122,6 +122,8 @@
             rows="5"
             auto-grow
             counter
+            maxlength="300"
+            :rules="[v => !v || v.length <= 300 || 'Máximo de 300 caracteres']"
           ></v-textarea>
         </v-card-text>
         <v-card-actions>
@@ -174,7 +176,7 @@ const headers = ref([
   { title: 'Assunto', key: 'assunto_principal', width: '140px' },
   { title: 'Tarjas', key: 'tarjas', width: '120px' },
   { title: 'Prazo', key: 'prazoRestanteNum', width: '120px' },
-  { title: 'Reit.', key: 'reiteracoes', width: '50px', align: 'center' },
+  { title: 'Reit.', key: 'reiteracoes', width: '65px', align: 'center' },
   { title: 'Obs', key: 'observacoes', width: '180px', sortable: false },
   { title: 'Cumprir', key: 'acaoCumprido', width: '70px', align: 'center', sortable: false },
 ]);
