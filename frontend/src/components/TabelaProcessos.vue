@@ -1,16 +1,38 @@
 <template>
-  <div style="width: 100%; overflow-x: auto;">
+  <div style="width: 100%; overflow-x: auto; position: relative;">
+    <!-- Overlay de carregamento para ações (salvar obs, marcar cumprido, etc.) -->
+    <v-overlay
+      :model-value="props.actionLoading"
+      contained
+      persistent
+      class="align-center justify-center"
+      scrim="rgba(0,0,0,0.4)"
+    >
+      <div class="text-center">
+        <v-progress-circular
+          indeterminate
+          color="primary"
+          size="48"
+          width="4"
+        ></v-progress-circular>
+        <div class="text-body-1 mt-3 text-white font-weight-medium">
+          {{ props.actionLoadingText || 'Processando...' }}
+        </div>
+      </div>
+    </v-overlay>
+
     <v-data-table-server
       :headers="headers"
       :items="props.items"
-      :items-length="props.totalItems" :loading="props.loading"
-      
+      :items-length="props.totalItems"
+      :loading="props.loading"
+      loading-text="Carregando processos..."
       show-select
       return-object
       :model-value="props.selected"
       @update:model-value="emit('update:selected', $event)"
-      
-      @update:options="emit('update:options', $event)" item-key="id"
+      @update:options="emit('update:options', $event)"
+      item-key="id"
       class="elevation-1"
       fixed-header
       height="70vh"
@@ -123,11 +145,11 @@ import { parseISO, format } from 'date-fns';
 // --- 1. PROPS (ATUALIZADO) ---
 const props = defineProps({
   items: { type: Array, default: () => [] },
-  totalItems: { type: Number, default: 0 }, // NOVO: Total de itens no DB
+  totalItems: { type: Number, default: 0 },
   loading: { type: Boolean, default: false },
   selected: { type: Array, default: () => [] },
-  // 'search' foi removido (o pai controla)
-  // 'sortBy' foi removido (agora vem pelo evento 'options')
+  actionLoading: { type: Boolean, default: false },
+  actionLoadingText: { type: String, default: 'Processando...' },
 });
 
 // --- 2. EVENTS (ATUALIZADO) ---
@@ -146,14 +168,14 @@ const itemEdicao = ref({ id: null, observacoes: '' });
 // Precisamos habilitar 'sortable' para a ordenação do servidor funcionar.
 // O 'prazoRestanteNum' vai precisar de atenção especial.
 const headers = ref([
-  { title: 'Nº Processo', key: 'numero_processo', width: '220px' }, // Exemplo de largura fixa
-  { title: 'Atribuído', key: 'user', width: '120px' },
-  { title: 'Classe', key: 'classe_principal', width: '140px' },
-  { title: 'Assunto', key: 'assunto_principal', width: '200px' },
-  { title: 'Tarjas', key: 'tarjas', width: '150px' },
-  { title: 'Prazo', key: 'prazoRestanteNum', width: '140px' },
-  { title: 'Reit.', key: 'reiteracoes', width: '60px', align: 'center' },
-  { title: 'Obs', key: 'observacoes',  width: '250px', sortable: false },
+  { title: 'Nº Processo', key: 'numero_processo', width: '200px' },
+  { title: 'Atribuído', key: 'user', width: '100px' },
+  { title: 'Classe', key: 'classe_principal', width: '120px' },
+  { title: 'Assunto', key: 'assunto_principal', width: '140px' },
+  { title: 'Tarjas', key: 'tarjas', width: '120px' },
+  { title: 'Prazo', key: 'prazoRestanteNum', width: '120px' },
+  { title: 'Reit.', key: 'reiteracoes', width: '50px', align: 'center' },
+  { title: 'Obs', key: 'observacoes', width: '180px', sortable: false },
   { title: 'Cumprir', key: 'acaoCumprido', width: '70px', align: 'center', sortable: false },
 ]);
 
@@ -182,7 +204,6 @@ const emitirEventoMarcarCumprido = (item) => {
 </script>
 
 <style scoped>
-/* Seus estilos permanecem os mesmos */ 
 .obs-celula {
   cursor: pointer;
   min-height: 40px;
@@ -191,38 +212,37 @@ const emitirEventoMarcarCumprido = (item) => {
   width: 100%;
 }
 
-/* --- CORREÇÃO PARA LINHAS VERTICAIS ---
-  O seu código original usava 'rgba(255, 255, 255, 0.12)' (branco), 
-  que só funciona no modo escuro.
-  Agora, ele aplica a cor correta para cada tema.
-*/
-
-/* ATUALIZADO: Removemos o :not(:last-child) para aplicar a borda em TODAS as colunas */
-/* Estilo para MODO ESCURO (linha branca) */
+/* Bordas verticais entre colunas */
 :deep(.v-theme--dark th) {
   border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 :deep(.v-theme--dark td) {
   border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
-
-/* Estilo para MODO CLARO (linha cinza/preta) */
 :deep(.v-theme--light th) {
   border-right: 1px solid rgba(0, 0, 0, 0.12) !important;
 }
 :deep(.v-theme--light td) {
   border-right: 1px solid rgba(0, 0, 0, 0.12) !important;
 }
-/* --- FIM DA CORREÇÃO --- */
 
-
+/* Tabela responsiva - cabe no container */
 :deep(table) {
   table-layout: fixed;
+  width: 100% !important;
 }
-:deep(td) {
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  word-break: break-all;
+:deep(td), :deep(th) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Loading overlay customizado */
+:deep(.v-data-table-server .v-data-table-progress) {
+  position: sticky;
+  top: 48px;
+  z-index: 2;
 }
 </style>
 

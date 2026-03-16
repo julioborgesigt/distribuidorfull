@@ -254,7 +254,7 @@
           color="primary"
           variant="flat"
           prepend-icon="mdi-download"
-          @click="downloadPDF(serverItems)" :disabled="serverItems.length === 0" 
+          @click="downloadPDF(serverItems)" :disabled="serverItems.length === 0 || actionLoading"
         >
           <span class="d-none d-md-inline">Baixar Exibidos</span>
         </v-btn>
@@ -297,6 +297,8 @@
       :items="serverItems"
       :totalItems="totalItems"
       :loading="loadingTable"
+      :action-loading="actionLoading"
+      :action-loading-text="actionLoadingText"
       @update:options="options = $event"
       @salvar-obs="handleSalvarObservacoes"
       @marcar-cumprido="handleMarcarComoCumprido"
@@ -637,6 +639,10 @@ const loadingTable = ref(true);
 const serverItems = ref([]); // Itens da página atual
 const totalItems = ref(0);  // Total de itens no DB
 const options = ref({});    // { page, itemsPerPage, sortBy }
+
+// Loading overlay para ações individuais (salvar obs, marcar cumprido, etc.)
+const actionLoading = ref(false);
+const actionLoadingText = ref('Processando...');
 
 const loadingCharts = ref(true);
 const statsResponse = ref(null); // Resposta da API de estatísticas
@@ -1030,14 +1036,18 @@ const reloadAllData = async () => {
 // --- Handlers da Tabela ---
 // (MANTIDOS)
 const handleSalvarObservacoes = async (itemEditado) => {
+  actionLoading.value = true;
+  actionLoadingText.value = 'Salvando observação...';
   try {
     const { id, observacoes } = itemEditado;
     await apiClient.put(`/admin/processes/${id}/observacoes`, { observacoes });
-    await reloadAllData(); // Recarrega para refletir mudança
+    await reloadAllData();
   } catch {
     snackbarText.value = 'Erro ao salvar observação.';
     snackbarColor.value = 'error';
     snackbar.value = true;
+  } finally {
+    actionLoading.value = false;
   }
 };
 
@@ -1065,6 +1075,8 @@ const handleMarcarComoCumprido = (item) => {
   const texto = `Deseja realmente ${item.cumprido ? 'DESMARCAR' : 'MARCAR'} o processo ${item.numero_processo} como cumprido?`;
 
   openConfirmDialog(texto, async () => {
+    actionLoading.value = true;
+    actionLoadingText.value = item.cumprido ? 'Desmarcando processo...' : 'Marcando como cumprido...';
     try {
       await apiClient.patch(`/admin/processes/${item.id}/${acao}`);
       await reloadAllData();
@@ -1072,6 +1084,8 @@ const handleMarcarComoCumprido = (item) => {
       snackbarText.value = `Erro ao ${acao} processo.`;
       snackbarColor.value = 'error';
       snackbar.value = true;
+    } finally {
+      actionLoading.value = false;
     }
   });
 };
@@ -1099,15 +1113,17 @@ const downloadPDF = async (dataToExport) => {
   if (sortState.length > 0) {
     processesToExport = sortProcesses(processesToExport, sortState);
   }
-  
+
   if (processesToExport.length === 0) {
-    // Substituir alert por snackbar
     snackbarText.value = 'Nenhum item para exportar.';
     snackbarColor.value = 'info';
     snackbar.value = true;
     return;
   }
-  
+
+  actionLoading.value = true;
+  actionLoadingText.value = 'Gerando PDF...';
+
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable')
@@ -1224,6 +1240,7 @@ const downloadPDF = async (dataToExport) => {
   });
 
   doc.save('processos.pdf');
+  actionLoading.value = false;
 };
 
 const getValue = (obj, path) => {
