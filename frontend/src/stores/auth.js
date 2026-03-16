@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
 
       // Cenário 1: É o primeiro login do usuário
       if (data.firstLogin) {
-        this.firstLoginData = { userId: data.userId, loginType: data.loginType };
+        this.firstLoginData = { firstLoginToken: data.firstLoginToken };
         sessionStorage.setItem('firstLoginData', JSON.stringify(this.firstLoginData));
         router.push('/primeiro-login');
         return;
@@ -54,12 +54,11 @@ export const useAuthStore = defineStore('auth', {
         return;
       }
 
-      const { userId, loginType } = this.firstLoginData;
+      const { firstLoginToken } = this.firstLoginData;
 
       const { data } = await apiClient.post('/auth/primeiro-login', {
-        userId,
-        novaSenha,
-        loginType
+        firstLoginToken,
+        novaSenha
       });
 
       // O token JWT já foi definido como cookie httpOnly pelo backend

@@ -45,18 +45,14 @@ const validateLogin = [
 
 // Validadores para Primeiro Login
 const validateFirstLogin = [
-  body('userId')
-    .notEmpty().withMessage('ID do usuário é obrigatório')
-    .isInt({ min: 1 }).withMessage('ID do usuário inválido'),
+  body('firstLoginToken')
+    .notEmpty().withMessage('Token de primeiro login é obrigatório')
+    .isString().withMessage('Token de primeiro login inválido'),
 
   body('novaSenha')
     .notEmpty().withMessage('Nova senha é obrigatória')
     .isLength({ min: 8, max: 100 }).withMessage('Senha deve ter entre 8 e 100 caracteres')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número. Símbolos são opcionais mas recomendados'),
-
-  body('loginType')
-    .notEmpty().withMessage('Tipo de login é obrigatório')
-    .isIn(['admin_super', 'admin_padrao']).withMessage('Tipo de login inválido'),
 
   handleValidationErrors
 ];

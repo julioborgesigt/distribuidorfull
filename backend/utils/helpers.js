@@ -1,6 +1,7 @@
 // /utils/helpers.js
 // Funções auxiliares reutilizáveis
 
+const crypto = require('crypto');
 const { User } = require('../models');
 
 /**
@@ -144,6 +145,33 @@ const formatCPF = (cpf) => {
   return cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 };
 
+/**
+ * Gera uma senha aleatória segura que atende aos requisitos do sistema
+ * (mín. 8 caracteres, pelo menos uma maiúscula, uma minúscula e um número)
+ * @param {number} length - Tamanho da senha (padrão: 10)
+ * @returns {string} Senha aleatória
+ */
+const generateRandomPassword = (length = 10) => {
+  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lowercase = 'abcdefghjkmnpqrstuvwxyz';
+  const digits = '23456789';
+  const allChars = uppercase + lowercase + digits;
+
+  // Garante pelo menos 1 de cada tipo obrigatório
+  let password = '';
+  password += uppercase[crypto.randomInt(uppercase.length)];
+  password += lowercase[crypto.randomInt(lowercase.length)];
+  password += digits[crypto.randomInt(digits.length)];
+
+  // Preenche o restante com caracteres aleatórios
+  for (let i = password.length; i < length; i++) {
+    password += allChars[crypto.randomInt(allChars.length)];
+  }
+
+  // Embaralha a senha para não ter padrão previsível
+  return password.split('').sort(() => crypto.randomInt(3) - 1).join('');
+};
+
 module.exports = {
   findUserByMatricula,
   parseArrayFilter,
@@ -153,4 +181,5 @@ module.exports = {
   getRealIP,
   isValidCPF,
   formatCPF,
+  generateRandomPassword,
 };

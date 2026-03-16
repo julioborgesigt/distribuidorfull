@@ -142,10 +142,16 @@ app.use('/api/auth', authRoutes);
 // app.use('/api/user', userRoutes); // REMOVIDO
 
 // --- DOCUMENTAÇÃO SWAGGER/OpenAPI ---
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Distribuidor API Docs'
-}));
+// Swagger UI disponível apenas em desenvolvimento (não expor em produção)
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Distribuidor API Docs'
+  }));
+  logger.info('Swagger UI disponível em /api-docs');
+} else {
+  logger.info('Swagger UI desabilitado em produção');
+}
 
 // --- 2. ARQUIVOS ESTÁTICOS DO FRONT-END ---
 const frontendDist = path.join(__dirname, '../frontend/dist');

@@ -4,7 +4,7 @@
 const { User, Process } = require('../models');
 const bcryptjs = require('bcryptjs');
 const logger = require('../utils/logger');
-const { getRealIP, isValidPassword } = require('../utils/helpers');
+const { getRealIP, isValidPassword, generateRandomPassword } = require('../utils/helpers');
 
 // Lista usuários (apenas matrícula e nome) - COM PAGINAÇÃO
 exports.listUsers = async (req, res) => {
@@ -68,17 +68,21 @@ exports.preCadastro = async (req, res) => {
     const existingUser = await User.findOne({ where: { matricula } });
     if (existingUser) {
       if (updateIfExists) {
+        const novaSenhaTemp = generateRandomPassword();
         existingUser.nome = nome;
-        existingUser.senha = await bcryptjs.hash('12345678', 10);
+        existingUser.senha = await bcryptjs.hash(novaSenhaTemp, 10);
         existingUser.senha_padrao = true;
         existingUser.admin_padrao = admin_padrao;
         existingUser.admin_super = admin_super;
         await existingUser.save();
-        return res.send('Usuário atualizado com sucesso. Senha: 12345678');
+        return res.json({
+          message: 'Usuário atualizado com sucesso.',
+          senhaTemporaria: novaSenhaTemp
+        });
       } else {
         return res.status(409).json({
           error: 'Usuário já cadastrado.',
-          updatePrompt: 'Deseja atualizar o usuário existente? A senha será: 12345678'
+          updatePrompt: 'Deseja atualizar o usuário existente? Uma nova senha temporária será gerada.'
         });
       }
     }
@@ -119,11 +123,12 @@ exports.resetPassword = async (req, res) => {
   try {
     const user = await User.findOne({ where: { matricula } });
     if (!user) {
-      return res.status(404).send('Usuário não encontrado.');
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
 
-    user.senha = await bcryptjs.hash('12345678', 10);
-    user.senha_padrao = 1;
+    const novaSenhaTemp = generateRandomPassword();
+    user.senha = await bcryptjs.hash(novaSenhaTemp, 10);
+    user.senha_padrao = true;
     await user.save();
 
     logger.info('Senha resetada com sucesso', {
@@ -132,7 +137,10 @@ exports.resetPassword = async (req, res) => {
       resetBy: req.userId,
       ip: getRealIP(req)
     });
-    res.send('Senha resetada com sucesso para "12345678".');
+    res.json({
+      message: 'Senha resetada com sucesso.',
+      senhaTemporaria: novaSenhaTemp
+    });
   } catch (error) {
     logger.error('Erro ao resetar senha', {
       error: error.message,
