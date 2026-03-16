@@ -17,10 +17,11 @@ passenger:
     - NODE_ENV=production
 
 commands:
-  # 1. Instala dependências e gera o build do Vue (frontend/dist/)
-  - cd frontend && npm install && npm run build
-  # 2. Instala dependências do backend
-  - cd backend && npm install
+  # 1. Instala dependências do backend (primeiro, pois é o servidor)
+  - npm install --prefix backend
+  # 2. Instala dependências do frontend e gera o build
+  - npm install --prefix frontend
+  - npm run build --prefix frontend
   # 3. Garante que a pasta de logs existe para o Winston
   - mkdir -p backend/logs
   # 4. Reinicia o Passenger
