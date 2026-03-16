@@ -4,6 +4,7 @@ const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 const { getRealIP } = require('../utils/helpers');
+const { setTokenCookie, clearTokenCookie } = require('../utils/cookieHelper');
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '2h';
 
@@ -59,7 +60,7 @@ exports.login = async (req, res) => {
     } else {
       logger.logAuthAttempt(true, matricula, clientIP);
       const token = jwt.sign({ id: user.id, loginType: effectiveLoginType }, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
-      
+
       let loginUser = {
         id: user.id,
         matricula: user.matricula,
@@ -67,14 +68,15 @@ exports.login = async (req, res) => {
         admin_padrao: user.admin_padrao,
         admin_super: user.admin_super
       };
-      
-      // Ajusta o objeto 'user' de acordo com o loginType EFETIVO
-      // A lógica para 'usuario' foi REMOVIDA
+
       if (effectiveLoginType === 'admin_padrao') {
         loginUser.admin_super = false;
       }
 
-      return res.json({ token, user: loginUser });
+      // Define o token como cookie httpOnly (protegido contra XSS)
+      setTokenCookie(res, token);
+
+      return res.json({ user: loginUser });
     }
   } catch (error) {
     logger.error('Erro no processo de login', {
@@ -87,6 +89,11 @@ exports.login = async (req, res) => {
   }
 };
 
+
+exports.logout = (req, res) => {
+  clearTokenCookie(res);
+  res.json({ message: 'Logout realizado com sucesso' });
+};
 
 exports.firstLogin = async (req, res) => {
   const { userId, novaSenha, loginType } = req.body;
@@ -112,23 +119,24 @@ exports.firstLogin = async (req, res) => {
       ip: clientIP
     });
 
-    // O loginType enviado já é o 'effectiveLoginType'
     const token = jwt.sign({ id: user.id, loginType: loginType }, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
-    
-    let loginUser = { 
-      id: user.id, 
-      matricula: user.matricula, 
+
+    let loginUser = {
+      id: user.id,
+      matricula: user.matricula,
       nome: user.nome,
-      admin_padrao: user.admin_padrao, 
-      admin_super: user.admin_super 
+      admin_padrao: user.admin_padrao,
+      admin_super: user.admin_super
     };
 
-    // Ajusta o objeto 'user' - A lógica para 'usuario' foi REMOVIDA
     if (loginType === 'admin_padrao') {
       loginUser.admin_super = false;
     }
 
-    return res.json({ token, user: loginUser });
+    // Define o token como cookie httpOnly (protegido contra XSS)
+    setTokenCookie(res, token);
+
+    return res.json({ user: loginUser });
   } catch (error) {
     logger.error('Erro no primeiro login', {
       error: error.message,

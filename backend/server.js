@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./utils/swagger');
@@ -118,9 +119,10 @@ if (PORT < 1 || PORT > 65535) {
 // Middleware de logging HTTP
 app.use(httpLogger);
 
-// Parsers de JSON e URL-encoded
+// Parsers de JSON, URL-encoded e cookies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Middleware para validar JSON
 app.use(validateJSON);

@@ -8,16 +8,8 @@ import { useAuthStore } from '@/stores/auth';
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const apiClient = axios.create({
-  baseURL: baseURL,
-});
-
-// Interceptor de request: adiciona token JWT
-apiClient.interceptors.request.use(config => {
-  const authStore = useAuthStore();
-  if (authStore.token) {
-    config.headers.Authorization = `Bearer ${authStore.token}`;
-  }
-  return config;
+  baseURL,
+  withCredentials: true, // Envia cookies httpOnly automaticamente em todas as requisições
 });
 
 // Interceptor de response: logout automático quando token expira (401)

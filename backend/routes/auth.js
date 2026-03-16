@@ -100,4 +100,18 @@ router.post('/login', loginLimiter, validateLogin, authController.login);
  */
 router.post('/primeiro-login', firstLoginLimiter, validateFirstLogin, authController.firstLogin);
 
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout
+ *     description: Remove o cookie de autenticação httpOnly
+ *     tags: [Autenticação]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Logout realizado com sucesso
+ */
+router.post('/logout', authController.logout);
+
 module.exports = router;
