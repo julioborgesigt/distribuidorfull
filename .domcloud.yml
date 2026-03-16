@@ -17,12 +17,24 @@ passenger:
     - NODE_ENV=production
 
 commands:
-  # 1. Instala dependências do backend (primeiro, pois é o servidor)
+  # 1. Cria backend/.env com as variáveis de ambiente
+  #    (env_var_list só está disponível no runtime do Passenger, não nos commands)
+  - |
+    cat > backend/.env <<'EOF'
+    JWT_SECRET=b7f8a2d4e3f7c78e8e9a3d0b5f6d8a3e7c9f2b8e4d1a5c0e2d3f9b6a7d8e4c1f
+    DB_HOST=sao.domcloud.co
+    DB_USER=distribuidor
+    DB_PASS=-C)W1aQ6nG9(Vbr1s7
+    DB_NAME=distribuidor_proc
+    FRONTEND_URL=https://distribuidorigt.domcloud.dev
+    NODE_ENV=production
+    EOF
+  # 2. Instala dependências do backend
   - npm install --prefix backend
-  # 2. Instala dependências do frontend e gera o build
+  # 3. Instala dependências do frontend e gera o build
   - npm install --prefix frontend
   - npm run build --prefix frontend
-  # 3. Garante que a pasta de logs existe para o Winston
+  # 4. Garante que a pasta de logs existe para o Winston
   - mkdir -p backend/logs
-  # 4. Reinicia o Passenger
+  # 5. Reinicia o Passenger
   - mkdir -p backend/tmp && touch backend/tmp/restart.txt
