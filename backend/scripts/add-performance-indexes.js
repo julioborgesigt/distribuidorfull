@@ -123,6 +123,45 @@ async function main() {
     connection = await mysql.createConnection(config);
     console.log('✓ Conectado com sucesso!\n');
 
+    // Listar índices existentes na tabela processos
+    const [existingIndexes] = await connection.query(`SHOW INDEX FROM processos`);
+    const indexNames = [...new Set(existingIndexes.map(r => r.Key_name))];
+    console.log(`→ Índices existentes na tabela processos: ${indexNames.length}`);
+    console.log(`  ${indexNames.join(', ')}\n`);
+
+    if (indexNames.length >= 62) {
+      console.log('⚠ Tabela próxima do limite de 64 índices. Verificando duplicados...\n');
+
+      // Agrupar por colunas para encontrar duplicados
+      const indexMap = {};
+      for (const row of existingIndexes) {
+        if (!indexMap[row.Key_name]) indexMap[row.Key_name] = [];
+        indexMap[row.Key_name].push(row.Column_name);
+      }
+
+      // Encontrar índices redundantes (mesmas colunas)
+      const colSignatures = {};
+      const duplicates = [];
+      for (const [name, cols] of Object.entries(indexMap)) {
+        if (name === 'PRIMARY') continue;
+        const sig = cols.join(',');
+        if (colSignatures[sig]) {
+          duplicates.push({ name, cols: sig, duplicateOf: colSignatures[sig] });
+        } else {
+          colSignatures[sig] = name;
+        }
+      }
+
+      if (duplicates.length > 0) {
+        console.log(`→ Encontrados ${duplicates.length} índices duplicados. Removendo...\n`);
+        for (const dup of duplicates) {
+          console.log(`  Removendo ${dup.name} (duplicata de ${dup.duplicateOf}, colunas: ${dup.cols})`);
+          await connection.query(`DROP INDEX ${dup.name} ON processos`);
+        }
+        console.log('');
+      }
+    }
+
     // Criar índices
     let created = 0;
     let existing = 0;
