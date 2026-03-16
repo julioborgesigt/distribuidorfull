@@ -2,7 +2,7 @@
 // Gerencia estatísticas e opções de filtro do dashboard
 
 const { sequelize, User, Process } = require('../models');
-const { Op, literal } = require('sequelize');
+const { Op } = require('sequelize');
 const logger = require('../utils/logger');
 const { getRealIP, parseArrayFilter } = require('../utils/helpers');
 
@@ -14,7 +14,7 @@ const buildStatsWhereClause = (req) => {
   const where = {};
 
   if (search) {
-    where.numero_processo = { [Op.like]: `%${search}%` };
+    where.numero_processo = { [Op.like]: `${search}%` };
   }
   const classeFilter = parseArrayFilter(classe);
   if (classeFilter) {
@@ -47,13 +47,13 @@ const buildStatsWhereClause = (req) => {
   }
 
   if (prazo) {
-    const prazoQuery = `DATE_ADD(data_intimacao, INTERVAL CAST(prazo_processual AS UNSIGNED) DAY)`;
-    where.data_intimacao = { [Op.not]: null };
-    where[Op.and] = (where[Op.and] || []);
+    const today = new Date().toISOString().split('T')[0];
+    where.prazo_vencimento = { [Op.not]: null };
+
     if (prazo === 'vencido') {
-      where[Op.and].push(literal(`${prazoQuery} < CURDATE()`));
+      where.prazo_vencimento = { [Op.lt]: today };
     } else if (prazo === 'a_vencer') {
-      where[Op.and].push(literal(`${prazoQuery} >= CURDATE()`));
+      where.prazo_vencimento = { [Op.gte]: today };
     }
   }
 
@@ -87,10 +87,18 @@ exports.getDashboardStats = async (req, res) => {
       cumpridoWhere.cumpridoDate = { [Op.gte]: dataLimite };
     }
 
-    const prazoQuery = `DATE_ADD(data_intimacao, INTERVAL CAST(prazo_processual AS UNSIGNED) DAY)`;
-    const vencidoWhere = { ...pendingWhere, data_intimacao: { [Op.not]: null }, [Op.and]: literal(`${prazoQuery} < CURDATE()`) };
-    const p10dWhere = { ...pendingWhere, data_intimacao: { [Op.not]: null }, [Op.and]: literal(`${prazoQuery} BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 10 DAY)`) };
-    const p30dWhere = { ...pendingWhere, data_intimacao: { [Op.not]: null }, [Op.and]: literal(`${prazoQuery} BETWEEN DATE_ADD(CURDATE(), INTERVAL 11 DAY) AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)`) };
+    // Filtros de prazo usando coluna indexada prazo_vencimento
+    const today = new Date().toISOString().split('T')[0];
+    const in10d = new Date();
+    in10d.setDate(in10d.getDate() + 10);
+    const in11d = new Date();
+    in11d.setDate(in11d.getDate() + 11);
+    const in30d = new Date();
+    in30d.setDate(in30d.getDate() + 30);
+
+    const vencidoWhere = { ...pendingWhere, prazo_vencimento: { [Op.lt]: today } };
+    const p10dWhere = { ...pendingWhere, prazo_vencimento: { [Op.between]: [today, in10d.toISOString().split('T')[0]] } };
+    const p30dWhere = { ...pendingWhere, prazo_vencimento: { [Op.between]: [in11d.toISOString().split('T')[0], in30d.toISOString().split('T')[0]] } };
 
     const assuntosChave = ['Homicídio', 'Roubo', 'Furto', 'Estelionato', 'Tráfico'];
     const assuntoQueries = assuntosChave.map(assunto =>

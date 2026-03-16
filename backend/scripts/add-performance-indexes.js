@@ -62,6 +62,18 @@ const indexes = [
     columns: ['assunto_principal'],
     description: 'Índice para assunto_principal (usado em filtros)'
   },
+  {
+    table: 'processos',
+    name: 'idx_tarjas',
+    columns: ['tarjas'],
+    description: 'Índice para tarjas (usado em filtros IN)'
+  },
+  {
+    table: 'processos',
+    name: 'idx_prazo_vencimento',
+    columns: ['prazo_vencimento'],
+    description: 'Índice para prazo_vencimento (substitui cálculo literal DATE_ADD)'
+  },
   // Usuarios
   {
     table: 'usuarios',

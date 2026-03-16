@@ -600,7 +600,7 @@ import apiClient from '@/api/axios';
 import TabelaProcessos from '../components/TabelaProcessos.vue'; 
 import StatsGrid from '../components/StatsGrid.vue';
 import CumpridosChart from '../components/CumpridosChart.vue';
-import { addDays, differenceInDays, startOfToday, parseISO, format, subDays } from 'date-fns';
+import { differenceInDays, startOfToday, parseISO, format } from 'date-fns';
 // jsPDF e autoTable são carregados sob demanda (lazy) para não aumentar o bundle inicial
 import { useDisplay } from 'vuetify';
 const { mdAndUp } = useDisplay(); // mdAndUp será 'true' se a tela for >= 960px
@@ -817,31 +817,25 @@ const formattedDataFim = computed(() => {
 // =================================================================
 // ... (Todas as funções helper são MANTIDAS aqui) ...
 // --- Helpers de Cálculo de Prazo (Usados pela Tabela) ---
-const parsePrazoDias = (prazoString) => {
-  if (!prazoString) return 0;
-  const dias = parseInt(prazoString, 10);
-  return isNaN(dias) ? 0 : dias;
-};
+// Usa a coluna prazo_vencimento pré-calculada pelo backend (indexada)
 const getPrazoRestanteNum = (proc) => {
-    if (!proc.data_intimacao || proc.prazo_processual == null) return null;
-    try {
-      const hoje = startOfToday();
-      const diasDePrazo = parsePrazoDias(proc.prazo_processual);
-      const dataIntimacao = parseISO(proc.data_intimacao);
-      const dataVencimento = addDays(dataIntimacao, diasDePrazo);
-      return differenceInDays(dataVencimento, hoje);
-    } catch (e) {
-      return null;
-    }
+  if (!proc.prazo_vencimento) return null;
+  try {
+    const hoje = startOfToday();
+    const dataVencimento = parseISO(proc.prazo_vencimento);
+    return differenceInDays(dataVencimento, hoje);
+  } catch {
+    return null;
+  }
 };
 const formatarPrazo = (dias) => {
-  if (dias === null || dias === 'Erro') return 'N/A';
+  if (dias === null) return 'N/A';
   if (dias < 0) return `Vencido há ${Math.abs(dias)} dias`;
   if (dias === 0) return 'Vence hoje';
   return `Vence em ${dias} dias`;
 };
 const getCorPrazo = (dias) => {
-  if (dias === null || dias === 'Erro') return 'grey';
+  if (dias === null) return 'grey';
   if (dias < 0) return 'red';
   if (dias <= 5) return 'orange';
   return 'green';
@@ -887,9 +881,18 @@ const buildQueryParams = () => {
 // =================================================================
 // 8. FUNÇÕES API (Chamadas ao Backend)
 // =================================================================
-// ... (Todas as funções de API são MANTIDAS aqui) ...
+
+// AbortController para cancelar requests anteriores quando filtros mudam rapidamente
+let tableAbortController = null;
+
 // Busca dados paginados para a TABELA
 const fetchTableData = async () => {
+  // Cancela request anterior se ainda estiver em andamento
+  if (tableAbortController) {
+    tableAbortController.abort();
+  }
+  tableAbortController = new AbortController();
+
   loadingTable.value = true;
   const params = buildQueryParams();
   params.append('page', options.value.page || 1);
@@ -897,7 +900,10 @@ const fetchTableData = async () => {
   params.append('sortBy', JSON.stringify(options.value.sortBy || []));
 
   try {
-    const response = await apiClient.get('/admin/processes', { params });
+    const response = await apiClient.get('/admin/processes', {
+      params,
+      signal: tableAbortController.signal
+    });
     serverItems.value = response.data.items.map(proc => {
       const prazoNum = getPrazoRestanteNum(proc);
       return {
@@ -908,7 +914,9 @@ const fetchTableData = async () => {
       };
     });
     totalItems.value = response.data.totalItems;
-  } catch {
+  } catch (error) {
+    // Ignora erros de abort (request cancelado por novo filtro)
+    if (error?.code === 'ERR_CANCELED') return;
     snackbarText.value = 'Erro ao carregar processos da tabela.';
     snackbarColor.value = 'error';
     snackbar.value = true;
@@ -946,11 +954,39 @@ const checkUnassignedProcesses = async () => {
   }
 };
 
-// Busca a lista de todos os usuários para os modais/filtros
+// --- Cache helpers (sessionStorage com TTL de 5 minutos) ---
+const CACHE_TTL = 5 * 60 * 1000;
+
+const getCache = (key) => {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) {
+      sessionStorage.removeItem(key);
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+const setCache = (key, data) => {
+  sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
+};
+
+// Busca a lista de todos os usuários para os modais/filtros (com cache de 5 min)
 const fetchAllUsers = async () => {
+  const cached = getCache('cache:users');
+  if (cached) {
+    allUsersList.value = cached;
+    return;
+  }
   try {
     const response = await apiClient.get('/admin/users');
     allUsersList.value = response.data;
+    setCache('cache:users', response.data);
   } catch {
     snackbarText.value = 'Erro ao carregar lista de usuários.';
     snackbarColor.value = 'error';
@@ -958,13 +994,21 @@ const fetchAllUsers = async () => {
   }
 };
 
-// Busca valores únicos para os filtros via endpoint dedicado (SELECT DISTINCT no backend)
+// Busca valores únicos para os filtros via endpoint dedicado (com cache de 5 min)
 const fetchFilterOptions = async () => {
+  const cached = getCache('cache:filterOptions');
+  if (cached) {
+    allClassesList.value = cached.classes;
+    allAssuntosList.value = cached.assuntos;
+    allTarjasList.value = cached.tarjas;
+    return;
+  }
   try {
     const { data } = await apiClient.get('/admin/filter-options');
     allClassesList.value = data.classes;
     allAssuntosList.value = data.assuntos;
     allTarjasList.value = data.tarjas;
+    setCache('cache:filterOptions', data);
   } catch {
     // Silenciado: filtros usarão valores em cache ou ficarão vazios
   }
