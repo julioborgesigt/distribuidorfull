@@ -170,15 +170,15 @@ const itemEdicao = ref({ id: null, observacoes: '' });
 // Precisamos habilitar 'sortable' para a ordenação do servidor funcionar.
 // O 'prazoRestanteNum' vai precisar de atenção especial.
 const headers = ref([
-  { title: 'Nº Processo', key: 'numero_processo', width: '160px' },
+  { title: 'Nº Processo', key: 'numero_processo', width: '180px' },
   { title: 'Atribuído', key: 'user', width: '100px' },
   { title: 'Classe', key: 'classe_principal', width: '120px' },
   { title: 'Assunto', key: 'assunto_principal', width: '140px' },
   { title: 'Tarjas', key: 'tarjas', width: '120px' },
   { title: 'Prazo', key: 'prazoRestanteNum', width: '120px' },
   { title: 'Reit.', key: 'reiteracoes', width: '70px', align: 'center' },
-  { title: 'Observações', key: 'observacoes', width: '180px', sortable: false },
-  { title: 'Cumprir', key: 'acaoCumprido', width: '60px', align: 'center', sortable: false },
+  { title: 'Observações', key: 'observacoes', width: '165px', sortable: false },
+  { title: 'Cumprir', key: 'acaoCumprido', width: '70px', align: 'center', sortable: false },
 ]);
 
 // --- 5. FUNÇÕES AUXILIARES (Sem alteração) ---
