@@ -13,7 +13,7 @@ const { getRealIP, parseArrayFilter } = require('../utils/helpers');
 // Upload e importação de CSV
 exports.uploadCSV = (req, res) => {
   if (!req.file) {
-    return res.status(400).send('Nenhum arquivo foi enviado.');
+    return res.status(400).json({ error: 'Nenhum arquivo foi enviado.' });
   }
 
   const filePath = req.file.path;
@@ -73,8 +73,19 @@ exports.uploadCSV = (req, res) => {
           }
         }
 
-        for (let row of latestProcessesMap.values()) {
-          const existing = await Process.findOne({ where: { numero_processo: row.numero_processo } });
+        // Otimização: busca todos os processos existentes em uma única query
+        const allNumeros = Array.from(latestProcessesMap.keys());
+        const existingProcesses = await Process.findAll({
+          where: { numero_processo: { [Op.in]: allNumeros } }
+        });
+        const existingMap = new Map(existingProcesses.map(p => [p.numero_processo, p]));
+
+        // Separa novos registros dos que precisam de atualização
+        const newRows = [];
+        const updatePromises = [];
+
+        for (const row of latestProcessesMap.values()) {
+          const existing = existingMap.get(row.numero_processo);
 
           if (existing) {
             const updateData = {};
@@ -100,19 +111,25 @@ exports.uploadCSV = (req, res) => {
               }
             }
             if (Object.keys(updateData).length > 0) {
-              await existing.update(updateData);
+              updatePromises.push(existing.update(updateData));
             }
           } else {
-            await Process.create(row);
+            newRows.push(row);
           }
         }
+
+        // Insere novos registros em batch e processa updates em paralelo
+        await Promise.all([
+          newRows.length > 0 ? Process.bulkCreate(newRows, { individualHooks: true }) : Promise.resolve(),
+          ...updatePromises
+        ]);
 
         await fsPromises.unlink(filePath);
         logger.info('CSV importado com sucesso', {
           totalRows: latestProcessesMap.size,
           userId: req.userId
         });
-        res.send('CSV importado com sucesso. Registros mais recentes foram processados.');
+        res.json({ message: 'CSV importado com sucesso. Registros mais recentes foram processados.', totalRows: latestProcessesMap.size });
 
       } catch (error) {
         logger.error('Erro ao salvar dados do CSV', {
@@ -121,7 +138,7 @@ exports.uploadCSV = (req, res) => {
           userId: req.userId,
           ip: getRealIP(req)
         });
-        res.status(500).send('Erro ao salvar dados do CSV.');
+        res.status(500).json({ error: 'Erro ao salvar dados do CSV.' });
       }
     })
     .on('error', (error) => {
@@ -131,7 +148,7 @@ exports.uploadCSV = (req, res) => {
         userId: req.userId,
         ip: getRealIP(req)
       });
-      res.status(500).send('Erro ao ler o arquivo CSV.');
+      res.status(500).json({ error: 'Erro ao ler o arquivo CSV.' });
     });
 };
 
@@ -275,7 +292,7 @@ exports.listProcesses = async (req, res) => {
 
 // Atribuição automática de processos
 exports.assignProcesses = async (req, res) => {
-  res.send('Atribuição automática simulada (lógica não implementada).');
+  res.status(501).json({ error: 'Atribuição automática não implementada.' });
 };
 
 // Atribuição manual de um processo
@@ -295,7 +312,7 @@ exports.manualAssignProcess = async (req, res) => {
         matricula,
         userId: req.userId
       });
-      return res.status(404).send('Usuário não encontrado.');
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
 
     const numero = numeroProcesso.trim();
@@ -306,7 +323,7 @@ exports.manualAssignProcess = async (req, res) => {
         numeroProcesso: numero,
         userId: req.userId
       });
-      return res.status(404).send('Processo não encontrado.');
+      return res.status(404).json({ error: 'Processo não encontrado.' });
     }
 
     process.userId = user.id;
@@ -318,7 +335,7 @@ exports.manualAssignProcess = async (req, res) => {
       assignedTo: user.id,
       assignedBy: req.userId
     });
-    res.send('Processo atribuído com sucesso.');
+    res.json({ message: 'Processo atribuído com sucesso.' });
   } catch (error) {
     logger.error('Erro ao atribuir processo', {
       error: error.message,
@@ -326,7 +343,7 @@ exports.manualAssignProcess = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).send('Erro ao atribuir processo.');
+    res.status(500).json({ error: 'Erro ao atribuir processo.' });
   }
 };
 
@@ -452,7 +469,7 @@ exports.bulkAssign = async (req, res) => {
     const { processIds, matricula } = req.body;
     const user = await User.findOne({ where: { matricula } });
     if (!user) {
-      return res.status(404).send("Usuário destino não encontrado.");
+      return res.status(404).json({ error: 'Usuário destino não encontrado.' });
     }
     await Process.update({ userId: user.id }, {
       where: { id: processIds }
@@ -464,7 +481,7 @@ exports.bulkAssign = async (req, res) => {
       assignedBy: req.userId,
       ip: getRealIP(req)
     });
-    res.send("Atribuição em massa realizada com sucesso.");
+    res.json({ message: 'Atribuição em massa realizada com sucesso.', count: processIds.length });
   } catch (error) {
     logger.error('Erro ao realizar atribuição em massa', {
       error: error.message,
@@ -472,7 +489,7 @@ exports.bulkAssign = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).send("Erro ao realizar atribuição em massa.");
+    res.status(500).json({ error: 'Erro ao realizar atribuição em massa.' });
   }
 };
 
@@ -488,7 +505,7 @@ exports.bulkDelete = async (req, res) => {
       deletedBy: req.userId,
       ip: getRealIP(req)
     });
-    res.send("Exclusão em massa realizada com sucesso.");
+    res.json({ message: 'Exclusão em massa realizada com sucesso.', count: processIds.length });
   } catch (error) {
     logger.error('Erro ao realizar exclusão em massa', {
       error: error.message,
@@ -496,7 +513,7 @@ exports.bulkDelete = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).send("Erro ao realizar exclusão em massa.");
+    res.status(500).json({ error: 'Erro ao realizar exclusão em massa.' });
   }
 };
 
@@ -512,7 +529,7 @@ exports.bulkCumprido = async (req, res) => {
       markedBy: req.userId,
       ip: getRealIP(req)
     });
-    res.send("Processos marcados como cumpridos com sucesso.");
+    res.json({ message: 'Processos marcados como cumpridos com sucesso.', count: processIds.length });
   } catch (error) {
     logger.error('Erro ao atualizar status em massa', {
       error: error.message,
@@ -520,7 +537,7 @@ exports.bulkCumprido = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).send("Erro ao atualizar status em massa.");
+    res.status(500).json({ error: 'Erro ao atualizar status em massa.' });
   }
 };
 
@@ -530,7 +547,7 @@ exports.updateIntim = async (req, res) => {
   try {
     const process = await Process.findByPk(processId);
     if (!process) {
-      return res.status(404).send('Processo não encontrado.');
+      return res.status(404).json({ error: 'Processo não encontrado.' });
     }
     process.reiteracoes = reiteracoes;
     await process.save();
@@ -539,7 +556,7 @@ exports.updateIntim = async (req, res) => {
       reiteracoes,
       updatedBy: req.userId
     });
-    res.send('Número de intim atualizado com sucesso.');
+    res.json({ message: 'Número de intim atualizado com sucesso.' });
   } catch (error) {
     logger.error('Erro ao atualizar número de intim', {
       error: error.message,
@@ -548,6 +565,6 @@ exports.updateIntim = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).send('Erro ao atualizar número de intim.');
+    res.status(500).json({ error: 'Erro ao atualizar número de intim.' });
   }
 };

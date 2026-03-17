@@ -9,11 +9,70 @@ const { setTokenCookie, clearTokenCookie } = require('../utils/cookieHelper');
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '2h';
 
+// --- Account Lockout em memória ---
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutos
+const loginAttempts = new Map(); // chave: "ip:matricula", valor: { count, lockedUntil }
+
+function getAttemptKey(ip, matricula) {
+  return `${ip}:${matricula}`;
+}
+
+function checkLockout(ip, matricula) {
+  const key = getAttemptKey(ip, matricula);
+  const record = loginAttempts.get(key);
+  if (!record) return { locked: false };
+  if (record.lockedUntil && Date.now() < record.lockedUntil) {
+    const remainingMs = record.lockedUntil - Date.now();
+    return { locked: true, remainingMinutes: Math.ceil(remainingMs / 60000) };
+  }
+  if (record.lockedUntil && Date.now() >= record.lockedUntil) {
+    loginAttempts.delete(key);
+    return { locked: false };
+  }
+  return { locked: false };
+}
+
+function recordFailedAttempt(ip, matricula) {
+  const key = getAttemptKey(ip, matricula);
+  const record = loginAttempts.get(key) || { count: 0, lockedUntil: null };
+  record.count += 1;
+  if (record.count >= MAX_LOGIN_ATTEMPTS) {
+    record.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+    logger.logSecurityEvent('Conta bloqueada por tentativas excessivas', { ip, matricula, attempts: record.count });
+  }
+  loginAttempts.set(key, record);
+  return record;
+}
+
+function clearAttempts(ip, matricula) {
+  loginAttempts.delete(getAttemptKey(ip, matricula));
+}
+
+// Limpeza periódica de registros expirados (a cada 10 min)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of loginAttempts.entries()) {
+    if (record.lockedUntil && now >= record.lockedUntil) {
+      loginAttempts.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
+
 exports.login = async (req, res) => {
   const { matricula, senha, loginType } = req.body;
   const clientIP = getRealIP(req);
 
   logger.info('Tentativa de login', { matricula, loginType, ip: clientIP });
+
+  // --- 0. VERIFICAÇÃO DE LOCKOUT ---
+  const lockStatus = checkLockout(clientIP, matricula);
+  if (lockStatus.locked) {
+    logger.warn('Tentativa de login em conta bloqueada', { matricula, ip: clientIP });
+    return res.status(429).json({
+      error: `Conta temporariamente bloqueada por tentativas excessivas. Tente novamente em ${lockStatus.remainingMinutes} minuto(s).`
+    });
+  }
 
   // --- 1. VALIDAÇÃO DO TIPO DE LOGIN (NOVO) ---
   // Exige que o loginType seja especificado como admin
@@ -50,9 +109,21 @@ exports.login = async (req, res) => {
     // Verificação de senha (assíncrona para não bloquear o event loop)
     const senhaValida = await bcryptjs.compare(senha, user.senha);
     if (!senhaValida) {
+      const attempt = recordFailedAttempt(clientIP, matricula);
       logger.logAuthAttempt(false, matricula, clientIP, 'Senha incorreta');
-      return res.status(401).json({ error: 'Senha incorreta' });
+      if (attempt.lockedUntil) {
+        return res.status(429).json({
+          error: `Conta bloqueada por ${MAX_LOGIN_ATTEMPTS} tentativas incorretas. Tente novamente em 15 minutos.`
+        });
+      }
+      return res.status(401).json({
+        error: 'Senha incorreta',
+        attemptsRemaining: MAX_LOGIN_ATTEMPTS - attempt.count
+      });
     }
+
+    // Login bem-sucedido: limpa tentativas falhas
+    clearAttempts(clientIP, matricula);
 
     // Lógica de primeiro login
     if (user.senha_padrao) {

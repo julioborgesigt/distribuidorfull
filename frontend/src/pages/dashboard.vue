@@ -1432,7 +1432,7 @@ const handleBulkAssign = async () => {
     selected.value = [];
     await reloadAllData(); // Recarrega tudo
   } catch (error) {
-    snackbarText.value = error.response?.data || 'Erro ao atribuir processos.';
+    snackbarText.value = error.response?.data?.error || 'Erro ao atribuir processos.';
     snackbarColor.value = 'error';
     snackbar.value = true;
   } finally {
