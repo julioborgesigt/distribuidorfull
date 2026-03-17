@@ -30,7 +30,7 @@ exports.listUsers = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).send('Erro ao buscar usuários.');
+    res.status(500).json({ error: 'Erro ao buscar usuários.' });
   }
 };
 
@@ -39,7 +39,7 @@ exports.preCadastro = async (req, res) => {
   const { matricula, nome, senha, tipoCadastro, updateIfExists } = req.body;
 
   if (!matricula || !nome || !senha || !tipoCadastro) {
-    return res.status(400).send('Campos obrigatórios ausentes.');
+    return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
   }
 
   if (!isValidPassword(senha)) {
@@ -99,7 +99,7 @@ exports.preCadastro = async (req, res) => {
       tipoCadastro,
       createdBy: req.userId
     });
-    res.send('Pré-cadastro realizado com sucesso.');
+    res.status(201).json({ message: 'Pré-cadastro realizado com sucesso.' });
   } catch (error) {
     logger.error('Erro ao realizar pré-cadastro', {
       error: error.message,
@@ -108,7 +108,7 @@ exports.preCadastro = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).send('Erro ao realizar pré-cadastro.');
+    res.status(500).json({ error: 'Erro ao realizar pré-cadastro.' });
   }
 };
 
@@ -117,7 +117,7 @@ exports.resetPassword = async (req, res) => {
   const { matricula } = req.body;
 
   if (!matricula) {
-    return res.status(400).send('Matrícula obrigatória.');
+    return res.status(400).json({ error: 'Matrícula obrigatória.' });
   }
 
   try {
@@ -149,7 +149,7 @@ exports.resetPassword = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).send('Erro ao resetar senha.');
+    res.status(500).json({ error: 'Erro ao resetar senha.' });
   }
 };
 
