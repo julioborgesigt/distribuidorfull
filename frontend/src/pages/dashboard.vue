@@ -30,14 +30,14 @@
     </div>
   </v-alert>
 
-  <!-- Drawer lateral mobile: tema, logout e ações de admin -->
+  <!-- Barra lateral: permanente no desktop, temporária (overlay) no mobile -->
   <v-navigation-drawer
     v-model="drawerOpen"
     location="right"
-    temporary
+    :temporary="!mdAndUp"
   >
+    <!-- Topo: saudação + ações de admin -->
     <v-list>
-      <!-- Saudação -->
       <v-list-item
         v-if="user"
         prepend-icon="mdi-account-circle"
@@ -45,86 +45,53 @@
         title="Bem-vindo"
       />
 
-      <v-divider />
-
-      <!-- Trocar tema -->
-      <v-list-item
-        :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
-        :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
-        @click="toggleTheme"
-      />
-
-      <!-- Sair -->
-      <v-list-item
-        prepend-icon="mdi-logout"
-        title="Sair"
-        base-color="error"
-        @click="() => { drawerOpen = false; authStore.logout(); }"
-      />
-
-      <!-- Ações de admin (apenas para admin_super) -->
       <template v-if="user?.admin_super">
         <v-divider class="mt-2" />
         <v-list-subheader>Administrador</v-list-subheader>
         <v-list-item
           prepend-icon="mdi-account-plus-outline"
           title="Cadastrar Usuário"
-          @click="() => { drawerOpen = false; abrirModalCadastro(); }"
+          @click="() => { if (!mdAndUp) drawerOpen = false; abrirModalCadastro(); }"
         />
         <v-list-item
           prepend-icon="mdi-lock-reset"
           title="Resetar Senha"
           base-color="orange"
-          @click="() => { drawerOpen = false; abrirModalReset(); }"
+          @click="() => { if (!mdAndUp) drawerOpen = false; abrirModalReset(); }"
         />
         <v-list-item
           prepend-icon="mdi-account-remove-outline"
           title="Apagar Usuário"
           base-color="red"
-          @click="() => { drawerOpen = false; abrirModalDelete(); }"
+          @click="() => { if (!mdAndUp) drawerOpen = false; abrirModalDelete(); }"
         />
         <v-list-item
           prepend-icon="mdi-file-upload-outline"
           title="Importar CSV"
           base-color="teal"
-          @click="() => { drawerOpen = false; abrirModalUpload(); }"
+          @click="() => { if (!mdAndUp) drawerOpen = false; abrirModalUpload(); }"
         />
       </template>
     </v-list>
+
+    <!-- Rodapé fixo: tema e sair -->
+    <template #append>
+      <v-divider />
+      <v-list>
+        <v-list-item
+          :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
+          :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
+          @click="toggleTheme"
+        />
+        <v-list-item
+          prepend-icon="mdi-logout"
+          title="Sair"
+          base-color="error"
+          @click="() => { if (!mdAndUp) drawerOpen = false; authStore.logout(); }"
+        />
+      </v-list>
+    </template>
   </v-navigation-drawer>
-
-  <!--
-    Card de Ações de Admin: visível apenas no desktop (sm+).
-  -->
-  <v-card class="mb-6 pa-3" v-if="user?.admin_super && mdAndUp">
-    <v-row align="center" justify="space-between" class="ga-2">
-      <v-col cols="12" sm="auto">
-        <div class="text-h6">Ações de Administrador</div>
-      </v-col>
-      <v-col cols="12" sm="auto">
-        <div class="d-flex flex-wrap justify-center justify-md-end" style="gap: 10px;">
-          <v-btn color="primary" variant="tonal" prepend-icon="mdi-account-plus-outline" @click="abrirModalCadastro" aria-label="Cadastrar novo usuário">
-            <v-tooltip activator="parent" location="bottom">Cadastrar Usuário</v-tooltip>
-            <span>Cadastrar Usuário</span>
-          </v-btn>
-          <v-btn color="orange" variant="tonal" prepend-icon="mdi-lock-reset" @click="abrirModalReset" aria-label="Resetar senha de usuário">
-            <v-tooltip activator="parent" location="bottom">Resetar Senha</v-tooltip>
-            <span>Resetar Senha</span>
-          </v-btn>
-          <v-btn color="red" variant="tonal" prepend-icon="mdi-account-remove-outline" @click="abrirModalDelete" aria-label="Apagar usuário">
-            <v-tooltip activator="parent" location="bottom">Apagar Usuário</v-tooltip>
-            <span>Apagar Usuário</span>
-          </v-btn>
-          <v-btn color="teal" variant="tonal" prepend-icon="mdi-file-upload-outline" @click="abrirModalUpload" aria-label="Importar arquivo CSV">
-            <v-tooltip activator="parent" location="bottom">Importar CSV</v-tooltip>
-            <span>Importar CSV</span>
-          </v-btn>
-        </div>
-      </v-col>
-    </v-row>
-  </v-card>
-
-  <!-- O CARD ORIGINAL FOI COMPLETAMENTE REMOVIDO -->
 
   <!-- O resto do seu template do dashboard continua aqui (gráficos, filtros, tabela) -->
   <v-expansion-panels class="mb-6" :model-value="mdAndUp ? 0 : undefined">
@@ -700,6 +667,11 @@ const theme = useTheme();
 const toggleTheme = () => {
   theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark';
 };
+
+// Abre a barra lateral automaticamente no desktop; fecha ao voltar para mobile
+watch(mdAndUp, (isDesktop) => {
+  drawerOpen.value = isDesktop;
+}, { immediate: true });
 // import { useTheme } from 'vuetify'; // REMOVIDO - Movido para default.vue
 
 
