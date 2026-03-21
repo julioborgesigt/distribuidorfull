@@ -43,15 +43,19 @@
         <div class="d-flex flex-wrap justify-center justify-md-end" style="gap: 10px;">
           <!-- Botões de Admin que abrem os modais -->
           <v-btn color="primary" variant="tonal" prepend-icon="mdi-account-plus-outline" @click="abrirModalCadastro" aria-label="Cadastrar novo usuário">
+            <v-tooltip activator="parent" location="bottom">Cadastrar Usuário</v-tooltip>
             <span class="d-none d-sm-inline">Cadastrar Usuário</span>
           </v-btn>
           <v-btn color="orange" variant="tonal" prepend-icon="mdi-lock-reset" @click="abrirModalReset" aria-label="Resetar senha de usuário">
+            <v-tooltip activator="parent" location="bottom">Resetar Senha</v-tooltip>
             <span class="d-none d-sm-inline">Resetar Senha</span>
           </v-btn>
           <v-btn color="red" variant="tonal" prepend-icon="mdi-account-remove-outline" @click="abrirModalDelete" aria-label="Apagar usuário">
+            <v-tooltip activator="parent" location="bottom">Apagar Usuário</v-tooltip>
             <span class="d-none d-sm-inline">Apagar Usuário</span>
           </v-btn>
           <v-btn color="teal" variant="tonal" prepend-icon="mdi-file-upload-outline" @click="abrirModalUpload" aria-label="Importar arquivo CSV">
+            <v-tooltip activator="parent" location="bottom">Importar CSV</v-tooltip>
             <span class="d-none d-sm-inline">Importar CSV</span>
           </v-btn>
         </div>
@@ -619,7 +623,7 @@
 // =================================================================
 // 1. IMPORTS
 // =================================================================
-import { ref, onMounted, computed, watch } from 'vue'; 
+import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 import apiClient from '@/api/axios';
@@ -1196,6 +1200,7 @@ const downloadPDF = async (dataToExport) => {
 
   actionLoading.value = true;
   actionLoadingText.value = 'Gerando PDF...';
+  await nextTick(); // garante que o overlay renderiza antes do trabalho síncrono
 
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),

@@ -79,6 +79,7 @@ export default defineConfig({
           'vendor-vuetify': ['vuetify'],
           'vendor-charts': ['chart.js', 'vue-chartjs'],
           'vendor-utils': ['axios', 'date-fns'],
+          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
         }
       }
     }
