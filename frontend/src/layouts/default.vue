@@ -8,10 +8,10 @@
       class="container-estreito rounded"
       elevation="2"
     >
-      <!-- Hamburger: visível apenas no mobile -->
+      <!-- Hamburger: abre a barra lateral em qualquer tela -->
       <v-btn
         icon
-        class="d-flex d-sm-none ml-1"
+        class="ml-1"
         aria-label="Abrir menu"
         @click="drawerOpen = !drawerOpen"
       >
@@ -34,14 +34,17 @@
 </template>
 
 <script setup>
+import { useTheme } from 'vuetify';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 import { useDrawer } from '@/composables/useDrawer';
 
+// useTheme aqui apenas para a binding :theme no v-app
+const theme = useTheme();
+
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 
-// Hamburger (mobile) togola o drawer gerenciado pelo dashboard.vue
 const { drawerOpen } = useDrawer();
 </script>
 
