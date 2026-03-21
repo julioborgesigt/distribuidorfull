@@ -30,11 +30,13 @@
     </div>
   </v-alert>
 
-  <!-- Barra lateral: sempre temporária (overlay), acionada pelo hamburger -->
+  <!-- Barra lateral: teleportada ao body para sobrepor o app bar inteiro -->
+  <Teleport to="body">
   <v-navigation-drawer
     v-model="drawerOpen"
-    location="right"
+    location="left"
     temporary
+    style="top: 0; height: 100%;"
   >
     <!-- Topo: saudação + ações de admin -->
     <v-list>
@@ -92,6 +94,7 @@
       </v-list>
     </template>
   </v-navigation-drawer>
+  </Teleport>
 
   <!-- O resto do seu template do dashboard continua aqui (gráficos, filtros, tabela) -->
   <v-expansion-panels class="mb-6" :model-value="mdAndUp ? 0 : undefined">
