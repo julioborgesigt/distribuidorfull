@@ -1,10 +1,25 @@
 <template>
   <v-card-text>
-    <div v-if="stats.total === 0" class="text-center text-grey">
+    <!-- Skeleton de carregamento -->
+    <div v-if="loading">
+      <v-row dense justify="center" class="mb-6">
+        <v-skeleton-loader type="button" width="240"></v-skeleton-loader>
+      </v-row>
+      <v-row dense>
+        <v-col v-for="n in 6" :key="n" cols="4" sm="2" md="2">
+          <div class="d-flex flex-column align-center ga-2 pa-1">
+            <v-skeleton-loader type="avatar" :size="85"></v-skeleton-loader>
+            <v-skeleton-loader type="text" width="60"></v-skeleton-loader>
+          </div>
+        </v-col>
+      </v-row>
+    </div>
+
+    <div v-else-if="stats.total === 0" class="text-center text-grey">
       Nenhum dado para exibir com os filtros atuais.
     </div>
 
-    <v-row v-else dense justify="center" class="mb-4 mt-0">
+    <v-row v-else-if="!loading" dense justify="center" class="mb-4 mt-0">
       <v-btn-toggle
         v-model="currentView"
         color="primary"
@@ -25,7 +40,7 @@
       </v-btn-toggle>
     </v-row>
 
-    <div v-if="stats.total > 0 && currentView === 'users'">
+    <div v-if="!loading && stats.total > 0 && currentView === 'users'">
       <v-row dense>
         
         <v-col cols="4" sm="2" md="2">
@@ -68,7 +83,7 @@
       </v-row>
     </div>
 
-    <div v-else-if="stats.total > 0 && currentView === 'details'">
+    <div v-else-if="!loading && stats.total > 0 && currentView === 'details'">
       
       <v-row dense>
         <v-col v-for="prazo in stats.byPrazo" :key="prazo.nome" cols="6" sm="4" md="2">
@@ -109,12 +124,15 @@
 import { ref, computed } from 'vue';
 import { useDisplay } from 'vuetify';
 
-// Props (Sem alteração)
 const props = defineProps({
   stats: {
     type: Object,
     required: true,
     default: () => ({ total: 0, byUser: [], byPrazo: [], byAssunto: [] })
+  },
+  loading: {
+    type: Boolean,
+    default: false
   }
 });
 

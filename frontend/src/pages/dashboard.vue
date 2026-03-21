@@ -42,16 +42,16 @@
       <v-col cols="12" sm="auto">
         <div class="d-flex flex-wrap justify-center justify-md-end" style="gap: 10px;">
           <!-- Botões de Admin que abrem os modais -->
-          <v-btn color="primary" variant="tonal" prepend-icon="mdi-account-plus-outline" @click="abrirModalCadastro">
+          <v-btn color="primary" variant="tonal" prepend-icon="mdi-account-plus-outline" @click="abrirModalCadastro" aria-label="Cadastrar novo usuário">
             <span class="d-none d-sm-inline">Cadastrar Usuário</span>
           </v-btn>
-          <v-btn color="orange" variant="tonal" prepend-icon="mdi-lock-reset" @click="abrirModalReset">
+          <v-btn color="orange" variant="tonal" prepend-icon="mdi-lock-reset" @click="abrirModalReset" aria-label="Resetar senha de usuário">
             <span class="d-none d-sm-inline">Resetar Senha</span>
           </v-btn>
-          <v-btn color="red" variant="tonal" prepend-icon="mdi-account-remove-outline" @click="abrirModalDelete">
+          <v-btn color="red" variant="tonal" prepend-icon="mdi-account-remove-outline" @click="abrirModalDelete" aria-label="Apagar usuário">
             <span class="d-none d-sm-inline">Apagar Usuário</span>
           </v-btn>
-          <v-btn color="teal" variant="tonal" prepend-icon="mdi-file-upload-outline" @click="abrirModalUpload">
+          <v-btn color="teal" variant="tonal" prepend-icon="mdi-file-upload-outline" @click="abrirModalUpload" aria-label="Importar arquivo CSV">
             <span class="d-none d-sm-inline">Importar CSV</span>
           </v-btn>
         </div>
@@ -74,8 +74,9 @@
 
       <v-expansion-panel-text>
         <v-row dense class="pt-0"> <v-col cols="12" lg="6" > 
-            <stats-grid 
-              :stats="statsData" 
+            <stats-grid
+              :stats="statsData"
+              :loading="loadingCharts"
               style="padding-right: 1%;"
             />
           </v-col>       
@@ -86,8 +87,9 @@
             :class="{ 'mt-6 border-s pl-4': mdAndUp }"
           > 
             <v-card-subtitle>Cumpridos por Usuário (Últimos 30 dias)</v-card-subtitle>
-            <cumpridos-chart 
-              :chart-data="cumpridosChartData" 
+            <cumpridos-chart
+              :chart-data="cumpridosChartData"
+              :loading="loadingCharts"
             />
           </v-col>
 
@@ -237,9 +239,21 @@
               ></v-date-picker>
             </v-menu>
           </v-col>
+          <v-col cols="12" md="2" class="d-flex align-center">
+            <v-btn
+              variant="tonal"
+              color="grey"
+              prepend-icon="mdi-filter-remove-outline"
+              @click="limparFiltros"
+              block
+              aria-label="Limpar todos os filtros"
+            >
+              Limpar Filtros
+            </v-btn>
+          </v-col>
         </v-row>
       </v-expansion-panel-text>
-    </v-expansion-panel> 
+    </v-expansion-panel>
   </v-expansion-panels>
   
 
@@ -917,8 +931,10 @@ const buildQueryParams = () => {
 // 8. FUNÇÕES API (Chamadas ao Backend)
 // =================================================================
 
-// AbortController para cancelar requests anteriores quando filtros mudam rapidamente
+// AbortControllers para cancelar requests anteriores quando filtros mudam rapidamente
 let tableAbortController = null;
+let chartAbortController = null;
+let unassignedAbortController = null;
 
 // Busca dados paginados para a TABELA
 const fetchTableData = async () => {
@@ -962,12 +978,19 @@ const fetchTableData = async () => {
 
 // Busca dados de estatísticas para os GRÁFICOS
 const fetchChartData = async () => {
+  if (chartAbortController) chartAbortController.abort();
+  chartAbortController = new AbortController();
+
   loadingCharts.value = true;
   const params = buildChartQueryParams();
   try {
-    const response = await apiClient.get('/admin/stats/dashboard', { params });
+    const response = await apiClient.get('/admin/stats/dashboard', {
+      params,
+      signal: chartAbortController.signal
+    });
     statsResponse.value = response.data;
-  } catch {
+  } catch (error) {
+    if (error?.code === 'ERR_CANCELED') return;
     snackbarText.value = 'Erro ao carregar dados dos gráficos.';
     snackbarColor.value = 'error';
     snackbar.value = true;
@@ -978,13 +1001,19 @@ const fetchChartData = async () => {
 
 // Busca contagem de não atribuídos para o ALERTA
 const checkUnassignedProcesses = async () => {
+  if (unassignedAbortController) unassignedAbortController.abort();
+  unassignedAbortController = new AbortController();
+
   try {
-    const response = await apiClient.get('/admin/stats/unassigned-count');
+    const response = await apiClient.get('/admin/stats/unassigned-count', {
+      signal: unassignedAbortController.signal
+    });
     unassignedCount.value = response.data.count;
     if (unassignedCount.value > 0) {
       showUnassignedAlert.value = true;
     }
-  } catch {
+  } catch (error) {
+    if (error?.code === 'ERR_CANCELED') return;
     // Silenciado: alerta de não atribuídos é informativo, não crítico
   }
 };
@@ -1047,6 +1076,21 @@ const fetchFilterOptions = async () => {
   } catch {
     // Silenciado: filtros usarão valores em cache ou ficarão vazios
   }
+};
+
+// Limpa todos os filtros e busca de volta ao estado padrão
+const limparFiltros = () => {
+  search.value = '';
+  filters.value = {
+    classe: [],
+    assunto: [],
+    tarjas: [],
+    userId: [],
+    prazo: null,
+    cumprido: false,
+    data_inicio: null,
+    data_fim: null,
+  };
 };
 
 // Recarrega todos os dados da página (em paralelo para melhor performance)

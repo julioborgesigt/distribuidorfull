@@ -65,6 +65,16 @@ module.exports = (sequelize) => {
     timestamps: false,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    indexes: [
+      { fields: ['cumprido'] },
+      { fields: ['prazo_vencimento'] },
+      { fields: ['classe_principal'] },
+      { fields: ['assunto_principal'] },
+      { fields: ['tarjas'] },
+      { fields: ['cumpridoDate'] },
+      { fields: ['cumprido', 'prazo_vencimento'], name: 'idx_cumprido_prazo_vencimento' },
+      { fields: ['userId', 'cumprido'], name: 'idx_userid_cumprido' },
+    ],
     hooks: {
       beforeCreate: (process) => {
         // Calcula prazo_vencimento ao criar um novo registro (inclui bulkCreate com individualHooks)
