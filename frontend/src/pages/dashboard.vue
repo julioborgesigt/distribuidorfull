@@ -603,7 +603,7 @@ import apiClient from '@/api/axios';
 import TabelaProcessos from '../components/TabelaProcessos.vue'; 
 import StatsGrid from '../components/StatsGrid.vue';
 import CumpridosChart from '../components/CumpridosChart.vue';
-import { differenceInDays, startOfToday, parseISO, format } from 'date-fns';
+import { differenceInDays, startOfToday, format } from 'date-fns';
 // jsPDF e autoTable são carregados sob demanda (lazy) para não aumentar o bundle inicial
 import { useDisplay } from 'vuetify';
 const { mdAndUp } = useDisplay(); // mdAndUp será 'true' se a tela for >= 960px
@@ -825,21 +825,28 @@ const formattedDataFim = computed(() => {
 // =================================================================
 // ... (Todas as funções helper são MANTIDAS aqui) ...
 // --- Helpers de Cálculo de Prazo (Usados pela Tabela) ---
+// Converte "YYYY-MM-DD" para Date em horário local (evita erro de UTC no fuso Brasil)
+const parseDateLocal = (str) => {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 // Calcula prazo a partir de prazo_vencimento armazenado ou, como fallback,
 // diretamente de data_intimacao + prazo_processual (como o sistema antigo fazia)
 const getPrazoRestanteNum = (proc) => {
-  let prazoDate = proc.prazo_vencimento;
-  if (!prazoDate && proc.data_intimacao && proc.prazo_processual) {
+  let dataVencimento = null;
+
+  if (proc.prazo_vencimento) {
+    dataVencimento = parseDateLocal(proc.prazo_vencimento);
+  } else if (proc.data_intimacao && proc.prazo_processual) {
     const dias = parseInt(proc.prazo_processual, 10) || 0;
-    const data = new Date(proc.data_intimacao);
-    data.setDate(data.getDate() + dias);
-    prazoDate = data.toISOString().split('T')[0];
+    dataVencimento = parseDateLocal(proc.data_intimacao);
+    dataVencimento.setDate(dataVencimento.getDate() + dias);
   }
-  if (!prazoDate) return null;
+
+  if (!dataVencimento) return null;
   try {
-    const hoje = startOfToday();
-    const dataVencimento = parseISO(prazoDate);
-    return differenceInDays(dataVencimento, hoje);
+    return differenceInDays(dataVencimento, startOfToday());
   } catch {
     return null;
   }
