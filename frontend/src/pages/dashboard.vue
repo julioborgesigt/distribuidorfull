@@ -579,9 +579,18 @@
     :timeout="snackbarTimeout"
     location="top right"
     multi-line
-    @update:model-value="val => { if (!val) snackbarTimeout = 3000; }"
+    class="toast-snackbar"
+    @update:model-value="val => { if (!val) { snackbarTimeout = 3000; snackbarProgress = 100; } }"
   >
     {{ snackbarText }}
+    <v-progress-linear
+      :model-value="snackbarProgress"
+      color="rgba(255,255,255,0.7)"
+      bg-color="rgba(255,255,255,0.2)"
+      height="3"
+      class="mt-2"
+      rounded
+    ></v-progress-linear>
     <template v-slot:actions>
       <v-btn icon @click="snackbar = false">
         <v-icon>mdi-close</v-icon>
@@ -664,6 +673,8 @@ const snackbar = ref(false);
 const snackbarText = ref('');
 const snackbarColor = ref('success');
 const snackbarTimeout = ref(3000);
+const snackbarProgress = ref(100);
+let snackbarTimer = null;
 const menuInicio = ref(false);
 const menuFim = ref(false);
 
@@ -1408,7 +1419,9 @@ const handleUploadCSV = async () => {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     fecharModalUpload();
-    snackbarText.value = response.data || 'CSV importado com sucesso!';
+    snackbarText.value = response.data?.message
+      ? `${response.data.message} (${response.data.totalRows} registros)`
+      : 'CSV importado com sucesso!';
     snackbarColor.value = 'success';
     snackbar.value = true;
     await reloadAllData(); // Recarrega tudo
@@ -1460,6 +1473,22 @@ const handleBulkAssign = async () => {
 // 11. OBSERVADORES (WATCHERS)
 // =================================================================
 // ... (Todos os watchers são MANTIDOS aqui) ...
+// Anima a barra de progresso do snackbar
+watch(snackbar, (val) => {
+  if (snackbarTimer) clearInterval(snackbarTimer);
+  if (val) {
+    snackbarProgress.value = 100;
+    const interval = 50;
+    const decrement = 100 / (snackbarTimeout.value / interval);
+    snackbarTimer = setInterval(() => {
+      snackbarProgress.value = Math.max(0, snackbarProgress.value - decrement);
+      if (snackbarProgress.value <= 0) clearInterval(snackbarTimer);
+    }, interval);
+  } else {
+    snackbarProgress.value = 100;
+  }
+});
+
 // Dispara quando 'options' (página, itensPorPagina, sortBy) muda
 watch(options, fetchTableData, { deep: true });
 
@@ -1493,7 +1522,8 @@ onMounted(() => {
 
 </script>
 
-<!-- 
-  A tag <style> foi removida pois o .container-estreito
-  foi movido para o default.vue
--->
+<style scoped>
+.toast-snackbar :deep(.v-snackbar__wrapper) {
+  opacity: 0.88;
+}
+</style>
