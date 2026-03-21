@@ -48,12 +48,13 @@ const buildStatsWhereClause = (req) => {
 
   if (prazo) {
     const today = new Date().toISOString().split('T')[0];
-    where.prazo_vencimento = { [Op.not]: null };
 
     if (prazo === 'vencido') {
       where.prazo_vencimento = { [Op.lt]: today };
     } else if (prazo === 'a_vencer') {
       where.prazo_vencimento = { [Op.gte]: today };
+    } else {
+      where.prazo_vencimento = { [Op.not]: null };
     }
   }
 
@@ -184,17 +185,17 @@ exports.getFilterOptions = async (req, res) => {
     const [classes, assuntos, tarjas] = await Promise.all([
       Process.findAll({
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('classe_principal')), 'value']],
-        where: { classe_principal: { [Op.ne]: null, [Op.ne]: '' } },
+        where: { classe_principal: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
         raw: true
       }),
       Process.findAll({
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('assunto_principal')), 'value']],
-        where: { assunto_principal: { [Op.ne]: null, [Op.ne]: '' } },
+        where: { assunto_principal: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
         raw: true
       }),
       Process.findAll({
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('tarjas')), 'value']],
-        where: { tarjas: { [Op.ne]: null, [Op.ne]: '' } },
+        where: { tarjas: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
         raw: true
       })
     ]);

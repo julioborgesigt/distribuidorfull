@@ -682,7 +682,7 @@ const menuFim = ref(false);
 const dialogCadastro = ref(false);
 const formCadastroRef = ref(null);
 const loadingCadastro = ref(false);
-const novoUsuario = ref({ matricula: '', nome: '', senha: '', tipoCadastro: 'usuario_padrao' });
+const novoUsuario = ref({ matricula: '', nome: '', senha: '', tipoCadastro: 'admin_padrao' });
 
 // Modal: Resetar Senha
 const dialogReset = ref(false);
@@ -1302,7 +1302,7 @@ const sortProcesses = (processList, sortState) => {
 // ... (TODAS as funções de abrir/fechar/handle dos modais são MANTIDAS aqui) ...
 // --- Modal Cadastrar ---
 const abrirModalCadastro = () => {
-  novoUsuario.value = { matricula: '', nome: '', senha: '', tipoCadastro: 'usuario_padrao' };
+  novoUsuario.value = { matricula: '', nome: '', senha: '', tipoCadastro: 'admin_padrao' };
   formCadastroRef.value?.resetValidation();
   dialogCadastro.value = true;
 };
@@ -1418,6 +1418,7 @@ const handleUploadCSV = async () => {
     const response = await apiClient.post('/admin/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
+    loadingUpload.value = false;
     fecharModalUpload();
     snackbarText.value = response.data?.message
       ? `${response.data.message} (${response.data.totalRows} registros)`

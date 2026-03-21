@@ -1,5 +1,4 @@
 // /controllers/authController.js (Apenas Admin)
-const crypto = require('crypto');
 const { User } = require('../models');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
