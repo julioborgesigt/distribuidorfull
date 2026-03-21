@@ -1,30 +1,29 @@
 <template>
-  <!-- 
-    Usamos o :theme aqui para que o v-app controle o tema global.
-  -->
   <v-app :theme="theme.global.name.value">
-    
-    <!-- 
-      ATUALIZAÇÃO: 
-      A classe .container-estreito está agora APLICADA DIRETAMENTE na v-app-bar.
-      O <v-container> que estava aqui dentro foi removido.
-    -->
-    <v-app-bar 
-      app 
-      color="surface" 
-      density="compact" 
+
+    <v-app-bar
+      app
+      color="surface"
+      density="compact"
       class="container-estreito rounded"
       elevation="2"
     >
-      <!-- 
-        O conteúdo (botões, texto) agora está diretamente
-        dentro da barra de 1400px.
-      -->
+      <!-- Hamburger: visível apenas no mobile -->
+      <v-btn
+        icon
+        class="d-flex d-sm-none ml-1"
+        aria-label="Abrir menu"
+        @click="drawerOpen = !drawerOpen"
+      >
+        <v-icon>mdi-menu</v-icon>
+      </v-btn>
+
+      <!-- Botão de tema: visível apenas no desktop -->
       <v-btn
         :title="theme.global.current.value.dark ? 'Mudar para tema claro' : 'Mudar para tema escuro'"
         icon
         @click="toggleTheme"
-        class="mr-1 ml-4"
+        class="mr-1 ml-4 d-none d-sm-flex"
       >
         <v-icon>
           {{ theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night' }}
@@ -37,19 +36,55 @@
 
       <v-spacer></v-spacer>
 
-      <v-btn @click="handleLogout" prepend-icon="mdi-logout" variant="text">
+      <!-- Botão de sair: visível apenas no desktop -->
+      <v-btn @click="handleLogout" prepend-icon="mdi-logout" variant="text" class="d-none d-sm-flex">
         <span class="d-none d-sm-inline">Sair</span>
       </v-btn>
-
     </v-app-bar>
+
+    <!-- Drawer lateral: mobile -->
+    <v-navigation-drawer
+      v-model="drawerOpen"
+      location="right"
+      temporary
+    >
+      <v-list>
+        <!-- Saudação -->
+        <v-list-item
+          v-if="user"
+          prepend-icon="mdi-account-circle"
+          :subtitle="user.nome"
+          title="Bem-vindo"
+        />
+
+        <v-divider />
+
+        <!-- Trocar tema -->
+        <v-list-item
+          :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
+          :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
+          @click="toggleTheme"
+        />
+
+        <!-- Sair -->
+        <v-list-item
+          prepend-icon="mdi-logout"
+          title="Sair"
+          base-color="error"
+          @click="handleLogout"
+        />
+
+        <!-- Ações de administrador (injetadas via Teleport pelo dashboard.vue) -->
+        <template v-if="user?.admin_super">
+          <v-divider class="mt-2" />
+          <v-list-subheader>Administrador</v-list-subheader>
+          <div id="drawer-admin-slot"></div>
+        </template>
+      </v-list>
+    </v-navigation-drawer>
 
     <!-- Conteúdo Principal da Página -->
     <v-main>
-      <!-- 
-        Este container continua aqui, para que o conteúdo da sua página
-        (o dashboard.vue) também fique limitado a 1400px e se alinhe
-        com a barra lá em cima.
-      -->
       <v-container class="container-estreito py-6">
         <router-view />
       </v-container>
@@ -59,10 +94,11 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useTheme } from 'vuetify';
 import { storeToRefs } from 'pinia';
-// Certifique-se de que o caminho para seu store está correto
-import { useAuthStore } from '@/stores/auth'; 
+import { useAuthStore } from '@/stores/auth';
+import { useDrawer } from '@/composables/useDrawer';
 
 // --- Lógica do Tema ---
 const theme = useTheme();
@@ -77,10 +113,13 @@ const { user } = storeToRefs(authStore);
 const handleLogout = () => {
   authStore.logout();
 };
+
+// --- Drawer (menu lateral mobile) ---
+const { drawerOpen } = useDrawer();
 </script>
 
-<!-- 
-  ATUALIZAÇÃO IMPORTANTE: 
+<!--
+  ATUALIZAÇÃO IMPORTANTE:
   Removi o "scoped" da tag <style>.
   Isto é necessário para que a nossa classe .container-estreito
   consiga modificar o componente <v-app-bar> do Vuetify.
@@ -89,42 +128,36 @@ const handleLogout = () => {
 /* Esta regra aplica-se à v-app-bar (que é 'fixed').
 */
 .container-estreito {
-  max-width: 1400px !important; 
+  max-width: 1400px !important;
   width: 100%;
-  
-  /* CORREÇÃO: Esta é a forma robusta de centrar 
+
+  /* CORREÇÃO: Esta é a forma robusta de centrar
     um elemento 'fixed' (a v-app-bar).
   */
   left: 50% !important;
   transform: translateX(-50%) !important;
-
-  /* Removemos as regras que não funcionavam para 'fixed' */
-  /* right: unset !important; 
-    margin-left: auto !important;
-    margin-right: auto !important;
-  */
 }
 
 /* Esta regra garante que o container DENTRO do v-main
-  (que NÃO é 'fixed') use o 'margin: auto' normal 
+  (que NÃO é 'fixed') use o 'margin: auto' normal
   e anule o 'transform' da regra acima.
 */
 .v-main .container-estreito {
   /* Anula a centralização 'fixed' */
   left: unset !important;
   right: unset !important;
-  transform: none !important; 
-  
+  transform: none !important;
+
   /* Adiciona a centralização 'static' (normal) */
   margin-left: auto !important;
   margin-right: auto !important;
-  
+
   padding-left: 0px;
   padding-right: 0px;
 }
 
 /* CORREÇÃO PARA TABELA EM MODO CLARO:
-  Força as linhas da tabela (v-data-table) a serem visíveis 
+  Força as linhas da tabela (v-data-table) a serem visíveis
   no tema claro (v-theme--light).
 */
 .v-theme--light .v-data-table .v-table__wrapper > table > tbody > tr > td,
@@ -132,6 +165,3 @@ const handleLogout = () => {
     border-bottom-color: rgba(0, 0, 0, 0.12) !important; /* Cor cinza padrão */
 }
 </style>
-
-
-
