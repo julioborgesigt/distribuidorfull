@@ -119,7 +119,7 @@ const validateUpdateObservacoes = [
 
   body('observacoes')
     .optional()
-    .isLength({ max: 100 }).withMessage('Observação deve ter no máximo 100 caracteres')
+    .isLength({ max: 300 }).withMessage('Observação deve ter no máximo 300 caracteres')
     .trim(),
 
   handleValidationErrors
