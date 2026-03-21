@@ -36,8 +36,8 @@
     location="right"
     temporary
   >
+    <!-- Topo: saudação + ações de admin -->
     <v-list>
-      <!-- Saudação -->
       <v-list-item
         v-if="user"
         prepend-icon="mdi-account-circle"
@@ -45,24 +45,6 @@
         title="Bem-vindo"
       />
 
-      <v-divider />
-
-      <!-- Trocar tema -->
-      <v-list-item
-        :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
-        :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
-        @click="toggleTheme"
-      />
-
-      <!-- Sair -->
-      <v-list-item
-        prepend-icon="mdi-logout"
-        title="Sair"
-        base-color="error"
-        @click="() => { drawerOpen = false; authStore.logout(); }"
-      />
-
-      <!-- Ações de admin (apenas para admin_super) -->
       <template v-if="user?.admin_super">
         <v-divider class="mt-2" />
         <v-list-subheader>Administrador</v-list-subheader>
@@ -91,6 +73,24 @@
         />
       </template>
     </v-list>
+
+    <!-- Rodapé fixo: tema e sair -->
+    <template #append>
+      <v-divider />
+      <v-list>
+        <v-list-item
+          :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
+          :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
+          @click="toggleTheme"
+        />
+        <v-list-item
+          prepend-icon="mdi-logout"
+          title="Sair"
+          base-color="error"
+          @click="() => { drawerOpen = false; authStore.logout(); }"
+        />
+      </v-list>
+    </template>
   </v-navigation-drawer>
 
   <!--
