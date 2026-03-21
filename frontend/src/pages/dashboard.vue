@@ -30,11 +30,11 @@
     </div>
   </v-alert>
 
-  <!-- Barra lateral: permanente no desktop, temporária (overlay) no mobile -->
+  <!-- Barra lateral: sempre temporária (overlay), acionada pelo hamburger -->
   <v-navigation-drawer
     v-model="drawerOpen"
     location="right"
-    :temporary="!mdAndUp"
+    temporary
   >
     <!-- Topo: saudação + ações de admin -->
     <v-list>
@@ -51,25 +51,25 @@
         <v-list-item
           prepend-icon="mdi-account-plus-outline"
           title="Cadastrar Usuário"
-          @click="() => { if (!mdAndUp) drawerOpen = false; abrirModalCadastro(); }"
+          @click="() => { drawerOpen = false; abrirModalCadastro(); }"
         />
         <v-list-item
           prepend-icon="mdi-lock-reset"
           title="Resetar Senha"
           base-color="orange"
-          @click="() => { if (!mdAndUp) drawerOpen = false; abrirModalReset(); }"
+          @click="() => { drawerOpen = false; abrirModalReset(); }"
         />
         <v-list-item
           prepend-icon="mdi-account-remove-outline"
           title="Apagar Usuário"
           base-color="red"
-          @click="() => { if (!mdAndUp) drawerOpen = false; abrirModalDelete(); }"
+          @click="() => { drawerOpen = false; abrirModalDelete(); }"
         />
         <v-list-item
           prepend-icon="mdi-file-upload-outline"
           title="Importar CSV"
           base-color="teal"
-          @click="() => { if (!mdAndUp) drawerOpen = false; abrirModalUpload(); }"
+          @click="() => { drawerOpen = false; abrirModalUpload(); }"
         />
       </template>
     </v-list>
@@ -87,7 +87,7 @@
           prepend-icon="mdi-logout"
           title="Sair"
           base-color="error"
-          @click="() => { if (!mdAndUp) drawerOpen = false; authStore.logout(); }"
+          @click="() => { drawerOpen = false; authStore.logout(); }"
         />
       </v-list>
     </template>
@@ -668,10 +668,6 @@ const toggleTheme = () => {
   theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark';
 };
 
-// Abre a barra lateral automaticamente no desktop; fecha ao voltar para mobile
-watch(mdAndUp, (isDesktop) => {
-  drawerOpen.value = isDesktop;
-}, { immediate: true });
 // import { useTheme } from 'vuetify'; // REMOVIDO - Movido para default.vue
 
 
