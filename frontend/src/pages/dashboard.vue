@@ -831,17 +831,18 @@ const parseDateLocal = (str) => {
   return new Date(y, m - 1, d);
 };
 
-// Calcula prazo a partir de prazo_vencimento armazenado ou, como fallback,
-// diretamente de data_intimacao + prazo_processual (como o sistema antigo fazia)
+// Calcula prazo sempre a partir de data_intimacao + prazo_processual,
+// igual ao sistema antigo — ignora prazo_vencimento armazenado, que pode estar desatualizado.
+// Usa prazo_vencimento apenas como último recurso (sem os outros campos).
 const getPrazoRestanteNum = (proc) => {
   let dataVencimento = null;
 
-  if (proc.prazo_vencimento) {
-    dataVencimento = parseDateLocal(proc.prazo_vencimento);
-  } else if (proc.data_intimacao && proc.prazo_processual) {
+  if (proc.data_intimacao && proc.prazo_processual) {
     const dias = parseInt(proc.prazo_processual, 10) || 0;
     dataVencimento = parseDateLocal(proc.data_intimacao);
     dataVencimento.setDate(dataVencimento.getDate() + dias);
+  } else if (proc.prazo_vencimento) {
+    dataVencimento = parseDateLocal(proc.prazo_vencimento);
   }
 
   if (!dataVencimento) return null;
