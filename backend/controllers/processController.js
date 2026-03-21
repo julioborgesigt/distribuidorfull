@@ -82,7 +82,7 @@ exports.uploadCSV = (req, res) => {
 
         // Separa novos registros dos que precisam de atualização
         const newRows = [];
-        const updatePromises = [];
+        const updateFns = []; // Funções lazy — só executam dentro da transaction
 
         for (const row of latestProcessesMap.values()) {
           const existing = existingMap.get(row.numero_processo);
@@ -111,18 +111,26 @@ exports.uploadCSV = (req, res) => {
               }
             }
             if (Object.keys(updateData).length > 0) {
-              updatePromises.push(existing.update(updateData));
+              updateFns.push((t) => existing.update(updateData, { transaction: t }));
             }
           } else {
             newRows.push(row);
           }
         }
 
-        // Insere novos registros em batch e processa updates em paralelo
-        await Promise.all([
-          newRows.length > 0 ? Process.bulkCreate(newRows, { individualHooks: true }) : Promise.resolve(),
-          ...updatePromises
-        ]);
+        // Executa tudo dentro de uma única transaction atômica.
+        // Updates são processados em lotes de 50 para não sobrecarregar
+        // o pool de conexões com CSVs de até 10 mil linhas.
+        const CHUNK_SIZE = 50;
+        await sequelize.transaction(async (t) => {
+          if (newRows.length > 0) {
+            await Process.bulkCreate(newRows, { individualHooks: true, transaction: t });
+          }
+          for (let i = 0; i < updateFns.length; i += CHUNK_SIZE) {
+            const chunk = updateFns.slice(i, i + CHUNK_SIZE);
+            await Promise.all(chunk.map(fn => fn(t)));
+          }
+        });
 
         await fsPromises.unlink(filePath);
         logger.info('CSV importado com sucesso', {
