@@ -18,28 +18,9 @@
         <v-icon>mdi-menu</v-icon>
       </v-btn>
 
-      <!-- Botão de tema: visível apenas no desktop -->
-      <v-btn
-        :title="theme.global.current.value.dark ? 'Mudar para tema claro' : 'Mudar para tema escuro'"
-        icon
-        @click="toggleTheme"
-        class="mr-1 ml-4 d-none d-sm-flex"
-      >
-        <v-icon>
-          {{ theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night' }}
-        </v-icon>
-      </v-btn>
-
       <v-col class="text-md-left" v-if="user">
         <div class="text-subtitle-1 font-weight-medium">Bem-vindo, {{ user?.nome }}!</div>
       </v-col>
-
-      <v-spacer></v-spacer>
-
-      <!-- Botão de sair: visível apenas no desktop -->
-      <v-btn @click="handleLogout" prepend-icon="mdi-logout" variant="text" class="d-none d-sm-flex">
-        <span class="d-none d-sm-inline">Sair</span>
-      </v-btn>
     </v-app-bar>
 
     <!-- Conteúdo Principal da Página -->
@@ -53,26 +34,14 @@
 </template>
 
 <script setup>
-import { useTheme } from 'vuetify';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 import { useDrawer } from '@/composables/useDrawer';
 
-// --- Lógica do Tema ---
-const theme = useTheme();
-const toggleTheme = () => {
-  theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark';
-};
-
-// --- Lógica de Autenticação e Logout ---
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 
-const handleLogout = () => {
-  authStore.logout();
-};
-
-// --- Drawer (menu lateral mobile) — controlado pelo dashboard.vue ---
+// Hamburger (mobile) togola o drawer gerenciado pelo dashboard.vue
 const { drawerOpen } = useDrawer();
 </script>
 
