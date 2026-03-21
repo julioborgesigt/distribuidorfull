@@ -452,6 +452,6 @@ router.patch('/processes/:id/desfazer-cumprir', adminController.unmarkAsCumprido
  *       200:
  *         description: Listas de classes, assuntos e tarjas únicas
  */
-router.get('/filter-options', autenticarAdmin, adminController.getFilterOptions);
+router.get('/filter-options', adminController.getFilterOptions);
 
 module.exports = router;

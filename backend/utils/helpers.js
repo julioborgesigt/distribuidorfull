@@ -2,25 +2,6 @@
 // Funções auxiliares reutilizáveis
 
 const crypto = require('crypto');
-const { User } = require('../models');
-
-/**
- * Busca um usuário pela matrícula
- * @param {string} matricula - Matrícula do usuário
- * @returns {Promise<User>} Usuário encontrado
- * @throws {Error} Se usuário não for encontrado
- */
-const findUserByMatricula = async (matricula) => {
-  const user = await User.findOne({ where: { matricula } });
-
-  if (!user) {
-    const error = new Error('Usuário não encontrado');
-    error.statusCode = 404;
-    throw error;
-  }
-
-  return user;
-};
 
 /**
  * Converte filtros de query (string ou array) para array
@@ -41,39 +22,6 @@ const isValidPassword = (senha) => {
   // Mínimo 8 caracteres, pelo menos uma maiúscula, uma minúscula e um número
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
   return regex.test(senha);
-};
-
-/**
- * Sanitiza uma string removendo caracteres perigosos
- * @param {string} str - String a ser sanitizada
- * @returns {string} String sanitizada
- */
-const sanitizeString = (str) => {
-  if (typeof str !== 'string') return str;
-
-  // Remove tags HTML
-  return str.replace(/<[^>]*>/g, '').trim();
-};
-
-/**
- * Formata data do formato brasileiro para ISO
- * @param {string} dateStr - Data no formato DD/MM/YYYY
- * @returns {string|null} Data no formato YYYY-MM-DD ou null se inválida
- */
-const parseBrazilianDate = (dateStr) => {
-  if (!dateStr) return null;
-
-  const parts = dateStr.split('/');
-  if (parts.length !== 3) return null;
-
-  const [day, month, year] = parts;
-
-  // Validação básica
-  if (day.length !== 2 || month.length !== 2 || year.length !== 4) {
-    return null;
-  }
-
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 
 /**
@@ -131,21 +79,6 @@ const isValidCPF = (cpf) => {
 };
 
 /**
- * Formata CPF para o padrão brasileiro (###.###.###-##)
- * @param {string} cpf - CPF sem formatação
- * @returns {string|null} CPF formatado ou null se inválido
- */
-const formatCPF = (cpf) => {
-  if (!cpf) return null;
-
-  const cleanCPF = cpf.replace(/[^\d]/g, '');
-
-  if (cleanCPF.length !== 11) return null;
-
-  return cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-};
-
-/**
  * Gera uma senha aleatória segura que atende aos requisitos do sistema
  * (mín. 8 caracteres, pelo menos uma maiúscula, uma minúscula e um número)
  * @param {number} length - Tamanho da senha (padrão: 10)
@@ -173,13 +106,9 @@ const generateRandomPassword = (length = 10) => {
 };
 
 module.exports = {
-  findUserByMatricula,
   parseArrayFilter,
   isValidPassword,
-  sanitizeString,
-  parseBrazilianDate,
   getRealIP,
   isValidCPF,
-  formatCPF,
   generateRandomPassword,
 };

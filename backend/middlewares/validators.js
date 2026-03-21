@@ -1,7 +1,7 @@
 // /middlewares/validators.js
 // Validadores de entrada para proteger contra XSS e dados inválidos
 const { body, param, query, validationResult } = require('express-validator');
-const { isValidCPF } = require('../utils/helpers');
+
 
 // Middleware para verificar erros de validação
 const handleValidationErrors = (req, res, next) => {
@@ -13,15 +13,6 @@ const handleValidationErrors = (req, res, next) => {
     });
   }
   next();
-};
-
-// Validador customizado de CPF
-const cpfValidator = (value) => {
-  if (!value) return true; // CPF é opcional
-  if (!isValidCPF(value)) {
-    throw new Error('CPF inválido');
-  }
-  return true;
 };
 
 // Validadores para Login
@@ -181,17 +172,6 @@ const validateUpdateIntim = [
   handleValidationErrors
 ];
 
-// Exemplo de validador com CPF (disponível para uso futuro)
-// Pode ser usado em rotas que necessitem validação de CPF
-const validateCPFExample = [
-  body('cpf')
-    .optional()
-    .custom(cpfValidator)
-    .withMessage('CPF inválido'),
-
-  handleValidationErrors
-];
-
 module.exports = {
   validateLogin,
   validateFirstLogin,
@@ -203,6 +183,4 @@ module.exports = {
   validateBulkAssign,
   validateDeleteMatricula,
   validateUpdateIntim,
-  validateCPFExample,
-  cpfValidator
 };

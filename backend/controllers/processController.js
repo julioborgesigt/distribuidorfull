@@ -185,10 +185,6 @@ exports.listProcesses = async (req, res) => {
       order: []
     };
 
-    if (req.loginType !== 'admin_super') {
-      options.where.userId = req.userId;
-    }
-
     if (search) {
       // Busca por prefixo usa o índice UNIQUE (muito mais rápido que %search%)
       options.where.numero_processo = { [Op.like]: `${search}%` };
@@ -247,13 +243,14 @@ exports.listProcesses = async (req, res) => {
     }
 
     if (prazo) {
-      options.where.prazo_vencimento = { [Op.not]: null };
       const today = new Date().toISOString().split('T')[0];
 
       if (prazo === 'vencido') {
         options.where.prazo_vencimento = { [Op.lt]: today };
       } else if (prazo === 'a_vencer') {
         options.where.prazo_vencimento = { [Op.gte]: today };
+      } else {
+        options.where.prazo_vencimento = { [Op.not]: null };
       }
     }
 
@@ -523,7 +520,7 @@ exports.bulkDelete = async (req, res) => {
 exports.bulkCumprido = async (req, res) => {
   try {
     const { processIds } = req.body;
-    await Process.update({ cumprido: true, reiteracoes: 0 }, {
+    await Process.update({ cumprido: true, reiteracoes: 0, cumpridoDate: new Date() }, {
       where: { id: processIds }
     });
     logger.info('Processos marcados como cumpridos em massa', {
