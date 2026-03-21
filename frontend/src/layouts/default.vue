@@ -42,47 +42,6 @@
       </v-btn>
     </v-app-bar>
 
-    <!-- Drawer lateral: mobile -->
-    <v-navigation-drawer
-      v-model="drawerOpen"
-      location="right"
-      temporary
-    >
-      <v-list>
-        <!-- Saudação -->
-        <v-list-item
-          v-if="user"
-          prepend-icon="mdi-account-circle"
-          :subtitle="user.nome"
-          title="Bem-vindo"
-        />
-
-        <v-divider />
-
-        <!-- Trocar tema -->
-        <v-list-item
-          :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
-          :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
-          @click="toggleTheme"
-        />
-
-        <!-- Sair -->
-        <v-list-item
-          prepend-icon="mdi-logout"
-          title="Sair"
-          base-color="error"
-          @click="handleLogout"
-        />
-
-        <!-- Ações de administrador (injetadas via Teleport pelo dashboard.vue) -->
-        <template v-if="user?.admin_super">
-          <v-divider class="mt-2" />
-          <v-list-subheader>Administrador</v-list-subheader>
-          <div id="drawer-admin-slot"></div>
-        </template>
-      </v-list>
-    </v-navigation-drawer>
-
     <!-- Conteúdo Principal da Página -->
     <v-main>
       <v-container class="container-estreito py-6">
@@ -94,7 +53,6 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
 import { useTheme } from 'vuetify';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
@@ -114,7 +72,7 @@ const handleLogout = () => {
   authStore.logout();
 };
 
-// --- Drawer (menu lateral mobile) ---
+// --- Drawer (menu lateral mobile) — controlado pelo dashboard.vue ---
 const { drawerOpen } = useDrawer();
 </script>
 

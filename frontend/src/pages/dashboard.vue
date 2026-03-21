@@ -30,9 +30,71 @@
     </div>
   </v-alert>
 
+  <!-- Drawer lateral mobile: tema, logout e ações de admin -->
+  <v-navigation-drawer
+    v-model="drawerOpen"
+    location="right"
+    temporary
+  >
+    <v-list>
+      <!-- Saudação -->
+      <v-list-item
+        v-if="user"
+        prepend-icon="mdi-account-circle"
+        :subtitle="user.nome"
+        title="Bem-vindo"
+      />
+
+      <v-divider />
+
+      <!-- Trocar tema -->
+      <v-list-item
+        :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
+        :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
+        @click="toggleTheme"
+      />
+
+      <!-- Sair -->
+      <v-list-item
+        prepend-icon="mdi-logout"
+        title="Sair"
+        base-color="error"
+        @click="() => { drawerOpen = false; authStore.logout(); }"
+      />
+
+      <!-- Ações de admin (apenas para admin_super) -->
+      <template v-if="user?.admin_super">
+        <v-divider class="mt-2" />
+        <v-list-subheader>Administrador</v-list-subheader>
+        <v-list-item
+          prepend-icon="mdi-account-plus-outline"
+          title="Cadastrar Usuário"
+          @click="() => { drawerOpen = false; abrirModalCadastro(); }"
+        />
+        <v-list-item
+          prepend-icon="mdi-lock-reset"
+          title="Resetar Senha"
+          base-color="orange"
+          @click="() => { drawerOpen = false; abrirModalReset(); }"
+        />
+        <v-list-item
+          prepend-icon="mdi-account-remove-outline"
+          title="Apagar Usuário"
+          base-color="red"
+          @click="() => { drawerOpen = false; abrirModalDelete(); }"
+        />
+        <v-list-item
+          prepend-icon="mdi-file-upload-outline"
+          title="Importar CSV"
+          base-color="teal"
+          @click="() => { drawerOpen = false; abrirModalUpload(); }"
+        />
+      </template>
+    </v-list>
+  </v-navigation-drawer>
+
   <!--
     Card de Ações de Admin: visível apenas no desktop (sm+).
-    No mobile os botões são injetados no drawer via Teleport abaixo.
   -->
   <v-card class="mb-6 pa-3" v-if="user?.admin_super && mdAndUp">
     <v-row align="center" justify="space-between" class="ga-2">
@@ -61,37 +123,6 @@
       </v-col>
     </v-row>
   </v-card>
-
-  <!--
-    Teleport: injeta os itens de admin no drawer lateral do default.vue.
-    Ativo apenas no mobile (!mdAndUp) e para admins.
-    O drawer fecha antes de abrir o modal para não sobrepor a tela.
-  -->
-  <Teleport v-if="user?.admin_super && !mdAndUp" to="#drawer-admin-slot">
-    <v-list-item
-      prepend-icon="mdi-account-plus-outline"
-      title="Cadastrar Usuário"
-      @click="() => { drawerOpen.value = false; abrirModalCadastro(); }"
-    />
-    <v-list-item
-      prepend-icon="mdi-lock-reset"
-      title="Resetar Senha"
-      base-color="orange"
-      @click="() => { drawerOpen.value = false; abrirModalReset(); }"
-    />
-    <v-list-item
-      prepend-icon="mdi-account-remove-outline"
-      title="Apagar Usuário"
-      base-color="red"
-      @click="() => { drawerOpen.value = false; abrirModalDelete(); }"
-    />
-    <v-list-item
-      prepend-icon="mdi-file-upload-outline"
-      title="Importar CSV"
-      base-color="teal"
-      @click="() => { drawerOpen.value = false; abrirModalUpload(); }"
-    />
-  </Teleport>
 
   <!-- O CARD ORIGINAL FOI COMPLETAMENTE REMOVIDO -->
 
@@ -661,10 +692,14 @@ import StatsGrid from '../components/StatsGrid.vue';
 import CumpridosChart from '../components/CumpridosChart.vue';
 import { differenceInDays, startOfToday, format } from 'date-fns';
 // jsPDF e autoTable são carregados sob demanda (lazy) para não aumentar o bundle inicial
-import { useDisplay } from 'vuetify';
+import { useDisplay, useTheme } from 'vuetify';
 import { useDrawer } from '@/composables/useDrawer';
-const { mdAndUp } = useDisplay(); // mdAndUp será 'true' se a tela for >= 960px
+const { mdAndUp } = useDisplay();
 const { drawerOpen } = useDrawer();
+const theme = useTheme();
+const toggleTheme = () => {
+  theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark';
+};
 // import { useTheme } from 'vuetify'; // REMOVIDO - Movido para default.vue
 
 
