@@ -5,7 +5,7 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const csvParser = require('csv-parser');
 const { sequelize, User, Process } = require('../models');
-const { Op } = require('sequelize');
+const { Op, literal } = require('sequelize');
 const iconv = require('iconv-lite');
 const logger = require('../utils/logger');
 const { getRealIP, parseArrayFilter } = require('../utils/helpers');
@@ -264,7 +264,9 @@ exports.listProcesses = async (req, res) => {
           return [User, 'nome', s.order];
         }
         if (s.key === 'prazoRestanteNum') {
-          return ['prazo_vencimento', s.order];
+          // Ordena pelo prazo calculado (data_intimacao + prazo_processual em dias),
+          // igual ao cálculo exibido no frontend — ignora prazo_vencimento armazenado.
+          return [literal(`DATE_ADD(data_intimacao, INTERVAL CAST(prazo_processual AS UNSIGNED) DAY)`), s.order];
         }
         return [s.key, s.order];
       });
