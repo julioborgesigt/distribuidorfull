@@ -66,8 +66,19 @@ module.exports = (sequelize) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
     hooks: {
+      beforeCreate: (process) => {
+        // Calcula prazo_vencimento ao criar um novo registro (inclui bulkCreate com individualHooks)
+        if (process.data_intimacao && process.prazo_processual) {
+          const dias = parseInt(process.prazo_processual, 10) || 0;
+          const data = new Date(process.data_intimacao);
+          data.setDate(data.getDate() + dias);
+          process.prazo_vencimento = data.toISOString().split('T')[0]; // YYYY-MM-DD
+        } else {
+          process.prazo_vencimento = null;
+        }
+      },
       beforeSave: (process) => {
-        // Recalcula prazo_vencimento sempre que data_intimacao ou prazo_processual mudarem
+        // Recalcula prazo_vencimento ao atualizar se campos relevantes mudarem ou prazo estiver nulo
         if (process.changed('data_intimacao') || process.changed('prazo_processual') || !process.prazo_vencimento) {
           if (process.data_intimacao && process.prazo_processual) {
             const dias = parseInt(process.prazo_processual, 10) || 0;
