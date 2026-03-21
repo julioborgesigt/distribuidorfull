@@ -52,11 +52,11 @@ module.exports = (sequelize) => {
       allowNull: true,
     },
     observacoes: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(300),
       allowNull: false,
       defaultValue: '',
       validate: {
-        len: [0, 100]
+        len: [0, 300]
       }
     }
 
