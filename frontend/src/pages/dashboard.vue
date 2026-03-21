@@ -825,12 +825,20 @@ const formattedDataFim = computed(() => {
 // =================================================================
 // ... (Todas as funções helper são MANTIDAS aqui) ...
 // --- Helpers de Cálculo de Prazo (Usados pela Tabela) ---
-// Usa a coluna prazo_vencimento pré-calculada pelo backend (indexada)
+// Calcula prazo a partir de prazo_vencimento armazenado ou, como fallback,
+// diretamente de data_intimacao + prazo_processual (como o sistema antigo fazia)
 const getPrazoRestanteNum = (proc) => {
-  if (!proc.prazo_vencimento) return null;
+  let prazoDate = proc.prazo_vencimento;
+  if (!prazoDate && proc.data_intimacao && proc.prazo_processual) {
+    const dias = parseInt(proc.prazo_processual, 10) || 0;
+    const data = new Date(proc.data_intimacao);
+    data.setDate(data.getDate() + dias);
+    prazoDate = data.toISOString().split('T')[0];
+  }
+  if (!prazoDate) return null;
   try {
     const hoje = startOfToday();
-    const dataVencimento = parseISO(proc.prazo_vencimento);
+    const dataVencimento = parseISO(prazoDate);
     return differenceInDays(dataVencimento, hoje);
   } catch {
     return null;
