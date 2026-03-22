@@ -47,10 +47,10 @@
       >
         <template #append>
           <v-btn
+            v-if="!isWide"
             icon
             size="small"
             variant="text"
-            class="d-flex d-md-none"
             aria-label="Fechar menu"
             @click="drawerOpen = false"
           >
@@ -674,9 +674,11 @@ import StatsGrid from '../components/StatsGrid.vue';
 import CumpridosChart from '../components/CumpridosChart.vue';
 import { differenceInDays, startOfToday, format } from 'date-fns';
 // jsPDF e autoTable são carregados sob demanda (lazy) para não aumentar o bundle inicial
+import { computed } from 'vue';
 import { useDisplay, useTheme } from 'vuetify';
 import { useDrawer } from '@/composables/useDrawer';
-const { mdAndUp } = useDisplay();
+const { mdAndUp, width } = useDisplay();
+const isWide = computed(() => width.value >= 1660);
 const { drawerOpen } = useDrawer();
 const theme = useTheme();
 const toggleTheme = () => {
