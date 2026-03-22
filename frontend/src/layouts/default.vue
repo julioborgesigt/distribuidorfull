@@ -18,9 +18,10 @@
         <v-icon>mdi-menu</v-icon>
       </v-btn>
 
-      <v-col class="text-md-left" v-if="user">
-        <div class="text-subtitle-1 font-weight-medium">Bem-vindo, {{ user?.nome }}!</div>
-      </v-col>
+      <v-spacer />
+      <div class="text-subtitle-1 font-weight-medium mr-3" v-if="user">
+        Bem-vindo, {{ user?.nome }}!
+      </div>
     </v-app-bar>
 
     <!-- FAB mobile: flutuante, visível só em telas < md e com drawer fechado -->
