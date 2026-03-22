@@ -50,6 +50,7 @@
             icon
             size="small"
             variant="text"
+            class="d-flex d-md-none"
             aria-label="Fechar menu"
             @click="drawerOpen = false"
           >
