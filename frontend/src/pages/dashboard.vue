@@ -35,8 +35,7 @@
   <v-navigation-drawer
     v-model="drawerOpen"
     location="left"
-    temporary
-    style="top: 0; height: 100%;"
+    style="top: 0; height: 100%; position: fixed;"
   >
     <!-- Topo: saudação + ações de admin -->
     <v-list>
