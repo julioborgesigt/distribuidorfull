@@ -20,6 +20,7 @@
       <v-spacer />
       <div
         v-if="user"
+        v-show="isWide || !drawerOpen"
         class="text-subtitle-1 font-weight-medium mr-3"
       >
         Bem-vindo, {{ user?.nome }}!
