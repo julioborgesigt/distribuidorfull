@@ -674,7 +674,6 @@ import StatsGrid from '../components/StatsGrid.vue';
 import CumpridosChart from '../components/CumpridosChart.vue';
 import { differenceInDays, startOfToday, format } from 'date-fns';
 // jsPDF e autoTable são carregados sob demanda (lazy) para não aumentar o bundle inicial
-import { computed } from 'vue';
 import { useDisplay, useTheme } from 'vuetify';
 import { useDrawer } from '@/composables/useDrawer';
 const { mdAndUp, width } = useDisplay();
