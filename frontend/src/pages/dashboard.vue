@@ -37,6 +37,22 @@
     location="left"
     style="top: 0; height: 100%; position: fixed;"
   >
+    <!-- Botão integrado ao drawer (mobile only): mesma posição visual do FAB -->
+    <template #prepend>
+      <div class="d-flex d-md-none" style="padding: 6px 8px;">
+        <v-btn
+          icon
+          size="small"
+          variant="text"
+          aria-label="Fechar menu"
+          @click="drawerOpen = false"
+        >
+          <v-icon size="20">mdi-menu</v-icon>
+        </v-btn>
+      </div>
+      <v-divider class="d-md-none" />
+    </template>
+
     <!-- Topo: saudação + ações de admin -->
     <v-list>
       <v-list-item
