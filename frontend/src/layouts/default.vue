@@ -8,10 +8,10 @@
       :class="['container-estreito', 'rounded', { 'drawer-open': drawerOpen }]"
       elevation="2"
     >
-      <!-- Hamburger: abre a barra lateral em qualquer tela -->
+      <!-- Hamburger: apenas desktop (md+) -->
       <v-btn
         icon
-        class="ml-1"
+        class="ml-1 d-none d-md-inline-flex"
         aria-label="Abrir menu"
         @click="drawerOpen = !drawerOpen"
       >
@@ -22,6 +22,23 @@
         <div class="text-subtitle-1 font-weight-medium">Bem-vindo, {{ user?.nome }}!</div>
       </v-col>
     </v-app-bar>
+
+    <!-- FAB mobile: flutuante, visível só em telas < md e com drawer fechado -->
+    <Teleport to="body">
+      <v-btn
+        v-if="!drawerOpen"
+        icon
+        size="small"
+        color="surface"
+        elevation="4"
+        class="d-flex d-md-none"
+        style="position: fixed; top: 8px; left: 8px; z-index: 1500;"
+        aria-label="Abrir menu"
+        @click="drawerOpen = true"
+      >
+        <v-icon size="20">mdi-menu</v-icon>
+      </v-btn>
+    </Teleport>
 
     <!-- Conteúdo Principal da Página -->
     <v-main>
