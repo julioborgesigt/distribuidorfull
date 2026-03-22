@@ -5,7 +5,7 @@
       app
       color="surface"
       density="compact"
-      class="container-estreito rounded"
+      :class="['container-estreito', 'rounded', { 'drawer-open': drawerOpen }]"
       elevation="2"
     >
       <!-- Hamburger: abre a barra lateral em qualquer tela -->
@@ -66,6 +66,12 @@ const { drawerOpen } = useDrawer();
   */
   left: 50% !important;
   transform: translateX(-50%) !important;
+  transition: left 0.2s ease;
+}
+
+/* Quando o drawer (256px) está aberto, desloca o centro do app bar */
+.container-estreito.drawer-open {
+  left: calc(50% + 128px) !important;
 }
 
 /* Esta regra garante que o container DENTRO do v-main
