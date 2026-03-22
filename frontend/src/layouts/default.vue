@@ -8,10 +8,11 @@
       :class="['container-estreito', 'rounded', { 'drawer-open': drawerOpen }]"
       elevation="2"
     >
-      <!-- Hamburger: apenas desktop (md+) -->
+      <!-- Hamburger: apenas em telas >= 1660px -->
       <v-btn
+        v-if="isWide"
         icon
-        class="ml-1 d-none d-md-inline-flex"
+        class="ml-1"
         aria-label="Abrir menu"
         @click="drawerOpen = !drawerOpen"
       >
@@ -21,22 +22,21 @@
       <v-spacer />
       <div
         v-if="user"
-        v-show="!drawerOpen || mdAndUp"
+        v-show="!drawerOpen || isWide"
         class="text-subtitle-1 font-weight-medium mr-3"
       >
         Bem-vindo, {{ user?.nome }}!
       </div>
     </v-app-bar>
 
-    <!-- FAB mobile: flutuante, visível só em telas < md e com drawer fechado -->
+    <!-- FAB: flutuante em telas < 1660px quando drawer fechado -->
     <Teleport to="body">
       <v-btn
-        v-if="!drawerOpen"
+        v-if="!drawerOpen && !isWide"
         icon
         size="small"
         color="surface"
         elevation="4"
-        class="d-flex d-md-none"
         style="position: fixed; top: 8px; left: 8px; z-index: 1500;"
         aria-label="Abrir menu"
         @click="drawerOpen = true"
@@ -56,13 +56,15 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useTheme, useDisplay } from 'vuetify';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 import { useDrawer } from '@/composables/useDrawer';
 
 const theme = useTheme();
-const { mdAndUp } = useDisplay();
+const { width } = useDisplay();
+const isWide = computed(() => width.value >= 1660);
 
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
