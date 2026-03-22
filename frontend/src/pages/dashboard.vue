@@ -35,6 +35,7 @@
   <v-navigation-drawer
     v-model="drawerOpen"
     location="left"
+    :width="smAndDown ? '100%' : 256"
     style="top: 0; height: 100%; position: fixed; z-index: 1010;"
   >
     <!-- Topo: saudação + ações de admin -->
@@ -47,14 +48,14 @@
       >
         <template #append>
           <v-btn
-            v-if="!isWide"
+            v-if="smAndDown"
             icon
             size="small"
             variant="text"
             aria-label="Fechar menu"
             @click="drawerOpen = false"
           >
-            <v-icon size="20">mdi-menu</v-icon>
+            <v-icon size="20">mdi-close</v-icon>
           </v-btn>
         </template>
       </v-list-item>
@@ -676,7 +677,7 @@ import { differenceInDays, startOfToday, format } from 'date-fns';
 // jsPDF e autoTable são carregados sob demanda (lazy) para não aumentar o bundle inicial
 import { useDisplay, useTheme } from 'vuetify';
 import { useDrawer } from '@/composables/useDrawer';
-const { mdAndUp, width } = useDisplay();
+const { mdAndUp, smAndDown, width } = useDisplay();
 const isWide = computed(() => width.value >= 1660);
 const { drawerOpen } = useDrawer();
 const theme = useTheme();
