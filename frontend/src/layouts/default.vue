@@ -19,7 +19,11 @@
       </v-btn>
 
       <v-spacer />
-      <div class="text-subtitle-1 font-weight-medium mr-3" v-if="user">
+      <div
+        v-if="user"
+        v-show="!drawerOpen || mdAndUp"
+        class="text-subtitle-1 font-weight-medium mr-3"
+      >
         Bem-vindo, {{ user?.nome }}!
       </div>
     </v-app-bar>
@@ -52,13 +56,13 @@
 </template>
 
 <script setup>
-import { useTheme } from 'vuetify';
+import { useTheme, useDisplay } from 'vuetify';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 import { useDrawer } from '@/composables/useDrawer';
 
-// useTheme aqui apenas para a binding :theme no v-app
 const theme = useTheme();
+const { mdAndUp } = useDisplay();
 
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
