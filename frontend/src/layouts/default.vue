@@ -5,12 +5,10 @@
       app
       color="surface"
       density="compact"
-      :class="['container-estreito', 'rounded', { 'drawer-open': drawerOpen }]"
+      :class="['container-estreito', 'rounded', { 'drawer-open': drawerOpen && isWide }]"
       elevation="2"
     >
-      <!-- Hamburger: apenas em telas >= 1660px -->
       <v-btn
-        v-if="isWide"
         icon
         class="ml-1"
         aria-label="Abrir menu"
@@ -22,28 +20,11 @@
       <v-spacer />
       <div
         v-if="user"
-        v-show="!drawerOpen || isWide"
         class="text-subtitle-1 font-weight-medium mr-3"
       >
         Bem-vindo, {{ user?.nome }}!
       </div>
     </v-app-bar>
-
-    <!-- FAB: flutuante em telas < 1660px quando drawer fechado -->
-    <Teleport to="body">
-      <v-btn
-        v-if="!drawerOpen && !isWide"
-        icon
-        size="small"
-        color="surface"
-        elevation="4"
-        style="position: fixed; top: 8px; left: 8px; z-index: 1500;"
-        aria-label="Abrir menu"
-        @click="drawerOpen = true"
-      >
-        <v-icon size="20">mdi-menu</v-icon>
-      </v-btn>
-    </Teleport>
 
     <!-- Conteúdo Principal da Página -->
     <v-main>
