@@ -46,6 +46,9 @@ export default defineConfig({
     }),
   ],
   optimizeDeps: {
+    // Desabilita o pre-bundling de deps (que usa esbuild.Build() e causa deadlock no ARM64)
+    noDiscovery: true,
+    include: [],
     exclude: [
       'vuetify',
       'vue-router',
@@ -72,6 +75,8 @@ export default defineConfig({
 
   // --- SEÇÃO CORRIGIDA ---
   build: {
+    // Desabilita minificação por esbuild para evitar deadlock no ARM64
+    minify: false,
     rollupOptions: {
       output: {
         manualChunks: {
