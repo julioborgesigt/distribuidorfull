@@ -1,27 +1,29 @@
 // /frontend/src/utils/sessionCache.js
 // Cache simples em sessionStorage com TTL
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
 
-export const getCache = (key) => {
+export function getCache (key) {
   try {
-    const raw = sessionStorage.getItem(key);
-    if (!raw) return null;
-    const { data, ts } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL) {
-      sessionStorage.removeItem(key);
-      return null;
+    const raw = sessionStorage.getItem(key)
+    if (!raw) {
+      return null
     }
-    return data;
+    const { data, ts } = JSON.parse(raw)
+    if (Date.now() - ts > CACHE_TTL) {
+      sessionStorage.removeItem(key)
+      return null
+    }
+    return data
   } catch {
-    return null;
+    return null
   }
-};
+}
 
-export const setCache = (key, data) => {
-  sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
-};
+export function setCache (key, data) {
+  sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }))
+}
 
-export const clearCache = (key) => {
-  sessionStorage.removeItem(key);
-};
+export function clearCache (key) {
+  sessionStorage.removeItem(key)
+}

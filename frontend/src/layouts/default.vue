@@ -3,15 +3,15 @@
 
     <v-app-bar
       app
+      :class="['container-estreito', 'rounded', { 'drawer-open': drawerOpen && isWide }]"
       color="surface"
       density="compact"
-      :class="['container-estreito', 'rounded', { 'drawer-open': drawerOpen && isWide }]"
       elevation="2"
     >
       <v-btn
-        icon
-        class="ml-1"
         aria-label="Abrir menu"
+        class="ml-1"
+        icon
         @click="drawerOpen = !drawerOpen"
       >
         <v-icon>mdi-menu</v-icon>
@@ -38,20 +38,20 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { useTheme, useDisplay } from 'vuetify';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/stores/auth';
-import { useDrawer } from '@/composables/useDrawer';
+  import { storeToRefs } from 'pinia'
+  import { computed } from 'vue'
+  import { useDisplay, useTheme } from 'vuetify'
+  import { useDrawer } from '@/composables/useDrawer'
+  import { useAuthStore } from '@/stores/auth'
 
-const theme = useTheme();
-const { width } = useDisplay();
-const isWide = computed(() => width.value >= 1660);
+  const theme = useTheme()
+  const { width } = useDisplay()
+  const isWide = computed(() => width.value >= 1660)
 
-const authStore = useAuthStore();
-const { user } = storeToRefs(authStore);
+  const authStore = useAuthStore()
+  const { user } = storeToRefs(authStore)
 
-const { drawerOpen } = useDrawer();
+  const { drawerOpen } = useDrawer()
 </script>
 
 <!--

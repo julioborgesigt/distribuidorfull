@@ -1,18 +1,18 @@
 // /fronted/vite.config.mjs (Corrigido)
 
+import { fileURLToPath, URL } from 'node:url'
+import Vue from '@vitejs/plugin-vue'
 // Plugins
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-// import Fonts from 'unplugin-fonts/vite' // Removido - usando @fontsource diretamente
-import Layouts from 'vite-plugin-vue-layouts-next'
-import Vue from '@vitejs/plugin-vue'
-import VueRouter from 'unplugin-vue-router/vite'
 import { VueRouterAutoImports } from 'unplugin-vue-router'
-import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
-
+import VueRouter from 'unplugin-vue-router/vite'
 // Utilities
 import { defineConfig } from 'vite'
-import { fileURLToPath, URL } from 'node:url'
+
+// import Fonts from 'unplugin-fonts/vite' // Removido - usando @fontsource diretamente
+import Layouts from 'vite-plugin-vue-layouts-next'
+import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -85,9 +85,9 @@ export default defineConfig({
           'vendor-charts': ['chart.js', 'vue-chartjs'],
           'vendor-utils': ['axios', 'date-fns'],
           'vendor-pdf': ['jspdf', 'jspdf-autotable'],
-        }
-      }
-    }
+        },
+      },
+    },
   },
 
   server: {
@@ -96,8 +96,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000', // Backend local em desenvolvimento
         changeOrigin: true,
-      }
-    }
+      },
+    },
   },
   // --- FIM DA SEÇÃO ---
 })

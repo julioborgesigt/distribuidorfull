@@ -43,7 +43,9 @@ commands:
   - sed -i 's/^[[:space:]]*//' backend/.env
   # 2. Instala apenas as dependências de produção do backend
   - npm install --omit=dev --prefix backend
-  # 3. Garante que a pasta de logs existe para o Winston
+  # 3. Aplica migrations de schema pendentes (substitui o antigo sequelize.sync)
+  - npm run db:migrate --prefix backend
+  # 4. Garante que a pasta de logs existe para o Winston
   - mkdir -p backend/logs
-  # 4. Reinicia o Passenger (restart.txt na raiz do app)
+  # 5. Reinicia o Passenger (restart.txt na raiz do app)
   - mkdir -p tmp && touch tmp/restart.txt

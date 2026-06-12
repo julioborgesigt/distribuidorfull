@@ -2,7 +2,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const authController = require('../controllers/authcontroller');
+const authController = require('../controllers/authController');
 const { validateLogin, validateFirstLogin } = require('../middlewares/validators');
 
 // Rate Limiter para Login - Proteção contra Força Bruta

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-skeleton-loader v-if="loading" type="image" height="200"></v-skeleton-loader>
+    <v-skeleton-loader v-if="loading" height="200" type="image" />
     <Bar
       v-else
       :data="chartData"
@@ -10,52 +10,52 @@
 </template>
 
 <script setup>
-import { Bar } from 'vue-chartjs';
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale
-} from 'chart.js';
+  import {
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend,
+    LinearScale,
+    Title,
+    Tooltip,
+  } from 'chart.js'
+  import { Bar } from 'vue-chartjs'
 
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale
-);
+  ChartJS.register(
+    Title,
+    Tooltip,
+    Legend,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+  )
 
-defineProps({
-  chartData: {
-    type: Object,
-    required: true
-  },
-  loading: {
-    type: Boolean,
-    default: false
+  defineProps({
+    chartData: {
+      type: Object,
+      required: true,
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+  })
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0,
+        },
+      },
+    },
   }
-});
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: true,
-  plugins: {
-    legend: {
-      display: false
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      ticks: {
-        precision: 0 
-      }
-    }
-  }
-};
 </script>
