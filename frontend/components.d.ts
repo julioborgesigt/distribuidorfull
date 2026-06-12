@@ -16,5 +16,6 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     StatsGrid: typeof import('./src/components/StatsGrid.vue')['default']
     TabelaProcessos: typeof import('./src/components/TabelaProcessos.vue')['default']
+    UserAdminDialogs: typeof import('./src/components/UserAdminDialogs.vue')['default']
   }
 }
