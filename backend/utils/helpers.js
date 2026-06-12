@@ -25,16 +25,16 @@ const isValidPassword = (senha) => {
 };
 
 /**
- * Extrai o IP real da requisição (considerando proxies)
+ * Extrai o IP real da requisição.
+ * Usa req.ip, que o Express resolve corretamente a partir da configuração
+ * `trust proxy` (ver server.js). Como confiamos apenas em 1 hop de proxy,
+ * o cliente não consegue forjar o IP via cabeçalho X-Forwarded-For — algo
+ * que importa porque o rate limit e o lockout de login são por IP.
  * @param {Object} req - Objeto de requisição Express
  * @returns {string} IP do cliente
  */
 const getRealIP = (req) => {
-  return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-         req.headers['x-real-ip'] ||
-         req.connection.remoteAddress ||
-         req.socket.remoteAddress ||
-         req.ip;
+  return req.ip || req.socket?.remoteAddress || 'unknown';
 };
 
 /**
@@ -79,6 +79,18 @@ const isValidCPF = (cpf) => {
 };
 
 /**
+ * Formata um CPF para o padrão 000.000.000-00.
+ * @param {string} cpf - CPF com ou sem máscara
+ * @returns {string|null} CPF formatado, ou null se não tiver 11 dígitos
+ */
+const formatCPF = (cpf) => {
+  if (!cpf) return null;
+  const clean = cpf.replace(/[^\d]/g, '');
+  if (clean.length !== 11) return null;
+  return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+};
+
+/**
  * Gera uma senha aleatória segura que atende aos requisitos do sistema
  * (mín. 8 caracteres, pelo menos uma maiúscula, uma minúscula e um número)
  * @param {number} length - Tamanho da senha (padrão: 10)
@@ -105,10 +117,25 @@ const generateRandomPassword = (length = 10) => {
   return password.split('').sort(() => crypto.randomInt(3) - 1).join('');
 };
 
+/**
+ * Retorna a cláusula WHERE de escopo de processos para a requisição atual.
+ * - admin_super: sem restrição (objeto vazio) → enxerga/opera em todos os processos.
+ * - demais admins: restrito aos processos atribuídos ao próprio usuário.
+ * Centraliza a regra para que operações em massa e individuais não vazem dados
+ * de outros usuários.
+ * @param {Object} req - Objeto de requisição Express (após autenticarAdmin)
+ * @returns {Object} Cláusula WHERE do Sequelize
+ */
+const processScopeWhere = (req) => {
+  return req.loginType === 'admin_super' ? {} : { userId: req.userId };
+};
+
 module.exports = {
   parseArrayFilter,
   isValidPassword,
   getRealIP,
   isValidCPF,
+  formatCPF,
   generateRandomPassword,
+  processScopeWhere,
 };

@@ -8,7 +8,7 @@ const { sequelize, User, Process } = require('../models');
 const { Op, literal } = require('sequelize');
 const iconv = require('iconv-lite');
 const logger = require('../utils/logger');
-const { getRealIP, parseArrayFilter } = require('../utils/helpers');
+const { getRealIP, parseArrayFilter, processScopeWhere } = require('../utils/helpers');
 
 // Upload e importação de CSV
 exports.uploadCSV = (req, res) => {
@@ -262,22 +262,40 @@ exports.listProcesses = async (req, res) => {
       }
     }
 
-    const sortConfig = JSON.parse(sortBy);
-    if (sortConfig.length > 0) {
-      options.order = sortConfig.map(s => {
-        if (s.key === 'user') {
-          return [User, 'nome', s.order];
-        }
-        if (s.key === 'prazoRestanteNum') {
-          // Ordena pelo prazo calculado (data_intimacao + prazo_processual em dias),
-          // igual ao cálculo exibido no frontend — ignora prazo_vencimento armazenado.
-          return [literal(`DATE_ADD(data_intimacao, INTERVAL CAST(prazo_processual AS UNSIGNED) DAY)`), s.order];
-        }
-        return [s.key, s.order];
-      });
-    } else {
-      options.order = [['data_intimacao', 'DESC']];
+    // Whitelist de colunas ordenáveis — evita erro 500 (ou exposição de schema)
+    // a partir de uma `key` arbitrária vinda do cliente.
+    const SORTABLE_COLUMNS = new Set([
+      'numero_processo', 'prazo_processual', 'classe_principal',
+      'assunto_principal', 'tarjas', 'data_intimacao', 'prazo_vencimento',
+      'cumprido', 'reiteracoes', 'cumpridoDate', 'observacoes'
+    ]);
+
+    let sortConfig = [];
+    try {
+      const parsed = JSON.parse(sortBy);
+      if (Array.isArray(parsed)) sortConfig = parsed;
+    } catch {
+      sortConfig = [];
     }
+
+    const normalizeOrder = (order) => (String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC');
+
+    const safeOrder = sortConfig.reduce((acc, s) => {
+      const order = normalizeOrder(s.order);
+      if (s.key === 'user') {
+        acc.push([User, 'nome', order]);
+      } else if (s.key === 'prazoRestanteNum') {
+        // Ordena pelo prazo calculado (data_intimacao + prazo_processual em dias),
+        // igual ao cálculo exibido no frontend — ignora prazo_vencimento armazenado.
+        acc.push([literal(`DATE_ADD(data_intimacao, INTERVAL CAST(prazo_processual AS UNSIGNED) DAY)`), order]);
+      } else if (SORTABLE_COLUMNS.has(s.key)) {
+        acc.push([s.key, order]);
+      }
+      // keys desconhecidas são silenciosamente ignoradas
+      return acc;
+    }, []);
+
+    options.order = safeOrder.length > 0 ? safeOrder : [['data_intimacao', 'DESC']];
 
     const { count, rows } = await Process.findAndCountAll(options);
 
@@ -324,7 +342,7 @@ exports.manualAssignProcess = async (req, res) => {
 
     const numero = numeroProcesso.trim();
 
-    const process = await Process.findOne({ where: { numero_processo: numero } });
+    const process = await Process.findOne({ where: { numero_processo: numero, ...processScopeWhere(req) } });
     if (!process) {
       logger.warn('Processo não encontrado para atribuição', {
         numeroProcesso: numero,
@@ -360,7 +378,7 @@ exports.updateObservacoes = async (req, res) => {
     const { id } = req.params;
     const { observacoes } = req.body;
 
-    const processo = await Process.findByPk(id);
+    const processo = await Process.findOne({ where: { id, ...processScopeWhere(req) } });
 
     if (!processo) {
       return res.status(404).json({ error: 'Processo não encontrado' });
@@ -387,7 +405,7 @@ exports.updateObservacoes = async (req, res) => {
 exports.markAsCumprido = async (req, res) => {
   try {
     const { id } = req.params;
-    const processo = await Process.findByPk(id);
+    const processo = await Process.findOne({ where: { id, ...processScopeWhere(req) } });
 
     if (!processo) {
       return res.status(404).json({ error: 'Processo não encontrado' });
@@ -419,7 +437,7 @@ exports.markAsCumprido = async (req, res) => {
 exports.unmarkAsCumprido = async (req, res) => {
   try {
     const { id } = req.params;
-    const processo = await Process.findByPk(id);
+    const processo = await Process.findOne({ where: { id, ...processScopeWhere(req) } });
 
     if (!processo) {
       return res.status(404).json({ error: 'Processo não encontrado' });
@@ -478,17 +496,19 @@ exports.bulkAssign = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'Usuário destino não encontrado.' });
     }
-    await Process.update({ userId: user.id }, {
-      where: { id: processIds }
+    // admin_padrao só pode reatribuir processos que já são dele
+    const [affected] = await Process.update({ userId: user.id }, {
+      where: { id: processIds, ...processScopeWhere(req) }
     });
     logger.info('Atribuição em massa realizada', {
-      processCount: processIds.length,
+      requested: processIds.length,
+      affected,
       assignedTo: user.id,
       matricula,
       assignedBy: req.userId,
       ip: getRealIP(req)
     });
-    res.json({ message: 'Atribuição em massa realizada com sucesso.', count: processIds.length });
+    res.json({ message: 'Atribuição em massa realizada com sucesso.', count: affected });
   } catch (error) {
     logger.error('Erro ao realizar atribuição em massa', {
       error: error.message,
@@ -504,15 +524,16 @@ exports.bulkAssign = async (req, res) => {
 exports.bulkDelete = async (req, res) => {
   try {
     const { processIds } = req.body;
-    await Process.destroy({
-      where: { id: processIds }
+    const affected = await Process.destroy({
+      where: { id: processIds, ...processScopeWhere(req) }
     });
     logger.info('Exclusão em massa realizada', {
-      processCount: processIds.length,
+      requested: processIds.length,
+      affected,
       deletedBy: req.userId,
       ip: getRealIP(req)
     });
-    res.json({ message: 'Exclusão em massa realizada com sucesso.', count: processIds.length });
+    res.json({ message: 'Exclusão em massa realizada com sucesso.', count: affected });
   } catch (error) {
     logger.error('Erro ao realizar exclusão em massa', {
       error: error.message,
@@ -528,15 +549,16 @@ exports.bulkDelete = async (req, res) => {
 exports.bulkCumprido = async (req, res) => {
   try {
     const { processIds } = req.body;
-    await Process.update({ cumprido: true, reiteracoes: 0, cumpridoDate: new Date() }, {
-      where: { id: processIds }
+    const [affected] = await Process.update({ cumprido: true, reiteracoes: 0, cumpridoDate: new Date() }, {
+      where: { id: processIds, ...processScopeWhere(req) }
     });
     logger.info('Processos marcados como cumpridos em massa', {
-      processCount: processIds.length,
+      requested: processIds.length,
+      affected,
       markedBy: req.userId,
       ip: getRealIP(req)
     });
-    res.json({ message: 'Processos marcados como cumpridos com sucesso.', count: processIds.length });
+    res.json({ message: 'Processos marcados como cumpridos com sucesso.', count: affected });
   } catch (error) {
     logger.error('Erro ao atualizar status em massa', {
       error: error.message,
@@ -552,7 +574,7 @@ exports.bulkCumprido = async (req, res) => {
 exports.updateIntim = async (req, res) => {
   const { processId, reiteracoes } = req.body;
   try {
-    const process = await Process.findByPk(processId);
+    const process = await Process.findOne({ where: { id: processId, ...processScopeWhere(req) } });
     if (!process) {
       return res.status(404).json({ error: 'Processo não encontrado.' });
     }
