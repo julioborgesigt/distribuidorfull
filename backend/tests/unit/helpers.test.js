@@ -1,5 +1,6 @@
 // Testes unitários para funções utilitárias
-const { isValidPassword, getRealIP, sanitizeString } = require('../../utils/helpers');
+const { isValidPassword, getRealIP } = require('../../utils/helpers');
+const { sanitizeData: sanitizeString } = require('../../middlewares/sanitizer');
 
 describe('Helpers - isValidPassword', () => {
   test('deve aceitar senha válida com maiúscula, minúscula e número', () => {
@@ -37,38 +38,34 @@ describe('Helpers - isValidPassword', () => {
 });
 
 describe('Helpers - getRealIP', () => {
-  test('deve retornar IP do header x-forwarded-for', () => {
+  // getRealIP confia no req.ip resolvido pelo Express (via trust proxy),
+  // e NÃO em cabeçalhos forjáveis como X-Forwarded-For.
+  test('deve retornar req.ip resolvido pelo Express', () => {
     const req = {
-      headers: { 'x-forwarded-for': '192.168.1.100' },
-      ip: '127.0.0.1'
+      headers: { 'x-forwarded-for': '203.0.113.7' },
+      ip: '192.168.1.100'
     };
     expect(getRealIP(req)).toBe('192.168.1.100');
   });
 
-  test('deve retornar IP do header x-real-ip se x-forwarded-for não existir', () => {
+  test('não deve confiar em X-Forwarded-For forjado pelo cliente', () => {
     const req = {
-      headers: { 'x-real-ip': '192.168.1.101' },
-      ip: '127.0.0.1'
+      headers: { 'x-forwarded-for': '10.0.0.1' },
+      ip: '198.51.100.42'
     };
-    expect(getRealIP(req)).toBe('192.168.1.101');
+    expect(getRealIP(req)).toBe('198.51.100.42');
   });
 
-  test('deve retornar req.ip se nenhum header especial existir', () => {
+  test('deve cair para o endereço do socket quando req.ip não existe', () => {
     const req = {
       headers: {},
-      ip: '127.0.0.1',
-      connection: {},
-      socket: {}
+      socket: { remoteAddress: '127.0.0.1' }
     };
     expect(getRealIP(req)).toBe('127.0.0.1');
   });
 
-  test('deve lidar com múltiplos IPs no x-forwarded-for', () => {
-    const req = {
-      headers: { 'x-forwarded-for': '192.168.1.100, 10.0.0.1' },
-      ip: '127.0.0.1'
-    };
-    expect(getRealIP(req)).toBe('192.168.1.100');
+  test('deve retornar "unknown" quando não há IP disponível', () => {
+    expect(getRealIP({ headers: {} })).toBe('unknown');
   });
 });
 
