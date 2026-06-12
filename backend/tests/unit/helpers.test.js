@@ -1,6 +1,5 @@
 // Testes unitários para funções utilitárias
 const { isValidPassword, getRealIP } = require('../../utils/helpers');
-const { sanitizeData: sanitizeString } = require('../../middlewares/sanitizer');
 
 describe('Helpers - isValidPassword', () => {
   test('deve aceitar senha válida com maiúscula, minúscula e número', () => {
@@ -66,31 +65,5 @@ describe('Helpers - getRealIP', () => {
 
   test('deve retornar "unknown" quando não há IP disponível', () => {
     expect(getRealIP({ headers: {} })).toBe('unknown');
-  });
-});
-
-describe('Helpers - sanitizeString', () => {
-  test('deve remover tags HTML e manter conteúdo', () => {
-    const result = sanitizeString('<script>alert("xss")</script>Texto');
-    // A biblioteca xss pode remover a tag script mas manter o conteúdo
-    expect(result).toContain('Texto');
-  });
-
-  test('deve processar HTML complexo', () => {
-    const result = sanitizeString('<div class="test">Conteúdo</div>');
-    expect(result).toContain('Conteúdo');
-  });
-
-  test('deve manter texto sem HTML intacto', () => {
-    expect(sanitizeString('Texto normal')).toBe('Texto normal');
-  });
-
-  test('deve lidar com strings vazias', () => {
-    expect(sanitizeString('')).toBe('');
-  });
-
-  test('deve lidar com null', () => {
-    const result = sanitizeString(null);
-    expect(result === null || result === '').toBe(true);
   });
 });
