@@ -175,7 +175,7 @@ exports.getDashboardStats = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
 

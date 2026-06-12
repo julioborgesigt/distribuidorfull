@@ -311,13 +311,8 @@ exports.listProcesses = async (req, res) => {
       userId: req.userId,
       ip: getRealIP(req)
     });
-    res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
-};
-
-// Atribuição automática de processos
-exports.assignProcesses = async (req, res) => {
-  res.status(501).json({ error: 'Atribuição automática não implementada.' });
 };
 
 // Atribuição manual de um processo

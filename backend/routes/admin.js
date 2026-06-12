@@ -181,19 +181,6 @@ router.get('/processes', adminController.listProcesses);
 
 /**
  * @swagger
- * /api/admin/assign:
- *   post:
- *     summary: Atribuição automática de processos
- *     description: Distribui processos automaticamente entre usuários
- *     tags: [Administração - Processos]
- *     responses:
- *       200:
- *         description: Processos atribuídos com sucesso
- */
-router.post('/assign', adminController.assignProcesses);
-
-/**
- * @swagger
  * /api/admin/manual-assign:
  *   post:
  *     summary: Atribuição manual de processo

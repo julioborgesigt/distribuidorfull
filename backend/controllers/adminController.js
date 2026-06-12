@@ -13,7 +13,6 @@ module.exports = {
   // Processos
   uploadCSV: processController.uploadCSV,
   listProcesses: processController.listProcesses,
-  assignProcesses: processController.assignProcesses,
   manualAssignProcess: processController.manualAssignProcess,
   updateObservacoes: processController.updateObservacoes,
   markAsCumprido: processController.markAsCumprido,
