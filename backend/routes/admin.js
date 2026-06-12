@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const autenticarAdmin = require('../middlewares/autenticarAdmin');
+const requireSuperAdmin = require('../middlewares/requireSuperAdmin');
 const multer = require('multer');
 const {
   validatePreCadastro,
@@ -180,19 +181,6 @@ router.get('/processes', adminController.listProcesses);
 
 /**
  * @swagger
- * /api/admin/assign:
- *   post:
- *     summary: Atribuição automática de processos
- *     description: Distribui processos automaticamente entre usuários
- *     tags: [Administração - Processos]
- *     responses:
- *       200:
- *         description: Processos atribuídos com sucesso
- */
-router.post('/assign', adminController.assignProcesses);
-
-/**
- * @swagger
  * /api/admin/manual-assign:
  *   post:
  *     summary: Atribuição manual de processo
@@ -240,7 +228,7 @@ router.post('/manual-assign', validateManualAssign, adminController.manualAssign
  *       201:
  *         description: Usuário criado com sucesso
  */
-router.post('/pre-cadastro', validatePreCadastro, adminController.preCadastro);
+router.post('/pre-cadastro', requireSuperAdmin, validatePreCadastro, adminController.preCadastro);
 
 /**
  * @swagger
@@ -262,7 +250,7 @@ router.post('/pre-cadastro', validatePreCadastro, adminController.preCadastro);
  *       200:
  *         description: Senha resetada com sucesso
  */
-router.post('/reset-password', validateResetPassword, adminController.resetPassword);
+router.post('/reset-password', requireSuperAdmin, validateResetPassword, adminController.resetPassword);
 
 /**
  * @swagger
@@ -371,7 +359,7 @@ router.post('/update-intim', validateUpdateIntim, adminController.updateIntim);
  *       200:
  *         description: Usuário excluído com sucesso
  */
-router.post('/delete-matricula', validateDeleteMatricula, adminController.deleteMatricula);
+router.post('/delete-matricula', requireSuperAdmin, validateDeleteMatricula, adminController.deleteMatricula);
 
 /**
  * @swagger

@@ -1,4 +1,12 @@
-source: https://github.com/julioborgesigt/distribuidorfull
+# Deploy no DOM Cloud.
+#
+# O frontend é buildado no GitHub Actions (.github/workflows/build-deploy-branch.yml),
+# que publica o código + frontend/dist na branch "deploy". Aqui apenas clonamos essa
+# branch e instalamos o backend — o servidor NÃO roda mais `vite build` (estourava o
+# limite de memória do runner do DOM Cloud).
+source:
+  url: https://github.com/julioborgesigt/distribuidorfull
+  branch: deploy
 
 features:
   - node lts
@@ -8,8 +16,10 @@ passenger:
   # Passenger procura app.js na raiz por padrão — app.js delega para backend/server.js
   app_start_command: node app.js
   env_var_list:
-    # IMPORTANTE: Substitua os valores abaixo pelas suas credenciais reais
-    # no painel do DomCloud. NUNCA commite credenciais reais no repositório.
+    # IMPORTANTE: configure os valores reais no painel do DomCloud (Environment Variables).
+    # NUNCA commite credenciais reais no repositório.
+    # DB_HOST deve ser "localhost": o MySQL do DOM Cloud roda na mesma máquina e o
+    # usuário do banco só tem permissão para conexões locais.
     - JWT_SECRET=${JWT_SECRET}
     - DB_HOST=${DB_HOST}
     - DB_USER=${DB_USER}
@@ -19,8 +29,7 @@ passenger:
     - NODE_ENV=production
 
 commands:
-  # 1. Cria backend/.env a partir de variáveis de ambiente do servidor
-  #    Configure as variáveis reais no painel do DomCloud (Environment Variables)
+  # 1. Cria backend/.env a partir das variáveis de ambiente do servidor
   - |
     cat > backend/.env <<EOF
     JWT_SECRET=$JWT_SECRET
@@ -32,12 +41,9 @@ commands:
     NODE_ENV=production
     EOF
   - sed -i 's/^[[:space:]]*//' backend/.env
-  # 2. Instala dependências do backend
-  - npm install --prefix backend
-  # 3. Instala dependências do frontend e gera o build
-  - npm install --prefix frontend
-  - npm run build --prefix frontend
-  # 4. Garante que a pasta de logs existe para o Winston
+  # 2. Instala apenas as dependências de produção do backend
+  - npm install --omit=dev --prefix backend
+  # 3. Garante que a pasta de logs existe para o Winston
   - mkdir -p backend/logs
-  # 5. Reinicia o Passenger (restart.txt deve estar na raiz do app, não em backend/)
+  # 4. Reinicia o Passenger (restart.txt na raiz do app)
   - mkdir -p tmp && touch tmp/restart.txt

@@ -66,25 +66,25 @@
         <v-list-item
           prepend-icon="mdi-account-plus-outline"
           title="Cadastrar Usuário"
-          @click="() => { drawerOpen = false; abrirModalCadastro(); }"
+          @click="() => { drawerOpen = false; userDialogs?.abrirModalCadastro(); }"
         />
         <v-list-item
           prepend-icon="mdi-lock-reset"
           title="Resetar Senha"
           base-color="orange"
-          @click="() => { drawerOpen = false; abrirModalReset(); }"
+          @click="() => { drawerOpen = false; userDialogs?.abrirModalReset(); }"
         />
         <v-list-item
           prepend-icon="mdi-account-remove-outline"
           title="Apagar Usuário"
           base-color="red"
-          @click="() => { drawerOpen = false; abrirModalDelete(); }"
+          @click="() => { drawerOpen = false; userDialogs?.abrirModalDelete(); }"
         />
         <v-list-item
           prepend-icon="mdi-file-upload-outline"
           title="Importar CSV"
           base-color="teal"
-          @click="() => { drawerOpen = false; abrirModalUpload(); }"
+          @click="() => { drawerOpen = false; userDialogs?.abrirModalUpload(); }"
         />
       </template>
     </v-list>
@@ -367,214 +367,14 @@
   
   </v-card> 
   
-  <!-- 
-    Todos os modais (v-dialog) e o snackbar
-    PERMANECEM AQUI, pois são controlados pelos
-    botões de admin e ações desta página.
-  -->
-  <v-dialog v-model="dialogCadastro" max-width="600px" persistent>
-    <v-card>
-      <v-form ref="formCadastroRef" @submit.prevent="handleSalvarCadastro">
-        <v-card-title>
-          <span class="text-h5">Cadastrar Novo Usuário</span>
-        </v-card-title>
-        <v-card-text>
-          <v-container>
-            <v-row>
-              <v-col cols="12">
-                <v-text-field
-                  v-model="novoUsuario.nome"
-                  label="Nome Completo"
-                  :rules="[requiredRule]"
-                  variant="outlined"
-                  density="compact"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="novoUsuario.matricula"
-                  label="Matrícula"
-                  :rules="[requiredRule]"
-                  variant="outlined"
-                  density="compact"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="novoUsuario.senha"
-                  label="Senha Provisória"
-                  :rules="[requiredRule, senhaRule]"
-                  type="password"
-                  variant="outlined"
-                  density="compact"
-                  hint="Mínimo 8 caracteres"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12">
-                <label class="text-body-2">Tipo de Acesso</label>
-                <v-radio-group v-model="novoUsuario.tipoCadastro" inline>
-                  <v-radio
-                    v-for="opt in tipoCadastroOptions"
-                    :key="opt.value"
-                    :label="opt.title"
-                    :value="opt.value"
-                  ></v-radio>
-                </v-radio-group>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="fecharModalCadastro">Cancelar</v-btn>
-          <v-btn
-            color="primary"
-            :loading="loadingCadastro"
-            type="submit"
-          >
-            Salvar
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
-
-  <v-dialog v-model="dialogReset" max-width="500px" persistent>
-    <v-card>
-      <v-form ref="formResetRef" @submit.prevent="handleResetarSenha">
-        <v-card-title>
-          <span class="text-h5">Resetar Senha de Usuário</span>
-        </v-card-title>
-        <v-card-text>
-          <v-container>
-            <v-row>
-              <v-col cols="12">
-                <v-autocomplete
-                  v-model="matriculaParaReset"
-                  :items="allUsersOptions"
-                  item-title="title"
-                  item-value="value"
-                  label="Selecionar Usuário"
-                  :rules="[requiredRule]"
-                  variant="outlined"
-                  density="compact"
-                  placeholder="Digite o nome ou matrícula..."
-                ></v-autocomplete>
-                <div class="text-caption pa-1">
-                  Uma nova senha temporária será gerada automaticamente.
-                </div>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="fecharModalReset">Cancelar</v-btn>
-          <v-btn
-            color="orange"
-            :loading="loadingReset"
-            type="submit"
-          >
-            Resetar Senha
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
-
-  <v-dialog v-model="dialogUpload" max-width="500px" persistent>
-    <v-card>
-      <v-card-title>
-        <span class="text-h5">Importar e Atualizar CSV</span>
-      </v-card-title>
-      <v-card-text>
-        <v-container>
-          <v-row>
-            <v-col cols="12">
-              <v-file-input
-                label="Selecionar arquivo CSV"
-                accept=".csv, text/csv"
-                variant="outlined"
-                density="compact"
-                @change="onFileChange"
-                :error-messages="uploadError"
-              ></v-file-input>
-              <div class="text-caption pa-1">
-                O arquivo será processado pelo backend.
-                Processos existentes serão atualizados se a data de intimação for mais recente.
-              </div>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn variant="text" @click="fecharModalUpload">Cancelar</v-btn>
-        <v-btn
-          color="teal"
-          :loading="loadingUpload"
-          @click="handleUploadCSV"
-          :disabled="!csvFile"
-        >
-          Enviar e Processar
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-
-  <v-dialog v-model="dialogDelete" max-width="500px" persistent>
-    <v-card>
-      <v-form ref="formDeleteRef" @submit.prevent="handleDeleteUser">
-        <v-card-title>
-          <span class="text-h5">Apagar Usuário</span>
-        </v-card-title>
-        <v-card-text>
-          <v-container>
-            <v-alert
-              type="error"
-              variant="tonal"
-              class="mb-4"
-              border="start"
-              prominent
-            >
-              <strong>Atenção:</strong> Esta ação é permanente e não pode ser desfeita. Todos os processos atribuídos a este usuário ficarão "Não Atribuídos".
-            </v-alert>
-
-            <v-row>
-              <v-col cols="12">
-                <v-autocomplete
-                  v-model="matriculaParaDelete"
-                  item-title="title"
-                  :items="allUsersOptions"
-                  item-value="value"
-                  label="Selecionar Usuário para Apagar"
-                  :rules="[requiredRule]"
-                  variant="outlined"
-                  density="compact"
-                  placeholder="Digite o nome ou matrícula..."
-                ></v-autocomplete>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="fecharModalDelete">Cancelar</v-btn>
-          <v-btn
-            color="red"
-            :loading="loadingDelete"
-            type="submit"
-          >
-            Apagar Usuário
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
-
-
-
+  <!-- Modais de administração de usuários (cadastro, reset, exclusão, CSV) -->
+  <user-admin-dialogs
+    ref="userDialogs"
+    :all-users-options="allUsersOptions"
+    @notify="notify"
+    @users-changed="handleUsersChanged"
+    @data-changed="reloadAllData"
+  />
 
   <v-dialog v-model="dialogBulkAssign" max-width="500px" persistent>
     <v-card>
@@ -641,7 +441,7 @@
     location="top right"
     multi-line
     class="toast-snackbar"
-    @update:model-value="val => { if (!val) { snackbarTimeout = 3000; snackbarProgress = 100; } }"
+    @update:model-value="onSnackbarToggle"
   >
     {{ snackbarText }}
     <v-progress-linear
@@ -673,10 +473,14 @@ import apiClient from '@/api/axios';
 import TabelaProcessos from '../components/TabelaProcessos.vue';
 import StatsGrid from '../components/StatsGrid.vue';
 import CumpridosChart from '../components/CumpridosChart.vue';
-import { differenceInDays, startOfToday, format } from 'date-fns';
-// jsPDF e autoTable são carregados sob demanda (lazy) para não aumentar o bundle inicial
+import UserAdminDialogs from '../components/UserAdminDialogs.vue';
+import { format } from 'date-fns';
 import { useDisplay, useTheme } from 'vuetify';
 import { useDrawer } from '@/composables/useDrawer';
+import { useSnackbar } from '@/composables/useSnackbar';
+import { getPrazoRestanteNum, formatarPrazo, getCorPrazo } from '@/utils/prazo';
+import { getCache, setCache, clearCache } from '@/utils/sessionCache';
+import { exportProcessesPDF } from '@/utils/pdfExport';
 const { mdAndUp, smAndDown, width } = useDisplay();
 const isWide = computed(() => width.value >= 1660);
 const { drawerOpen } = useDrawer();
@@ -737,39 +541,20 @@ const allTarjasList = ref([]); // Lista de todas as tarjas disponíveis
 // =================================================================
 // 4. ESTADO DOS MODAIS E SNACKBAR
 // =================================================================
-// ... (Todo o estado dos modais e snackbar é MANTIDO aqui) ...
-const snackbar = ref(false);
-const snackbarText = ref('');
-const snackbarColor = ref('success');
-const snackbarTimeout = ref(3000);
-const snackbarProgress = ref(100);
-let snackbarTimer = null;
+// Snackbar centralizado no composable; modais de admin vivem em UserAdminDialogs
+const {
+  snackbar,
+  snackbarText,
+  snackbarColor,
+  snackbarTimeout,
+  snackbarProgress,
+  notify,
+  onSnackbarToggle,
+} = useSnackbar();
+
+const userDialogs = ref(null); // ref do componente UserAdminDialogs
 const menuInicio = ref(false);
 const menuFim = ref(false);
-
-// Modal: Cadastrar Usuário
-const dialogCadastro = ref(false);
-const formCadastroRef = ref(null);
-const loadingCadastro = ref(false);
-const novoUsuario = ref({ matricula: '', nome: '', senha: '', tipoCadastro: 'admin_padrao' });
-
-// Modal: Resetar Senha
-const dialogReset = ref(false);
-const formResetRef = ref(null);
-const loadingReset = ref(false);
-const matriculaParaReset = ref(null);
-
-// Modal: Apagar Usuário
-const dialogDelete = ref(false);
-const formDeleteRef = ref(null);
-const loadingDelete = ref(false);
-const matriculaParaDelete = ref(null);
-
-// Modal: Upload CSV
-const dialogUpload = ref(false);
-const loadingUpload = ref(false);
-const csvFile = ref(null);
-const uploadError = ref(null);
 
 // Modal: Atribuir em Massa
 const dialogBulkAssign = ref(false);
@@ -781,18 +566,11 @@ const matriculaParaAtribuir = ref(null);
 // 5. REGRAS DE VALIDAÇÃO
 // =================================================================
 const requiredRule = v => !!v || 'Campo obrigatório';
-const senhaRule = v => (v && v.length >= 8) || 'Senha deve ter no mínimo 8 caracteres';
 
 // =================================================================
 // 6. PROPRIEDADES COMPUTADAS (COMPUTED)
 // =================================================================
-// ... (Todas as computed properties são MANTIDAS aqui) ...
-// Opções para os selects de filtro/modais
-const tipoCadastroOptions = ref([
-  { title: 'Admin Padrão', value: 'admin_padrao' },
-  { title: 'Admin Super', value: 'admin_super' },
-]);
-
+// Opções para os selects de filtro
 const statusCumpridoOptions = [
   { title: 'Todos', value: null },
   { title: 'Cumprido', value: true },
@@ -901,49 +679,9 @@ const formattedDataFim = computed(() => {
 
 
 // =================================================================
-// 7. FUNÇÕES HELPERS (Cálculo de Prazo, Construtores de Query)
+// 7. FUNÇÕES HELPERS (Construtores de Query)
 // =================================================================
-// ... (Todas as funções helper são MANTIDAS aqui) ...
-// --- Helpers de Cálculo de Prazo (Usados pela Tabela) ---
-// Converte "YYYY-MM-DD" para Date em horário local (evita erro de UTC no fuso Brasil)
-const parseDateLocal = (str) => {
-  const [y, m, d] = str.split('-').map(Number);
-  return new Date(y, m - 1, d);
-};
-
-// Calcula prazo sempre a partir de data_intimacao + prazo_processual,
-// igual ao sistema antigo — ignora prazo_vencimento armazenado, que pode estar desatualizado.
-// Usa prazo_vencimento apenas como último recurso (sem os outros campos).
-const getPrazoRestanteNum = (proc) => {
-  let dataVencimento = null;
-
-  if (proc.data_intimacao && proc.prazo_processual) {
-    const dias = parseInt(proc.prazo_processual, 10) || 0;
-    dataVencimento = parseDateLocal(proc.data_intimacao);
-    dataVencimento.setDate(dataVencimento.getDate() + dias);
-  } else if (proc.prazo_vencimento) {
-    dataVencimento = parseDateLocal(proc.prazo_vencimento);
-  }
-
-  if (!dataVencimento) return null;
-  try {
-    return differenceInDays(dataVencimento, startOfToday());
-  } catch {
-    return null;
-  }
-};
-const formatarPrazo = (dias) => {
-  if (dias === null) return 'N/A';
-  if (dias < 0) return `Vencido há ${Math.abs(dias)} dias`;
-  if (dias === 0) return 'Vence hoje';
-  return `Vence em ${dias} dias`;
-};
-const getCorPrazo = (dias) => {
-  if (dias === null) return 'grey';
-  if (dias < 0) return 'red';
-  if (dias <= 5) return 'orange';
-  return 'green';
-};
+// Helpers de prazo (getPrazoRestanteNum etc.) vivem em @/utils/prazo
 
 // --- Helpers de Query Params ---
 const buildChartQueryParams = () => {
@@ -1023,9 +761,7 @@ const fetchTableData = async () => {
   } catch (error) {
     // Ignora erros de abort (request cancelado por novo filtro)
     if (error?.code === 'ERR_CANCELED') return;
-    snackbarText.value = 'Erro ao carregar processos da tabela.';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
+    notify('Erro ao carregar processos da tabela.', 'error');
   } finally {
     loadingTable.value = false;
   }
@@ -1046,9 +782,7 @@ const fetchChartData = async () => {
     statsResponse.value = response.data;
   } catch (error) {
     if (error?.code === 'ERR_CANCELED') return;
-    snackbarText.value = 'Erro ao carregar dados dos gráficos.';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
+    notify('Erro ao carregar dados dos gráficos.', 'error');
   } finally {
     loadingCharts.value = false;
   }
@@ -1073,28 +807,6 @@ const checkUnassignedProcesses = async () => {
   }
 };
 
-// --- Cache helpers (sessionStorage com TTL de 5 minutos) ---
-const CACHE_TTL = 5 * 60 * 1000;
-
-const getCache = (key) => {
-  try {
-    const raw = sessionStorage.getItem(key);
-    if (!raw) return null;
-    const { data, ts } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL) {
-      sessionStorage.removeItem(key);
-      return null;
-    }
-    return data;
-  } catch {
-    return null;
-  }
-};
-
-const setCache = (key, data) => {
-  sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
-};
-
 // Busca a lista de todos os usuários para os modais/filtros (com cache de 5 min)
 const fetchAllUsers = async () => {
   const cached = getCache('cache:users');
@@ -1107,10 +819,15 @@ const fetchAllUsers = async () => {
     allUsersList.value = response.data;
     setCache('cache:users', response.data);
   } catch {
-    snackbarText.value = 'Erro ao carregar lista de usuários.';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
+    notify('Erro ao carregar lista de usuários.', 'error');
   }
+};
+
+// Após criar/apagar usuário: invalida o cache antes de rebuscar, senão a
+// lista voltaria desatualizada do sessionStorage por até 5 minutos
+const handleUsersChanged = async () => {
+  clearCache('cache:users');
+  await fetchAllUsers();
 };
 
 // Busca valores únicos para os filtros via endpoint dedicado (com cache de 5 min)
@@ -1171,9 +888,7 @@ const handleSalvarObservacoes = async (itemEditado) => {
     await apiClient.put(`/admin/processes/${id}/observacoes`, { observacoes });
     await reloadAllData();
   } catch {
-    snackbarText.value = 'Erro ao salvar observação.';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
+    notify('Erro ao salvar observação.', 'error');
   } finally {
     actionLoading.value = false;
   }
@@ -1209,9 +924,7 @@ const handleMarcarComoCumprido = (item) => {
       await apiClient.patch(`/admin/processes/${item.id}/${acao}`);
       await reloadAllData();
     } catch {
-      snackbarText.value = `Erro ao ${acao} processo.`;
-      snackbarColor.value = 'error';
-      snackbar.value = true;
+      notify(`Erro ao ${acao} processo.`, 'error');
     } finally {
       actionLoading.value = false;
     }
@@ -1228,54 +941,8 @@ const filterUnassigned = () => {
 // const handleLogout = () => { ... }; // REMOVIDO - Movido para default.vue
 
 // --- Handlers de PDF ---
-// (MANTIDOS)
-const downloadPDF = async (dataToExport) => {
-  let processesToExport;
-  if (dataToExport === selected.value) {
-    processesToExport = [...dataToExport];
-  } else {
-    processesToExport = [...serverItems.value];
-  }
-
-  const sortState = options.value.sortBy || [];
-  if (sortState.length > 0) {
-    processesToExport = sortProcesses(processesToExport, sortState);
-  }
-
-  if (processesToExport.length === 0) {
-    snackbarText.value = 'Nenhum item para exportar.';
-    snackbarColor.value = 'info';
-    snackbar.value = true;
-    return;
-  }
-
-  actionLoading.value = true;
-  actionLoadingText.value = 'Gerando PDF...';
-  await nextTick(); // garante que o overlay renderiza antes do trabalho síncrono
-
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable')
-  ]);
-  const doc = new jsPDF('l', 'mm', 'a4');
-
-  // --- CABEÇALHO DO PDF ---
-  // Título
-  doc.setFontSize(16);
-  doc.setFont(undefined, 'bold');
-  doc.text('Relatório de Processos', 15, 15);
-
-  // Data de impressão
-  doc.setFontSize(10);
-  doc.setFont(undefined, 'normal');
-  const dataAtual = format(new Date(), 'dd/MM/yyyy HH:mm');
-  doc.text(`Data de Impressão: ${dataAtual}`, 15, 22);
-
-  // Quantidade de processos
-  doc.text(`Total de Processos: ${processesToExport.length}`, 15, 28);
-
-  // Filtros aplicados
-  let yPosition = 34;
+// Descreve os filtros ativos para o cabeçalho do relatório
+const buildFiltrosAtivos = () => {
   const filtrosAtivos = [];
 
   if (search.value) {
@@ -1312,232 +979,42 @@ const downloadPDF = async (dataToExport) => {
     filtrosAtivos.push(`Data Fim: ${format(filters.value.data_fim, 'dd/MM/yyyy')}`);
   }
 
-  if (filtrosAtivos.length > 0) {
-    doc.setFont(undefined, 'bold');
-    doc.text('Filtros Aplicados:', 15, yPosition);
-    doc.setFont(undefined, 'normal');
-    yPosition += 6;
-
-    filtrosAtivos.forEach((filtro, index) => {
-      // Se o texto for muito longo, quebra em múltiplas linhas
-      const maxWidth = 267; // Largura da página A4 landscape menos margens
-      const linhas = doc.splitTextToSize(filtro, maxWidth);
-      linhas.forEach(linha => {
-        doc.text(`  • ${linha}`, 15, yPosition);
-        yPosition += 5;
-      });
-    });
-  } else {
-    doc.text('Filtros: Nenhum filtro aplicado', 15, yPosition);
-    yPosition += 6;
-  }
-
-  // Linha separadora
-  doc.setLineWidth(0.5);
-  doc.line(15, yPosition + 2, 282, yPosition + 2);
-
-  // --- FIM DO CABEÇALHO ---
-
-  const columns = [
-    { header: 'Nº Processo', dataKey: 'numero_processo' },
-    { header: 'Atribuído a', dataKey: 'user' },
-    { header: 'Classe', dataKey: 'classe_principal' },
-    { header: 'Assunto', dataKey: 'assunto_principal' },
-    { header: 'Tarjas', dataKey: 'tarjas' },
-    { header: 'Prazo', dataKey: 'prazoRestanteStr' },
-    { header: 'Reiterações', dataKey: 'reiteracoes' },
-    { header: 'Obs', dataKey: 'observacoes' }
-  ];
-  const rows = processesToExport.map(proc => ({
-    numero_processo: proc.numero_processo || '',
-    user: proc.User?.nome || 'N.A.',
-    classe_principal: proc.classe_principal || '',
-    assunto_principal: proc.assunto_principal || '',
-    tarjas: proc.tarjas || '',
-    prazoRestanteStr: proc.prazoRestanteStr || 'N/A',
-    reiteracoes: proc.reiteracoes || 0,
-    observacoes: proc.observacoes || ''
-  }));
-
-  // Inicia a tabela após o cabeçalho (yPosition + margem)
-  autoTable(doc, {
-    columns,
-    body: rows,
-    startY: yPosition + 8,
-    styles: { fontSize: 8 },
-    headStyles: { fillColor: [66, 139, 202], fontStyle: 'bold' }
-  });
-
-  doc.save('processos.pdf');
-  actionLoading.value = false;
+  return filtrosAtivos;
 };
 
-const getValue = (obj, path) => {
-  if (path === 'user') return obj.User?.nome;
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-};
+const downloadPDF = async (dataToExport) => {
+  const processesToExport = dataToExport === selected.value
+    ? [...dataToExport]
+    : [...serverItems.value];
 
-const sortProcesses = (processList, sortState) => {
-  if (!sortState || sortState.length === 0) return processList;
-  const { key, order } = sortState[0];
-  if (!key) return processList;
-  return [...processList].sort((a, b) => {
-    let valA = getValue(a, key);
-    let valB = getValue(b, key);
-    if (valA == null) return 1;
-    if (valB == null) return -1;
-    if (typeof valA === 'string') {
-      valA = valA.toLowerCase();
-      valB = valB.toLowerCase();
-    }
-    if (valA < valB) return order === 'asc' ? -1 : 1;
-    if (valA > valB) return order === 'asc' ? 1 : -1;
-    return 0;
-  });
-};
-
-// =================================================================
-// 10. FUNÇÕES DOS MODAIS (Admin)
-// =================================================================
-// ... (TODAS as funções de abrir/fechar/handle dos modais são MANTIDAS aqui) ...
-// --- Modal Cadastrar ---
-const abrirModalCadastro = () => {
-  novoUsuario.value = { matricula: '', nome: '', senha: '', tipoCadastro: 'admin_padrao' };
-  formCadastroRef.value?.resetValidation();
-  dialogCadastro.value = true;
-};
-const fecharModalCadastro = () => { dialogCadastro.value = false; };
-const handleSalvarCadastro = async () => {
-  const { valid } = await formCadastroRef.value.validate();
-  if (!valid) return;
-  loadingCadastro.value = true;
-  try {
-    await apiClient.post('/admin/pre-cadastro', novoUsuario.value);
-    snackbarText.value = 'Usuário cadastrado com sucesso!';
-    snackbarColor.value = 'success';
-    snackbar.value = true;
-    fecharModalCadastro();
-    await fetchAllUsers(); // Atualiza a lista de usuários
-  } catch (error) {
-    snackbarText.value = error.response?.data?.error || 'Erro ao salvar usuário.';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
-  } finally {
-    loadingCadastro.value = false;
-  }
-};
-
-// --- Modal Resetar Senha ---
-const abrirModalReset = () => {
-  matriculaParaReset.value = null;
-  formResetRef.value?.resetValidation();
-  dialogReset.value = true;
-};
-const fecharModalReset = () => { dialogReset.value = false; };
-const handleResetarSenha = async () => {
-  const { valid } = await formResetRef.value.validate();
-  if (!valid) return;
-  loadingReset.value = true;
-  try {
-    const { data } = await apiClient.post('/admin/reset-password', { matricula: matriculaParaReset.value });
-    snackbarText.value = `Senha resetada! Nova senha temporária: ${data.senhaTemporaria}`;
-    snackbarColor.value = 'success';
-    snackbarTimeout.value = 15000;
-    snackbar.value = true;
-    fecharModalReset();
-  } catch (error) {
-    snackbarText.value = error.response?.data?.error || 'Erro ao resetar senha.';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
-  } finally {
-    loadingReset.value = false;
-  }
-};
-
-// --- Modal Apagar Usuário ---
-const abrirModalDelete = () => {
-  matriculaParaDelete.value = null;
-  formDeleteRef.value?.resetValidation();
-  dialogDelete.value = true;
-};
-const fecharModalDelete = () => { dialogDelete.value = false; };
-const handleDeleteUser = async () => {
-  const { valid } = await formDeleteRef.value.validate();
-  if (!valid) return;
-  loadingDelete.value = true;
-  try {
-    await apiClient.post('/admin/delete-matricula', { matricula: matriculaParaDelete.value });
-    
-    snackbarText.value = 'Usuário apagado com sucesso!';
-    snackbarColor.value = 'success';
-    snackbar.value = true;
-    fecharModalDelete();
-    await fetchAllUsers(); // Atualiza a lista de usuários
-    await reloadAllData(); // Recarrega processos (podem ter sido desatribuídos)
-
-  } catch (error) {
-    // ✅ CORREÇÃO: Lê a propriedade 'error' da resposta JSON do backend
-    snackbarText.value = error.response?.data?.error || 'Erro ao apagar usuário.';
-    
-    snackbarColor.value = 'error';
-    snackbar.value = true;
-  } finally {
-    loadingDelete.value = false;
-  }
-};
-
-// --- Modal Upload CSV ---
-const abrirModalUpload = () => {
-  csvFile.value = null;
-  uploadError.value = null;
-  dialogUpload.value = true;
-};
-const fecharModalUpload = () => { dialogUpload.value = false; };
-const onFileChange = (event) => {
-  const files = event.target.files;
-  if (files && files.length > 0) {
-    if (files[0].type === 'text/csv' || files[0].name.endsWith('.csv')) {
-      csvFile.value = files[0];
-      uploadError.value = null;
-    } else {
-      csvFile.value = null;
-      uploadError.value = "Formato de arquivo inválido. Por favor, selecione um arquivo .csv";
-    }
-  }
-};
-const handleUploadCSV = async () => {
-  if (!csvFile.value) {
-    uploadError.value = "Nenhum arquivo selecionado.";
+  if (processesToExport.length === 0) {
+    notify('Nenhum item para exportar.', 'info');
     return;
   }
-  loadingUpload.value = true;
-  uploadError.value = null;
-  const formData = new FormData();
-  formData.append('csvFile', csvFile.value);
+
+  actionLoading.value = true;
+  actionLoadingText.value = 'Gerando PDF...';
+  await nextTick(); // garante que o overlay renderiza antes do trabalho síncrono
+
   try {
-    const response = await apiClient.post('/admin/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    loadingUpload.value = false;
-    fecharModalUpload();
-    snackbarText.value = response.data?.message
-      ? `${response.data.message} (${response.data.totalRows} registros)`
-      : 'CSV importado com sucesso!';
-    snackbarColor.value = 'success';
-    snackbar.value = true;
-    await reloadAllData(); // Recarrega tudo
-  } catch (error) {
-    loadingUpload.value = false;
-    uploadError.value = error.response?.data?.error || 'Erro ao importar CSV.';
+    await exportProcessesPDF(processesToExport, options.value.sortBy || [], buildFiltrosAtivos());
+  } catch {
+    notify('Erro ao gerar PDF.', 'error');
+  } finally {
+    actionLoading.value = false;
   }
 };
+
+// =================================================================
+// 10. FUNÇÕES DOS MODAIS
+// =================================================================
+// Modais de admin (cadastro, reset, exclusão, CSV) vivem em UserAdminDialogs;
+// aqui fica apenas o de atribuição em massa, acoplado à seleção da tabela.
 
 // --- Modal Atribuir em Massa ---
 const abrirModalBulkAssign = () => {
   if (selected.value.length === 0) {
-    snackbarText.value = 'Nenhum processo selecionado.';
-    snackbarColor.value = 'warning';
-    snackbar.value = true;
+    notify('Nenhum processo selecionado.', 'warning');
     return;
   }
   matriculaParaAtribuir.value = null;
@@ -1551,20 +1028,16 @@ const handleBulkAssign = async () => {
   const processIds = selected.value.map(processo => processo.id);
   loadingBulkAssign.value = true;
   try {
-    await apiClient.post('/admin/bulk-assign', { 
+    await apiClient.post('/admin/bulk-assign', {
       processIds: processIds,
       matricula: matriculaParaAtribuir.value
     });
-    snackbarText.value = 'Processos atribuídos com sucesso!';
-    snackbarColor.value = 'success';
-    snackbar.value = true;
+    notify('Processos atribuídos com sucesso!');
     fecharModalBulkAssign();
     selected.value = [];
     await reloadAllData(); // Recarrega tudo
   } catch (error) {
-    snackbarText.value = error.response?.data?.error || 'Erro ao atribuir processos.';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
+    notify(error.response?.data?.error || 'Erro ao atribuir processos.', 'error');
   } finally {
     loadingBulkAssign.value = false;
   }
@@ -1573,22 +1046,7 @@ const handleBulkAssign = async () => {
 // =================================================================
 // 11. OBSERVADORES (WATCHERS)
 // =================================================================
-// ... (Todos os watchers são MANTIDOS aqui) ...
-// Anima a barra de progresso do snackbar
-watch(snackbar, (val) => {
-  if (snackbarTimer) clearInterval(snackbarTimer);
-  if (val) {
-    snackbarProgress.value = 100;
-    const interval = 50;
-    const decrement = 100 / (snackbarTimeout.value / interval);
-    snackbarTimer = setInterval(() => {
-      snackbarProgress.value = Math.max(0, snackbarProgress.value - decrement);
-      if (snackbarProgress.value <= 0) clearInterval(snackbarTimer);
-    }, interval);
-  } else {
-    snackbarProgress.value = 100;
-  }
-});
+// (a animação do snackbar vive no composable useSnackbar)
 
 // Dispara quando 'options' (página, itensPorPagina, sortBy) muda
 watch(options, fetchTableData, { deep: true });

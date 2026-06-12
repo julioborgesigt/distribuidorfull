@@ -115,9 +115,6 @@ const addSecurityHeaders = (req, res, next) => {
   // Previne MIME type sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
-  // Ativa proteção XSS do navegador
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-
   next();
 };
 
