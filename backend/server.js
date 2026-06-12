@@ -231,24 +231,16 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // --- 3. INICIAR SERVIDOR ---
-// SEGURANÇA: Não usar 'alter: true' por padrão para evitar perda de dados
-// ✅ MELHORIA: Requer variável de ambiente explícita para usar alter
-let syncOptions = {};
-
-if (process.env.NODE_ENV !== 'production' && process.env.SEQUELIZE_ALTER === 'true') {
-  logger.warn('⚠️  ATENÇÃO: Sequelize alter ativado! Pode causar perda de dados.');
-  logger.warn('⚠️  Colunas removidas do model serão apagadas do banco de dados.');
-  syncOptions.alter = true;
-}
-
-logger.info(`Sequelize sync options: ${JSON.stringify(syncOptions)}`);
+// O schema é gerenciado por MIGRATIONS (npm run db:migrate), não por sync().
+// sync()/alter em produção já causou índices duplicados no MySQL — toda
+// mudança de schema deve ser uma nova migration em backend/migrations/.
 
 // Variável para armazenar a referência do servidor
 let server;
 
-sequelize.sync(syncOptions)
-  .then(async () => {
-    logger.info('Banco de dados sincronizado com sucesso');
+sequelize.authenticate()
+  .then(() => {
+    logger.info('Conexão com o banco de dados estabelecida');
 
     // Inicia o servidor e guarda referência
     server = app.listen(PORT, () => {
@@ -258,7 +250,7 @@ sequelize.sync(syncOptions)
     });
   })
   .catch(err => {
-    logger.error('Erro ao sincronizar o banco de dados', {
+    logger.error('Erro ao conectar ao banco de dados', {
       error: err.message,
       stack: err.stack
     });
