@@ -3,8 +3,7 @@ meta:
   layout: login
 </route>
 
-  
-  <template>
+<template>
   <v-app>
     <v-main>
       <v-container class="fill-height">

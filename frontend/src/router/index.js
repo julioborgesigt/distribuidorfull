@@ -4,9 +4,9 @@
  * Automatic routes for `./src/pages/*.vue`
  */
 
+import { setupLayouts } from 'virtual:generated-layouts'
 // Composables
 import { createRouter, createWebHistory } from 'vue-router'
-import { setupLayouts } from 'virtual:generated-layouts'
 import { routes } from 'vue-router/auto-routes'
 import { useAuthStore } from '@/stores/auth'
 
@@ -14,9 +14,9 @@ import { useAuthStore } from '@/stores/auth'
 const customRoutes = [
   {
     path: '/',
-    redirect: '/login'
+    redirect: '/login',
   },
-  ...setupLayouts(routes)
+  ...setupLayouts(routes),
 ]
 
 const router = createRouter({
@@ -26,38 +26,38 @@ const router = createRouter({
 
 // --- 2. ADICIONE A GUARDA DE ROTA (O "SEGURANÇA") ---
 router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore();
+  const authStore = useAuthStore()
 
   // CENÁRIO ESPECIAL: Acesso à raiz "/"
   if (to.path === '/') {
     // Se estiver logado, vai para dashboard
     if (authStore.isLoggedIn) {
-      return next('/dashboard');
+      return next('/dashboard')
     }
     // Se não estiver logado, deixa o redirect padrão para /login acontecer
-    return next();
+    return next()
   }
 
   // Lista de rotas que NÃO precisam de login
-  const publicPages = ['/login', '/primeiro-login'];
+  const publicPages = ['/login', '/primeiro-login']
   // Verifica se a rota que o usuário quer acessar (to.path) é pública
-  const authRequired = !publicPages.includes(to.path);
+  const authRequired = !publicPages.includes(to.path)
 
   // CENÁRIO 1: Rota de admin E usuário NÃO está logado
   if (authRequired && !authStore.isLoggedIn) {
     // Manda ele para o login
-    return next('/login');
+    return next('/login')
   }
 
   // CENÁRIO 2: Rota pública (ex: /login) E usuário JÁ está logado
   if (!authRequired && authStore.isLoggedIn) {
     // Manda ele para o dashboard
-    return next('/dashboard');
+    return next('/dashboard')
   }
 
   // CENÁRIO 3: Tudo certo, pode passar
-  next();
-});
+  next()
+})
 // --- FIM DA GUARDA DE ROTA ---
 
 // Workaround for https://github.com/vitejs/vite/issues/11804

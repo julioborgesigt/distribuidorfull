@@ -4,14 +4,14 @@
  * Bootstraps Vuetify and other plugins then mounts the App`
  */
 
+// Composables
+import { createApp } from 'vue'
+
 // Plugins
 import { registerPlugins } from '@/plugins'
 
 // Components
 import App from './App.vue'
-
-// Composables
-import { createApp } from 'vue'
 
 // Styles - Fontes Roboto (pesos usados pelo Vuetify: 300, 400, 500, 700)
 import '@fontsource/roboto/300.css'
