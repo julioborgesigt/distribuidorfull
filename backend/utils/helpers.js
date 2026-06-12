@@ -4,6 +4,18 @@
 const crypto = require('crypto');
 
 /**
+ * Deriva a "versão da senha" de um usuário a partir do hash bcrypt armazenado.
+ * O valor é embutido no JWT (claim pwv); quando a senha muda (reset, primeiro
+ * login, recadastro), o hash muda e todos os tokens antigos deixam de valer.
+ * Não expõe nada do hash original (sha256 truncado).
+ * @param {string} senhaHash - Hash bcrypt armazenado em user.senha
+ * @returns {string} Identificador curto da versão da senha
+ */
+const passwordVersion = (senhaHash) => {
+  return crypto.createHash('sha256').update(String(senhaHash)).digest('hex').slice(0, 16);
+};
+
+/**
  * Converte filtros de query (string ou array) para array
  * @param {string|string[]} val - Valor do filtro
  * @returns {string[]|null} Array de valores ou null
@@ -138,4 +150,5 @@ module.exports = {
   formatCPF,
   generateRandomPassword,
   processScopeWhere,
+  passwordVersion,
 };

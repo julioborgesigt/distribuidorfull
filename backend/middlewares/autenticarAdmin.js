@@ -2,7 +2,7 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const logger = require('../utils/logger');
-const { getRealIP } = require('../utils/helpers');
+const { getRealIP, passwordVersion } = require('../utils/helpers');
 
 // Corrigido: Lendo o segredo das variáveis de ambiente
 const JWT_SECRET = process.env.JWT_SECRET; 
@@ -30,7 +30,20 @@ const autenticarAdmin = async (req, res, next) => {
     const user = await User.findByPk(decoded.id);
 
     if (!user) {
-      return res.status(404).json({ error: 'Usuário do token não encontrado' });
+      return res.status(401).json({ error: 'Sessão inválida. Faça login novamente.' });
+    }
+
+    // 2.1. VERSÃO DA SENHA: se a senha mudou depois que o token foi emitido
+    // (reset, primeiro login, recadastro), o pwv não bate e a sessão antiga
+    // é encerrada — sem isso, um token roubado valeria até expirar (2h)
+    // mesmo após o reset da senha.
+    if (decoded.pwv !== passwordVersion(user.senha)) {
+      logger.logSecurityEvent('Token de sessão invalidado por troca de senha', {
+        userId: user.id,
+        matricula: user.matricula,
+        ip: getRealIP(req)
+      });
+      return res.status(401).json({ error: 'Sessão expirada por troca de senha. Faça login novamente.' });
     }
 
     // 3. VERIFICAÇÃO DE PERMISSÃO (A PARTE CRÍTICA QUE FALTAVA)
@@ -60,7 +73,9 @@ const autenticarAdmin = async (req, res, next) => {
         ip: getRealIP(req),
         url: req.url
       });
-      return res.status(403).json({ error: 'Token inválido ou expirado' });
+      // 401 (não 403): o interceptor do frontend faz logout automático em 401,
+      // então sessão expirada volta para a tela de login em vez de travar a UI
+      return res.status(401).json({ error: 'Token inválido ou expirado' });
     }
     // Erro inesperado
     logger.error('Erro no middleware de autenticação admin', {

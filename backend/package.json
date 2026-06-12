@@ -36,10 +36,10 @@
     ],
     "coverageThreshold": {
       "global": {
-        "branches": 5,
-        "functions": 5,
-        "lines": 5,
-        "statements": 5
+        "branches": 11,
+        "functions": 12,
+        "lines": 11,
+        "statements": 11
       }
     }
   },
@@ -62,8 +62,7 @@
     "sequelize-cli": "^6.6.5",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "winston": "^3.18.3",
-    "xss": "^1.0.15"
+    "winston": "^3.18.3"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

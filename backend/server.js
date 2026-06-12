@@ -18,7 +18,6 @@ const {
   httpLogger,
   validateJSON
 } = require('./middlewares/errorHandler');
-const { sanitizeInput } = require('./middlewares/sanitizer');
 const {
   validateAjaxHeader,
   validateOriginForCriticalOps,
@@ -127,8 +126,11 @@ app.use(cookieParser());
 // Middleware para validar JSON
 app.use(validateJSON);
 
-// Middleware de sanitização XSS
-app.use(sanitizeInput);
+// NOTA: a antiga sanitização XSS global na ENTRADA (middleware xss em todo o
+// body/query/params) foi removida: ela corrompia dados legítimos (ex.: nome
+// com '<', observações com aspas) e era redundante — o Vue escapa tudo na
+// SAÍDA por padrão e o app não usa v-html. A validação de formato continua
+// nos validators (express-validator) de cada rota.
 
 // Middlewares de proteção CSRF e segurança adicional
 app.use(addSecurityHeaders);
