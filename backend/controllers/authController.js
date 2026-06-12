@@ -3,10 +3,18 @@ const { User } = require('../models');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
-const { getRealIP } = require('../utils/helpers');
+const { getRealIP, passwordVersion } = require('../utils/helpers');
 const { setTokenCookie, clearTokenCookie } = require('../utils/cookieHelper');
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '2h';
+
+// Mensagem única para matrícula inexistente e senha errada — evita enumeração
+// de usuários válidos pelo formulário de login
+const INVALID_CREDENTIALS_MSG = 'Matrícula ou senha incorretos.';
+
+// Hash usado para equalizar o tempo de resposta quando a matrícula não existe
+// (sem ele, a ausência do bcrypt.compare denunciaria matrículas inexistentes)
+const DUMMY_HASH = bcryptjs.hashSync('timing-equalizer', 10);
 
 // --- Account Lockout em memória ---
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -81,12 +89,24 @@ exports.login = async (req, res) => {
 
   try {
     const user = await User.findOne({ where: { matricula } });
-    if (!user) {
-      logger.logAuthAttempt(false, matricula, clientIP, 'Usuário não encontrado');
-      return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    // --- 2. VERIFICAÇÃO DE SENHA (antes da permissão, com resposta uniforme) ---
+    // Matrícula inexistente e senha errada retornam o MESMO erro 401, e o
+    // bcrypt.compare roda nos dois casos (DUMMY_HASH) para equalizar o tempo
+    // de resposta — sem isso seria possível enumerar matrículas válidas.
+    const senhaValida = await bcryptjs.compare(senha, user ? user.senha : DUMMY_HASH);
+    if (!user || !senhaValida) {
+      const attempt = recordFailedAttempt(clientIP, matricula);
+      logger.logAuthAttempt(false, matricula, clientIP, user ? 'Senha incorreta' : 'Usuário não encontrado');
+      if (attempt.lockedUntil) {
+        return res.status(429).json({
+          error: `Conta bloqueada por ${MAX_LOGIN_ATTEMPTS} tentativas incorretas. Tente novamente em 15 minutos.`
+        });
+      }
+      return res.status(401).json({ error: INVALID_CREDENTIALS_MSG });
     }
 
-    // --- 2. VALIDAÇÃO DE PERMISSÃO (MODIFICADO) ---
+    // --- 3. VALIDAÇÃO DE PERMISSÃO (só após provar a senha) ---
     // Verifica se o usuário TEM a permissão que ele ESTÁ PEDINDO
     let effectiveLoginType = null;
 
@@ -105,22 +125,6 @@ exports.login = async (req, res) => {
     }
     // --- Fim da validação de permissão ---
 
-    // Verificação de senha (assíncrona para não bloquear o event loop)
-    const senhaValida = await bcryptjs.compare(senha, user.senha);
-    if (!senhaValida) {
-      const attempt = recordFailedAttempt(clientIP, matricula);
-      logger.logAuthAttempt(false, matricula, clientIP, 'Senha incorreta');
-      if (attempt.lockedUntil) {
-        return res.status(429).json({
-          error: `Conta bloqueada por ${MAX_LOGIN_ATTEMPTS} tentativas incorretas. Tente novamente em 15 minutos.`
-        });
-      }
-      return res.status(401).json({
-        error: 'Senha incorreta',
-        attemptsRemaining: MAX_LOGIN_ATTEMPTS - attempt.count
-      });
-    }
-
     // Login bem-sucedido: limpa tentativas falhas
     clearAttempts(clientIP, matricula);
 
@@ -137,7 +141,12 @@ exports.login = async (req, res) => {
       return res.json({ firstLogin: true, firstLoginToken, loginType: effectiveLoginType });
     } else {
       logger.logAuthAttempt(true, matricula, clientIP);
-      const token = jwt.sign({ id: user.id, loginType: effectiveLoginType }, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
+      // pwv: versão da senha — invalida o token se a senha mudar (ver autenticarAdmin)
+      const token = jwt.sign(
+        { id: user.id, loginType: effectiveLoginType, pwv: passwordVersion(user.senha) },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRATION }
+      );
 
       let loginUser = {
         id: user.id,
@@ -225,7 +234,12 @@ exports.firstLogin = async (req, res) => {
       ip: clientIP
     });
 
-    const token = jwt.sign({ id: user.id, loginType: loginType }, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
+    // pwv calculado APÓS a troca de senha — tokens antigos ficam inválidos
+    const token = jwt.sign(
+      { id: user.id, loginType: loginType, pwv: passwordVersion(user.senha) },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRATION }
+    );
 
     let loginUser = {
       id: user.id,

@@ -49,11 +49,9 @@ const firstLoginLimiter = rateLimit({
  *                 - $ref: '#/components/schemas/LoginResponse'
  *                 - $ref: '#/components/schemas/FirstLoginResponse'
  *       401:
- *         description: Senha incorreta
+ *         description: Matrícula ou senha incorretos (resposta única para evitar enumeração de usuários)
  *       403:
  *         description: Acesso negado - sem permissão de administrador
- *       404:
- *         description: Usuário não encontrado
  *       429:
  *         description: Muitas tentativas de login
  */
