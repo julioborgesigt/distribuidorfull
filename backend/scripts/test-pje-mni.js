@@ -176,6 +176,56 @@ async function main() {
   console.log('mensagem:', mensagem);
   console.log('avisos  :', qtdAvisos);
 
+  // 3.5) PROBE OPCIONAL de consultarAlteracao — READ-ONLY, NÃO dá ciência.
+  //      Serve para descobrir se dá para enumerar processos JÁ CIENTES (que
+  //      saíram da fila de pendentes). Ative com a data de corte:
+  //        PJE_ALTERACAO_DATA=20260101000000  (AAAAMMDDHHMMSS)
+  const alteracaoData = process.env.PJE_ALTERACAO_DATA;
+  if (alteracaoData) {
+    try {
+      const desc = client.describe();
+      for (const s of Object.keys(desc)) {
+        for (const p of Object.keys(desc[s])) {
+          const op = Object.keys(desc[s][p]).find((o) => /consultarAlteracao/i.test(o));
+          if (op) {
+            console.log(`\nSchema de entrada de "${op}":`);
+            console.dir(desc[s][p][op].input, { depth: 4 });
+          }
+        }
+      }
+    } catch { /* ignore */ }
+
+    console.log(`\n=== Chamando consultarAlteracao (data corte ${alteracaoData}) ===`);
+    const altEnvelope =
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"` +
+      ` xmlns:ser="${SERVICE_NS}" xmlns:tip="${TIPOS_NS}">` +
+      `<soapenv:Header/>` +
+      `<soapenv:Body>` +
+      `<ser:consultarAlteracao>` +
+      `<tip:idConsultante>${esc(CPF)}</tip:idConsultante>` +
+      `<tip:senhaConsultante>${esc(SENHA)}</tip:senhaConsultante>` +
+      `<tip:dataReferencia>${esc(alteracaoData)}</tip:dataReferencia>` +
+      `</ser:consultarAlteracao>` +
+      `</soapenv:Body>` +
+      `</soapenv:Envelope>`;
+    let altResp;
+    try {
+      altResp = await postSoap(endpoint, altEnvelope);
+    } catch (err) {
+      console.error('\n[FALHA] Erro de rede no POST de consultarAlteracao:', err.message);
+      return;
+    }
+    console.log('HTTP status:', altResp.status);
+    const abody = (altResp.body || '').replace(/[A-Za-z0-9+/]{200,}={0,2}/g, '[BASE64_OMITIDO]');
+    console.log('\nResposta de consultarAlteracao (até 9000 chars):\n');
+    console.log(abody.slice(0, 9000));
+    console.log(
+      '\n[DICA] Queremos ver se vêm NÚMEROS de processo (inclusive já cientes).'
+    );
+    return;
+  }
+
   // 4) PROBE OPCIONAL DE consultarProcesso — READ-ONLY, NÃO dá ciência.
   //    Serve para verificar se o prazo (dataReferencia / "Data limite") de uma
   //    intimação JÁ CIENTE pode ser lido sem causar efeito — base do fluxo
