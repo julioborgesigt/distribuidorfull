@@ -149,6 +149,45 @@ const handleUploadError = (err, req, res, next) => {
  */
 router.post('/upload', upload.single('csvFile'), handleUploadError, adminController.uploadCSV);
 
+// Rate limiter dedicado à importação do PJe: é uma operação pesada (consulta o
+// webservice externo e pode registrar ciência), então limitamos a poucas
+// execuções por janela para evitar disparos acidentais/duplos.
+const pjeImportLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutos
+  max: 3,
+  message: {
+    error: 'Muitas importações do PJe em sequência. Aguarde alguns minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * @swagger
+ * /api/admin/import-pje:
+ *   post:
+ *     summary: Importa processos do PJe (webservice MNI)
+ *     description: >
+ *       Consulta os avisos pendentes no PJe e importa para o sistema.
+ *       Por padrão abre o teor de cada aviso para obter o prazo, o que
+ *       REGISTRA CIÊNCIA e INICIA O PRAZO. Use abrirTeor=false para importar
+ *       apenas a fila, sem dar ciência.
+ *     tags: [Administração - Processos]
+ *     parameters:
+ *       - in: query
+ *         name: abrirTeor
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Se true, abre o teor (dá ciência) para capturar o prazo.
+ *     responses:
+ *       200:
+ *         description: Importação concluída
+ *       502:
+ *         description: Erro de comunicação com o PJe
+ */
+router.post('/import-pje', pjeImportLimiter, adminController.importPje);
+
 /**
  * @swagger
  * /api/admin/processes:

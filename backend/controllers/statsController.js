@@ -208,7 +208,9 @@ exports.getFilterOptions = async (req, res) => {
     res.json({
       classes: classes.map(r => r.value).sort(),
       assuntos: assuntos.map(r => r.value).sort(),
-      tarjas: Array.from(tarjasSet).sort()
+      tarjas: Array.from(tarjasSet).sort(),
+      // Origem do registro — enum fixo, exposto para o filtro do dashboard.
+      fontes: ['esaj', 'pje']
     });
   } catch (error) {
     logger.error('Erro ao buscar opções de filtros', { error: error.message });

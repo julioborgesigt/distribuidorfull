@@ -12,6 +12,7 @@ const statsController = require('./statsController');
 module.exports = {
   // Processos
   uploadCSV: processController.uploadCSV,
+  importPje: processController.importPje,
   listProcesses: processController.listProcesses,
   manualAssignProcess: processController.manualAssignProcess,
   updateObservacoes: processController.updateObservacoes,

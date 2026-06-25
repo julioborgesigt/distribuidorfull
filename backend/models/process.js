@@ -58,6 +58,12 @@ module.exports = (sequelize) => {
       validate: {
         len: [0, 300]
       }
+    },
+    // Origem do registro: 'esaj' (CSV) ou 'pje' (webservice MNI).
+    fonte: {
+      type: DataTypes.ENUM('esaj', 'pje'),
+      allowNull: false,
+      defaultValue: 'esaj'
     }
 
   }, {
@@ -74,6 +80,7 @@ module.exports = (sequelize) => {
       { fields: ['cumpridoDate'] },
       { fields: ['cumprido', 'prazo_vencimento'], name: 'idx_cumprido_prazo_vencimento' },
       { fields: ['userId', 'cumprido'], name: 'idx_userid_cumprido' },
+      { fields: ['fonte'] },
     ],
     hooks: {
       beforeCreate: (process) => {

@@ -55,6 +55,16 @@
         </div>
       </template>
 
+      <template #item.fonte="{ item }">
+        <v-chip
+          :color="item.fonte === 'pje' ? 'green' : 'blue'"
+          size="small"
+          variant="flat"
+        >
+          {{ item.fonte === 'pje' ? 'PJe' : 'eSAJ' }}
+        </v-chip>
+      </template>
+
       <template #item.user="{ item }">
         <span v-if="item.User">{{ item.User.nome }}</span>
         <v-chip v-else size="small" variant="tonal">Não Atribuído</v-chip>
@@ -168,6 +178,7 @@
   // O 'prazoRestanteNum' vai precisar de atenção especial.
   const headers = ref([
     { title: 'Nº Processo', key: 'numero_processo', width: '180px' },
+    { title: 'Fonte', key: 'fonte', width: '90px', align: 'center' },
     { title: 'Atribuído', key: 'user', width: '100px' },
     { title: 'Classe', key: 'classe_principal', width: '120px' },
     { title: 'Assunto', key: 'assunto_principal', width: '140px' },
