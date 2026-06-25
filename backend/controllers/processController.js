@@ -9,9 +9,7 @@ const { Op, literal } = require('sequelize');
 const iconv = require('iconv-lite');
 const logger = require('../utils/logger');
 const { getRealIP, parseArrayFilter, processScopeWhere } = require('../utils/helpers');
-const pjeClient = require('../utils/pjeClient');
-const { formatNumeroCNJ, mniDateToISO, computePrazo } = require('../utils/pjeParser');
-const tpu = require('../utils/tpu');
+const pjeImportService = require('../services/pjeImportService');
 
 // Pipeline compartilhado de upsert de processos (usado pelo CSV do eSAJ e pela
 // importação do PJe). Recebe linhas já normalizadas no formato do model
@@ -188,56 +186,18 @@ exports.uploadCSV = (req, res) => {
 exports.importPje = async (req, res) => {
   const abrirTeor = String(req.query.abrirTeor ?? 'true') !== 'false';
   try {
-    const avisos = await pjeClient.consultarAvisosPendentes();
+    const { avisos, rows, comPrazo, falhasTeor } =
+      await pjeImportService.coletarRows({ abrirTeor });
 
-    if (avisos.length === 0) {
+    if (avisos === 0) {
       logger.info('Importação PJe: nenhum aviso pendente', { userId: req.userId });
       return res.json({ message: 'Nenhum aviso pendente no PJe.', totalRows: 0, avisos: 0 });
-    }
-
-    const rows = [];
-    let comPrazo = 0;
-    let falhasTeor = 0;
-
-    for (const aviso of avisos) {
-      const dataIntimacaoISO = mniDateToISO(aviso.dataDisponibilizacao);
-      let prazo = { prazo_processual: '', prazo_vencimento: null };
-
-      if (abrirTeor) {
-        try {
-          // ESTA chamada dá ciência e inicia o prazo do aviso.
-          const teor = await pjeClient.consultarTeorComunicacao(aviso.idAviso);
-          prazo = computePrazo({
-            dataIntimacaoISO,
-            tipoPrazo: teor.tipoPrazo,
-            dataReferencia: teor.dataReferencia,
-            prazoDias: teor.prazoDias,
-          });
-          if (prazo.prazo_processual) comPrazo += 1;
-        } catch (err) {
-          falhasTeor += 1;
-          logger.warn('Falha ao obter teor de aviso PJe', {
-            idAviso: aviso.idAviso,
-            error: err.message,
-          });
-        }
-      }
-
-      rows.push({
-        numero_processo: formatNumeroCNJ(aviso.numeroProcesso),
-        prazo_processual: prazo.prazo_processual || '',
-        classe_principal: tpu.classeNome(aviso.classeProcessual),
-        assunto_principal: tpu.assuntoNome(aviso.assuntoCodigo),
-        tarjas: aviso.nivelSigilo && Number(aviso.nivelSigilo) > 0 ? 'Sigiloso' : '',
-        data_intimacao: dataIntimacaoISO,
-        fonte: 'pje',
-      });
     }
 
     const totalRows = await upsertProcessos(rows);
 
     logger.info('Importação PJe concluída', {
-      avisos: avisos.length,
+      avisos,
       totalRows,
       comPrazo,
       falhasTeor,
@@ -246,9 +206,9 @@ exports.importPje = async (req, res) => {
     });
 
     res.json({
-      message: `Importação do PJe concluída. ${avisos.length} avisos processados.`,
+      message: `Importação do PJe concluída. ${avisos} avisos processados.`,
       totalRows,
-      avisos: avisos.length,
+      avisos,
       comPrazo,
       falhasTeor,
     });
@@ -700,3 +660,6 @@ exports.updateIntim = async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar número de intim.' });
   }
 };
+
+// Exporta o pipeline de upsert para reúso por scripts (ex.: cron de importação PJe).
+exports.upsertProcessos = upsertProcessos;
