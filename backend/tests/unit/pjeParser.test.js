@@ -4,6 +4,8 @@ const {
   formatNumeroCNJ,
   mniDateToISO,
   daysBetween,
+  diasDesdeDisponibilizacao,
+  deveAbrirTeor,
   parseAvisos,
   parseTeor,
   computePrazo,
@@ -48,6 +50,22 @@ describe('pjeParser - datas', () => {
   });
   test('daysBetween calcula diferença em dias', () => {
     expect(daysBetween('2026-06-15', '2026-08-24')).toBe(70);
+  });
+});
+
+describe('pjeParser - ciência por idade', () => {
+  // disponibilização 2026-06-15; "hoje" fixo para o teste
+  test('diasDesdeDisponibilizacao calcula a idade', () => {
+    expect(diasDesdeDisponibilizacao('20260615152502', '2026-06-24')).toBe(9);
+  });
+  test('deveAbrirTeor=true quando idade >= limiar', () => {
+    expect(deveAbrirTeor('20260615152502', 9, '2026-06-24')).toBe(true);
+  });
+  test('deveAbrirTeor=false quando ainda jovem', () => {
+    expect(deveAbrirTeor('20260615152502', 9, '2026-06-23')).toBe(false);
+  });
+  test('limiar 0 abre sempre', () => {
+    expect(deveAbrirTeor('20260615152502', 0, '2026-06-15')).toBe(true);
   });
 });
 

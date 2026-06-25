@@ -185,9 +185,14 @@ exports.uploadCSV = (req, res) => {
 // com `abrirTeor=false` importa apenas a fila, sem prazo e sem dar ciência.
 exports.importPje = async (req, res) => {
   const abrirTeor = String(req.query.abrirTeor ?? 'true') !== 'false';
+  // Limiar de ciência: query tem prioridade; senão usa PJE_CIENCIA_MIN_DIAS.
+  const cienciaMinDias =
+    req.query.cienciaMinDias != null
+      ? parseInt(req.query.cienciaMinDias, 10) || 0
+      : undefined;
   try {
-    const { avisos, rows, comPrazo, falhasTeor } =
-      await pjeImportService.coletarRows({ abrirTeor });
+    const { avisos, rows, comPrazo, falhasTeor, adiados } =
+      await pjeImportService.coletarRows({ abrirTeor, cienciaMinDias });
 
     if (avisos === 0) {
       logger.info('Importação PJe: nenhum aviso pendente', { userId: req.userId });
@@ -201,6 +206,7 @@ exports.importPje = async (req, res) => {
       totalRows,
       comPrazo,
       falhasTeor,
+      adiados,
       abrirTeor,
       userId: req.userId,
     });
@@ -211,6 +217,7 @@ exports.importPje = async (req, res) => {
       avisos,
       comPrazo,
       falhasTeor,
+      adiados,
     });
   } catch (error) {
     logger.error('Erro na importação do PJe', {

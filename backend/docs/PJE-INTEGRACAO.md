@@ -27,7 +27,20 @@ PJE_SENHA=suaSenhaDoPje        # senha do PJe
 PJE_MNI_ENDPOINT=https://pje.tjce.jus.br/pje1grau/intercomunicacao   # opcional (default)
 PJE_MNI_TIMEOUT=30000          # opcional, ms
 PJE_CRON_ABRIR_TEOR=true       # opcional; false = não dá ciência no cron
+PJE_CIENCIA_MIN_DIAS=9         # opcional; só toma ciência de avisos com N+ dias
 ```
+
+### Tomar ciência só perto do fim da janela (`PJE_CIENCIA_MIN_DIAS`)
+
+A ciência só pode ser tomada uma vez e inicia o prazo. Para **aproveitar quase
+toda a janela de 10 dias corridos** de ciência, defina `PJE_CIENCIA_MIN_DIAS=9`:
+só são abertas (= ciência) as intimações com 9+ dias desde a disponibilização.
+As mais novas entram no painel **sem prazo** e recebem o prazo num import futuro,
+quando amadurecem.
+
+> Como a ciência ficta cai no 10º dia, rode o **cron diariamente** para capturar
+> a intimação no dia 9 (1 dia de margem). Use `8` se quiser 2 dias de folga.
+> `0` (ou ausente) = toma ciência de todos imediatamente.
 
 As credenciais ficam **apenas em variável de ambiente** — nunca no código ou no
 banco.

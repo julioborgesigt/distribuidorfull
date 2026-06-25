@@ -8,7 +8,12 @@
 // aviso para capturar o prazo — e ISSO REGISTRA CIÊNCIA e INICIA O PRAZO.
 
 const pjeClient = require('../utils/pjeClient');
-const { formatNumeroCNJ, mniDateToISO, computePrazo } = require('../utils/pjeParser');
+const {
+  formatNumeroCNJ,
+  mniDateToISO,
+  computePrazo,
+  deveAbrirTeor,
+} = require('../utils/pjeParser');
 const tpu = require('../utils/tpu');
 const logger = require('../utils/logger');
 
@@ -26,16 +31,32 @@ function avisoToRow(aviso, prazo) {
 }
 
 // Busca avisos pendentes e monta as linhas. Não persiste nada.
-async function coletarRows({ abrirTeor = true } = {}) {
+//
+// cienciaMinDias: só abre o teor (toma ciência) de avisos com idade >= esse
+// número de dias desde a disponibilização. 0 = abre todos. Avisos mais novos
+// são importados sem prazo (sem ciência) e ganham o prazo num import futuro,
+// quando amadurecerem — aproveitando a janela de 10 dias para ciência.
+async function coletarRows({
+  abrirTeor = true,
+  cienciaMinDias = Number(process.env.PJE_CIENCIA_MIN_DIAS) || 0,
+} = {}) {
   const avisos = await pjeClient.consultarAvisosPendentes();
   const rows = [];
   let comPrazo = 0;
   let falhasTeor = 0;
+  let adiados = 0;
 
   for (const aviso of avisos) {
     let prazo = { prazo_processual: '', prazo_vencimento: null };
 
-    if (abrirTeor) {
+    const abrirEste =
+      abrirTeor && deveAbrirTeor(aviso.dataDisponibilizacao, cienciaMinDias);
+
+    if (abrirTeor && !abrirEste) {
+      adiados += 1; // ainda jovem: importa sem ciência, prazo virá depois
+    }
+
+    if (abrirEste) {
       try {
         // Registra ciência e inicia o prazo do aviso.
         const teor = await pjeClient.consultarTeorComunicacao(aviso.idAviso);
@@ -58,7 +79,7 @@ async function coletarRows({ abrirTeor = true } = {}) {
     rows.push(avisoToRow(aviso, prazo));
   }
 
-  return { avisos: avisos.length, rows, comPrazo, falhasTeor };
+  return { avisos: avisos.length, rows, comPrazo, falhasTeor, adiados };
 }
 
 module.exports = { coletarRows, avisoToRow };

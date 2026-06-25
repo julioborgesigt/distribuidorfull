@@ -896,9 +896,10 @@
   async function importarPje () {
     if (importandoPje.value) return
     const ok = window.confirm(
-      'Importar do PJe?\n\nIsto vai consultar os avisos pendentes e ABRIR cada ' +
-        'intimação para capturar o prazo. Abrir a intimação REGISTRA CIÊNCIA e ' +
-        'INICIA O PRAZO no PJe. Deseja continuar?'
+      'Importar do PJe?\n\nIsto consulta os avisos pendentes e ABRE as intimações ' +
+        'que já atingiram o limiar de ciência configurado, para capturar o prazo. ' +
+        'Abrir a intimação REGISTRA CIÊNCIA e INICIA O PRAZO no PJe. As demais ' +
+        'entram no painel sem prazo e são abertas num import futuro. Continuar?'
     )
     if (!ok) return
 
@@ -909,6 +910,7 @@
       const { data } = await apiClient.post('/admin/import-pje')
       const partes = [`${data.avisos ?? 0} avisos`]
       if (data.comPrazo != null) partes.push(`${data.comPrazo} com prazo`)
+      if (data.adiados) partes.push(`${data.adiados} aguardando ciência`)
       if (data.falhasTeor) partes.push(`${data.falhasTeor} falha(s) ao abrir`)
       notify(`Importação do PJe concluída: ${partes.join(', ')}.`)
       clearCache('cache:filterOptions') // novas classes/assuntos podem ter surgido

@@ -50,6 +50,24 @@ function daysBetween(isoStart, isoEnd) {
   return Math.round((b - a) / 86400000);
 }
 
+// Idade (em dias) de uma intimação a partir da dataDisponibilizacao do MNI.
+// Usado para decidir se já vale a pena tomar ciência (abrir o teor), aproveitando
+// a janela de 10 dias corridos para ciência. Devolve null se a data for inválida.
+function diasDesdeDisponibilizacao(dataDisponibilizacaoMni, hojeISO) {
+  const dispoISO = mniDateToISO(dataDisponibilizacaoMni);
+  if (!dispoISO) return null;
+  const hoje = hojeISO || new Date().toISOString().slice(0, 10);
+  return daysBetween(dispoISO, hoje);
+}
+
+// Decide se o teor deve ser aberto (= tomar ciência) para um aviso, dado o
+// limiar mínimo de dias. minDias <= 0 significa "abrir sempre".
+function deveAbrirTeor(dataDisponibilizacaoMni, minDias, hojeISO) {
+  if (!minDias || minDias <= 0) return true;
+  const idade = diasDesdeDisponibilizacao(dataDisponibilizacaoMni, hojeISO);
+  return idade != null && idade >= minDias;
+}
+
 // Quebra a resposta de consultarAvisosPendentes em uma lista de objetos com os
 // campos relevantes de cada <aviso>. Não traz prazo (isso só vem no teor).
 function parseAvisos(xml) {
@@ -134,6 +152,8 @@ module.exports = {
   formatNumeroCNJ,
   mniDateToISO,
   daysBetween,
+  diasDesdeDisponibilizacao,
+  deveAbrirTeor,
   parseAvisos,
   parseTeor,
   computePrazo,
