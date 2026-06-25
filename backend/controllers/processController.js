@@ -190,58 +190,79 @@ exports.uploadCSV = (req, res) => {
     });
 };
 
-// Importação de processos do PJe via webservice MNI.
+// Estado da última importação do PJe (em memória). Como a importação abre o
+// teor de dezenas de avisos (chamadas SOAP sequenciais), ela pode levar minutos
+// — tempo demais para uma requisição HTTP (o gateway corta com 502). Por isso
+// ela roda em SEGUNDO PLANO: a rota responde 202 na hora e o frontend acompanha
+// pelo endpoint de status.
+let pjeImportStatus = {
+  running: false,
+  startedAt: null,
+  finishedAt: null,
+  result: null,
+  error: null,
+};
+
+// Importação de processos do PJe via webservice MNI (assíncrona/background).
 //
 // Fluxo: consultarAvisosPendentes (não dá ciência) e, para cada aviso,
 // consultarTeorComunicacao para obter o prazo estruturado. ATENÇÃO: a consulta
 // do teor REGISTRA CIÊNCIA e INICIA O PRAZO do aviso. Por isso a abertura do
 // teor é controlada por `abrirTeor` (default true, conforme decisão do cliente);
 // com `abrirTeor=false` importa apenas a fila, sem prazo e sem dar ciência.
-exports.importPje = async (req, res) => {
+exports.importPje = (req, res) => {
   const abrirTeor = String(req.query.abrirTeor ?? 'true') !== 'false';
   // Limiar de ciência: query tem prioridade; senão usa PJE_CIENCIA_MIN_DIAS.
   const cienciaMinDias =
     req.query.cienciaMinDias != null
       ? parseInt(req.query.cienciaMinDias, 10) || 0
       : undefined;
-  try {
-    const { avisos, rows, comPrazo, falhasTeor, adiados } =
-      await pjeImportService.coletarRows({ abrirTeor, cienciaMinDias });
 
-    if (avisos === 0) {
-      logger.info('Importação PJe: nenhum aviso pendente', { userId: req.userId });
-      return res.json({ message: 'Nenhum aviso pendente no PJe.', totalRows: 0, avisos: 0 });
-    }
-
-    const totalRows = await upsertProcessos(rows);
-
-    logger.info('Importação PJe concluída', {
-      avisos,
-      totalRows,
-      comPrazo,
-      falhasTeor,
-      adiados,
-      abrirTeor,
-      userId: req.userId,
+  if (pjeImportStatus.running) {
+    return res.status(409).json({
+      error: 'Já existe uma importação do PJe em andamento.',
     });
-
-    res.json({
-      message: `Importação do PJe concluída. ${avisos} avisos processados.`,
-      totalRows,
-      avisos,
-      comPrazo,
-      falhasTeor,
-      adiados,
-    });
-  } catch (error) {
-    logger.error('Erro na importação do PJe', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.userId,
-      ip: getRealIP(req),
-    });
-    res.status(502).json({ error: error.message || 'Erro ao importar do PJe.' });
   }
+
+  pjeImportStatus = {
+    running: true,
+    startedAt: new Date().toISOString(),
+    finishedAt: null,
+    result: null,
+    error: null,
+  };
+
+  // Responde imediatamente; o trabalho pesado segue em background.
+  res.status(202).json({
+    message: 'Importação do PJe iniciada em segundo plano.',
+    running: true,
+  });
+
+  const userId = req.userId;
+  (async () => {
+    try {
+      const { avisos, rows, comPrazo, falhasTeor, adiados } =
+        await pjeImportService.coletarRows({ abrirTeor, cienciaMinDias });
+      const totalRows = avisos > 0 ? await upsertProcessos(rows) : 0;
+      pjeImportStatus.result = { avisos, totalRows, comPrazo, falhasTeor, adiados };
+      logger.info('Importação PJe concluída', {
+        avisos, totalRows, comPrazo, falhasTeor, adiados, abrirTeor, userId,
+      });
+    } catch (error) {
+      pjeImportStatus.error = error.message || 'Erro ao importar do PJe.';
+      logger.error('Erro na importação do PJe', {
+        error: error.message, stack: error.stack, userId,
+      });
+    } finally {
+      pjeImportStatus.running = false;
+      pjeImportStatus.finishedAt = new Date().toISOString();
+    }
+  })();
+};
+
+// Status da última/atual importação do PJe (para o frontend acompanhar).
+exports.importPjeStatus = (req, res) => {
+  res.json(pjeImportStatus);
 };
 
 // Lista processos com paginação, filtros e ordenação do lado do servidor

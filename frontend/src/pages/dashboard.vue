@@ -905,23 +905,57 @@
 
     importandoPje.value = true
     actionLoading.value = true
-    actionLoadingText.value = 'Importando do PJe...'
+    actionLoadingText.value = 'Importando do PJe (pode levar alguns minutos)...'
     try {
-      const { data } = await apiClient.post('/admin/import-pje')
-      const partes = [`${data.avisos ?? 0} avisos`]
-      if (data.comPrazo != null) partes.push(`${data.comPrazo} com prazo`)
-      if (data.adiados) partes.push(`${data.adiados} aguardando ciência`)
-      if (data.falhasTeor) partes.push(`${data.falhasTeor} falha(s) ao abrir`)
-      notify(`Importação do PJe concluída: ${partes.join(', ')}.`)
-      clearCache('cache:filterOptions') // novas classes/assuntos podem ter surgido
-      await fetchFilterOptions()
-      await reloadAllData()
+      // A importação roda em segundo plano (pode levar minutos abrindo os teores).
+      // A rota responde na hora; acompanhamos o resultado pelo endpoint de status.
+      await apiClient.post('/admin/import-pje')
+      notify('Importação do PJe iniciada. Aguardando conclusão...')
+      await aguardarImportPje()
     } catch (error) {
-      notify(error.response?.data?.error || 'Erro ao importar do PJe.', 'error')
+      if (error.response?.status === 409) {
+        notify('Já existe uma importação do PJe em andamento.', 'warning')
+      } else {
+        notify(error.response?.data?.error || 'Erro ao iniciar a importação do PJe.', 'error')
+      }
     } finally {
       importandoPje.value = false
       actionLoading.value = false
     }
+  }
+
+  // Faz polling do status da importação até concluir (ou estourar o tempo).
+  async function aguardarImportPje () {
+    const limiteMs = 8 * 60 * 1000 // 8 minutos
+    const inicio = Date.now()
+    while (Date.now() - inicio < limiteMs) {
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      let data
+      try {
+        ({ data } = await apiClient.get('/admin/import-pje/status'))
+      } catch {
+        continue // erro transitório de rede; tenta de novo
+      }
+      if (data && !data.running) {
+        if (data.error) {
+          notify(`Importação do PJe falhou: ${data.error}`, 'error')
+        } else if (data.result) {
+          const r = data.result
+          const partes = [`${r.avisos ?? 0} avisos`]
+          if (r.comPrazo != null) partes.push(`${r.comPrazo} com prazo`)
+          if (r.adiados) partes.push(`${r.adiados} aguardando ciência`)
+          if (r.falhasTeor) partes.push(`${r.falhasTeor} falha(s) ao abrir`)
+          notify(`Importação do PJe concluída: ${partes.join(', ')}.`)
+        } else {
+          notify('Importação do PJe concluída.')
+        }
+        clearCache('cache:filterOptions') // novas classes/assuntos podem ter surgido
+        await fetchFilterOptions()
+        await reloadAllData()
+        return
+      }
+    }
+    notify('A importação do PJe está demorando mais que o esperado; atualize a página em instantes.', 'warning')
   }
 
   // Recarrega todos os dados da página (em paralelo para melhor performance)
