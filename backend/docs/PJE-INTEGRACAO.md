@@ -27,20 +27,26 @@ PJE_SENHA=suaSenhaDoPje        # senha do PJe
 PJE_MNI_ENDPOINT=https://pje.tjce.jus.br/pje1grau/intercomunicacao   # opcional (default)
 PJE_MNI_TIMEOUT=30000          # opcional, ms
 PJE_CRON_ABRIR_TEOR=true       # opcional; false = não dá ciência no cron
-PJE_CIENCIA_MIN_DIAS=9         # opcional; só toma ciência de avisos com N+ dias
+PJE_CIENCIA_MIN_DIAS=5         # opcional; só toma ciência de avisos com N+ dias
 ```
 
 ### Tomar ciência só perto do fim da janela (`PJE_CIENCIA_MIN_DIAS`)
 
-A ciência só pode ser tomada uma vez e inicia o prazo. Para **aproveitar quase
-toda a janela de 10 dias corridos** de ciência, defina `PJE_CIENCIA_MIN_DIAS=9`:
-só são abertas (= ciência) as intimações com 9+ dias desde a disponibilização.
-As mais novas entram no painel **sem prazo** e recebem o prazo num import futuro,
-quando amadurecem.
+A ciência só pode ser tomada uma vez e inicia o prazo. Para **aproveitar parte da
+janela de 10 dias corridos** de ciência, defina `PJE_CIENCIA_MIN_DIAS=5`: só são
+abertas (= ciência) as intimações com 5+ dias desde a disponibilização. As mais
+novas entram no painel **sem prazo** e recebem o prazo num import futuro, quando
+amadurecem.
 
-> Como a ciência ficta cai no 10º dia, rode o **cron diariamente** para capturar
-> a intimação no dia 9 (1 dia de margem). Use `8` se quiser 2 dias de folga.
-> `0` (ou ausente) = toma ciência de todos imediatamente.
+> Como a ciência ficta cai no 10º dia, quanto MENOR o limiar, maior a margem de
+> segurança caso o cron falhe em algum dia: com `5` sobram ~5 dias de folga até a
+> ficta. Valores maiores (8, 9) aproveitam mais a janela, mas exigem cron diário
+> sem falhas. `0` (ou ausente) = toma ciência de todos imediatamente.
+>
+> Observação: por que o prazo só vem na ciência? Testes no MNI do TJCE mostraram
+> que `consultarProcesso` não expõe o prazo e que reler o teor de uma intimação
+> já ciente retorna erro — ou seja, o prazo só é capturável no momento da ciência.
+> Por isso não há um modo "passivo" (ler prazo sem tomar ciência).
 
 As credenciais ficam **apenas em variável de ambiente** — nunca no código ou no
 banco.
