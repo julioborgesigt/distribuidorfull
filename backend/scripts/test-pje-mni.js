@@ -78,11 +78,21 @@ async function main() {
     return;
   }
 
-  // Os nomes dos campos seguem o MNI 2.2.2. Se o describe() acima mostrar nomes
-  // diferentes, ajuste este objeto conforme o schema real do TJCE.
+  // O TJCE exige que os elementos venham QUALIFICADOS no namespace de tipos do
+  // MNI 2.2.2 (elementFormDefault="qualified"). A lib soap, por padrão, envia os
+  // filhos sem namespace (uri:"") e o servidor rejeita com "elemento inesperado".
+  // Solução robusta: injetar o corpo como XML cru já namespaceado, na ordem do
+  // schema (idRepresentado?, idConsultante, senhaConsultante, dataReferencia?).
+  const NS = 'http://www.cnj.jus.br/tipos-servico-intercomunicacao-2.2.2';
+  const esc = (s) =>
+    String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   const args = {
-    idConsultante: CPF,
-    senhaConsultante: SENHA,
+    _xml:
+      `<ns2:idConsultante xmlns:ns2="${NS}">${esc(CPF)}</ns2:idConsultante>` +
+      `<ns2:senhaConsultante xmlns:ns2="${NS}">${esc(SENHA)}</ns2:senhaConsultante>`,
   };
 
   console.log('\n=== Chamando consultarAvisosPendentes ===');
@@ -116,9 +126,12 @@ async function main() {
   } catch (err) {
     console.error('\n[FALHA] Erro na chamada:', err.message);
     console.error(
-      'Se a mensagem citar autenticação/credencial/2FA, o MFA do TJCE está\n' +
-        'bloqueando o acesso por CPF+senha — será necessário certificado ou\n' +
-        'credencial de sistema. Confirme com a CATI do TJCE: (85) 3366-2966.'
+      'Diagnóstico do erro:\n' +
+        ' - "elemento inesperado / Unmarshalling": problema de XML/namespace.\n' +
+        ' - "usuario/senha", "credenciais", "nao autorizado", "2FA": o acesso\n' +
+        '   por CPF+senha foi recusado (possível efeito do MFA) — nesse caso\n' +
+        '   será necessário certificado ou credencial de sistema. Confirme com\n' +
+        '   a CATI do TJCE: (85) 3366-2966.'
     );
     if (err.root?.Envelope?.Body?.Fault) {
       console.dir(err.root.Envelope.Body.Fault, { depth: 6 });
