@@ -4,7 +4,7 @@
 const fs = require('fs');
 const fsPromises = require('fs').promises;
 const csvParser = require('csv-parser');
-const { sequelize, User, Process } = require('../models');
+const { sequelize, User, Process, PjeImportLog } = require('../models');
 const { Op, literal } = require('sequelize');
 const iconv = require('iconv-lite');
 const logger = require('../utils/logger');
@@ -111,7 +111,11 @@ async function upsertProcessos(results) {
     }
   });
 
-  return latestProcessesMap.size;
+  return {
+    total: latestProcessesMap.size,
+    criados: newRows.length,
+    atualizados: updateFns.length,
+  };
 }
 
 // Upload e importação de CSV
@@ -160,7 +164,7 @@ exports.uploadCSV = (req, res) => {
     })
     .on('end', async () => {
       try {
-        const totalRows = await upsertProcessos(results);
+        const { total: totalRows } = await upsertProcessos(results);
 
         await fsPromises.unlink(filePath);
         logger.info('CSV importado com sucesso', {
@@ -239,25 +243,69 @@ exports.importPje = (req, res) => {
   });
 
   const userId = req.userId;
+  const inicio = Date.now();
   (async () => {
+    let usuario = 'Administrador';
+    try {
+      const u = userId ? await User.findByPk(userId, { attributes: ['nome'] }) : null;
+      if (u && u.nome) usuario = u.nome;
+    } catch { /* mantém o padrão */ }
+
     try {
       const { avisos, rows, comPrazo, falhasTeor, adiados } =
         await pjeImportService.coletarRows({ abrirTeor, cienciaMinDias });
-      const totalRows = avisos > 0 ? await upsertProcessos(rows) : 0;
-      pjeImportStatus.result = { avisos, totalRows, comPrazo, falhasTeor, adiados };
+      const { total: totalRows, criados, atualizados } =
+        avisos > 0 ? await upsertProcessos(rows) : { total: 0, criados: 0, atualizados: 0 };
+
+      pjeImportStatus.result = {
+        avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados,
+      };
       logger.info('Importação PJe concluída', {
-        avisos, totalRows, comPrazo, falhasTeor, adiados, abrirTeor, userId,
+        avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados, abrirTeor, userId,
+      });
+
+      await pjeImportService.registrarLog({
+        usuario,
+        avisos,
+        criados,
+        atualizados,
+        comPrazo,
+        semPrazo: Math.max(0, avisos - comPrazo),
+        falhasTeor,
+        duracaoMs: Date.now() - inicio,
+        status: 'ok',
       });
     } catch (error) {
       pjeImportStatus.error = error.message || 'Erro ao importar do PJe.';
       logger.error('Erro na importação do PJe', {
         error: error.message, stack: error.stack, userId,
       });
+      await pjeImportService.registrarLog({
+        usuario,
+        duracaoMs: Date.now() - inicio,
+        status: 'erro',
+        erro: (error.message || 'Erro ao importar do PJe.').slice(0, 500),
+      });
     } finally {
       pjeImportStatus.running = false;
       pjeImportStatus.finishedAt = new Date().toISOString();
     }
   })();
+};
+
+// Lista o histórico de importações do PJe (mais recentes primeiro).
+exports.importPjeLogs = async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 30, 100);
+    const logs = await PjeImportLog.findAll({
+      order: [['created_at', 'DESC']],
+      limit,
+    });
+    res.json({ items: logs });
+  } catch (error) {
+    logger.error('Erro ao listar logs de importação PJe', { error: error.message });
+    res.status(500).json({ error: 'Erro ao listar logs de importação.' });
+  }
 };
 
 // Status da última/atual importação do PJe (para o frontend acompanhar).

@@ -202,6 +202,24 @@ router.get('/import-pje/status', adminController.importPjeStatus);
 
 /**
  * @swagger
+ * /api/admin/import-pje/logs:
+ *   get:
+ *     summary: Histórico de importações do PJe
+ *     tags: [Administração - Processos]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *     responses:
+ *       200:
+ *         description: Lista de importações (mais recentes primeiro)
+ */
+router.get('/import-pje/logs', adminController.importPjeLogs);
+
+/**
+ * @swagger
  * /api/admin/processes:
  *   get:
  *     summary: Lista processos

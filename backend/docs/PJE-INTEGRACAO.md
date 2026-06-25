@@ -70,6 +70,17 @@ como `esaj`):
 npm run db:migrate
 ```
 
+## Histórico de importações
+
+Cada importação (manual ou cron) grava um registro na tabela `pje_import_logs`
+com: data, quem disparou (nome do usuário ou "Cron automático"), avisos
+encontrados, processos criados/atualizados, com prazo, sem prazo, falhas ao
+abrir teor, duração e status (ok/erro). A migration cria a tabela
+automaticamente (`npm run db:migrate`).
+
+No painel, o item **"Logs do PJe"** (abaixo de "Importar do PJe") abre o
+histórico. Endpoint: `GET /api/admin/import-pje/logs?limit=30`.
+
 ## Uso
 
 - **Manual:** botão **"Importar do PJe"** no menu lateral do painel.

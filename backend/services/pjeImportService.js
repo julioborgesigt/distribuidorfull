@@ -16,6 +16,17 @@ const {
 } = require('../utils/pjeParser');
 const tpu = require('../utils/tpu');
 const logger = require('../utils/logger');
+const { PjeImportLog } = require('../models');
+
+// Grava um registro no histórico de importações do PJe. Nunca lança — uma falha
+// ao logar não deve derrubar a importação.
+async function registrarLog(dados) {
+  try {
+    await PjeImportLog.create(dados);
+  } catch (e) {
+    logger.error('Falha ao registrar log de importação PJe', { error: e.message });
+  }
+}
 
 // Converte um aviso (+ prazo já calculado) numa linha do model Process.
 function avisoToRow(aviso, prazo) {
@@ -82,4 +93,4 @@ async function coletarRows({
   return { avisos: avisos.length, rows, comPrazo, falhasTeor, adiados };
 }
 
-module.exports = { coletarRows, avisoToRow };
+module.exports = { coletarRows, avisoToRow, registrarLog };
