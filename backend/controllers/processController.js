@@ -17,8 +17,12 @@ const pjeImportService = require('../services/pjeImportService');
 // tarjas, data_intimacao, fonte) e devolve o total de processos processados.
 //
 // Mantém a regra de negócio original: ao receber uma data_intimacao mais
-// recente, marca como não cumprido e incrementa reiteracoes. A `fonte` só é
-// gravada na criação — registros já existentes preservam a origem original.
+// recente, marca como não cumprido e incrementa reiteracoes.
+//
+// Precedência de fonte: o PJe é a origem mais atual e prevalece. Quando um
+// processo existe nas duas origens, a fonte que está importando assume o
+// registro (eSAJ -> PJe), exceto que o eSAJ NÃO sobrescreve um processo que já
+// pertence ao PJe.
 async function upsertProcessos(results) {
   const latestProcessesMap = new Map();
 
@@ -53,6 +57,12 @@ async function upsertProcessos(results) {
     const existing = existingMap.get(row.numero_processo);
 
     if (existing) {
+      // Precedência de fonte: o PJe é a origem mais atual e prevalece. Um
+      // import do eSAJ NÃO sobrescreve um processo que já pertence ao PJe.
+      if (row.fonte === 'esaj' && existing.fonte === 'pje') {
+        continue;
+      }
+
       const updateData = {};
       if (row.prazo_processual !== existing.prazo_processual) {
         updateData.prazo_processual = row.prazo_processual;
@@ -65,6 +75,10 @@ async function upsertProcessos(results) {
       }
       if (row.tarjas !== existing.tarjas) {
         updateData.tarjas = row.tarjas;
+      }
+      // A fonte que está atualizando assume o processo (ex.: eSAJ -> PJe).
+      if (row.fonte && row.fonte !== existing.fonte) {
+        updateData.fonte = row.fonte;
       }
       if (row.data_intimacao !== existing.data_intimacao) {
         const newDate = new Date(row.data_intimacao);
