@@ -86,6 +86,13 @@
             title="Importar CSV"
             @click="() => { drawerOpen = false; userDialogs?.abrirModalUpload(); }"
           />
+          <v-list-item
+            base-color="green"
+            :disabled="importandoPje"
+            prepend-icon="mdi-download-network-outline"
+            title="Importar do PJe"
+            @click="() => { drawerOpen = false; importarPje(); }"
+          />
         </template>
       </v-list>
 
@@ -185,6 +192,20 @@
               density="compact"
               :items="uniqueTarjas"
               label="Tarjas"
+              multiple
+              variant="outlined"
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-select
+              v-model="filters.fonte"
+              chips
+              clearable
+              density="compact"
+              item-title="title"
+              item-value="value"
+              :items="fonteOptions"
+              label="Fonte (Origem)"
               multiple
               variant="outlined"
             />
@@ -502,6 +523,7 @@
     classe: [],
     assunto: [],
     tarjas: [],
+    fonte: [],
     userId: [],
     prazo: null,
     cumprido: false, // Default é "Não Cumprido"
@@ -509,6 +531,13 @@
     data_fim: null,
   })
   const selected = ref([])
+
+  // Opções fixas do filtro de origem do registro.
+  const fonteOptions = [
+    { title: 'eSAJ', value: 'esaj' },
+    { title: 'PJe', value: 'pje' },
+  ]
+  const importandoPje = ref(false)
 
   // =================================================================
   // 3. ESTADO DA TABELA E GRÁFICOS (PAGINAÇÃO DO SERVIDOR)
@@ -711,6 +740,7 @@
     if (filters.value.cumprido !== null) {
       params.append('cumprido', filters.value.cumprido)
     }
+    for (const v of filters.value.fonte || []) params.append('fonte', v)
     return params
   }
 
@@ -851,11 +881,44 @@
       classe: [],
       assunto: [],
       tarjas: [],
+      fonte: [],
       userId: [],
       prazo: null,
       cumprido: false,
       data_inicio: null,
       data_fim: null,
+    }
+  }
+
+  // Importa processos do PJe (webservice MNI). ATENÇÃO: por padrão abre o teor
+  // de cada aviso, o que registra ciência e inicia o prazo — por isso pedimos
+  // confirmação explícita antes de disparar.
+  async function importarPje () {
+    if (importandoPje.value) return
+    const ok = window.confirm(
+      'Importar do PJe?\n\nIsto vai consultar os avisos pendentes e ABRIR cada ' +
+        'intimação para capturar o prazo. Abrir a intimação REGISTRA CIÊNCIA e ' +
+        'INICIA O PRAZO no PJe. Deseja continuar?'
+    )
+    if (!ok) return
+
+    importandoPje.value = true
+    actionLoading.value = true
+    actionLoadingText.value = 'Importando do PJe...'
+    try {
+      const { data } = await apiClient.post('/admin/import-pje')
+      const partes = [`${data.avisos ?? 0} avisos`]
+      if (data.comPrazo != null) partes.push(`${data.comPrazo} com prazo`)
+      if (data.falhasTeor) partes.push(`${data.falhasTeor} falha(s) ao abrir`)
+      notify(`Importação do PJe concluída: ${partes.join(', ')}.`)
+      clearCache('cache:filterOptions') // novas classes/assuntos podem ter surgido
+      await fetchFilterOptions()
+      await reloadAllData()
+    } catch (error) {
+      notify(error.response?.data?.error || 'Erro ao importar do PJe.', 'error')
+    } finally {
+      importandoPje.value = false
+      actionLoading.value = false
     }
   }
 
