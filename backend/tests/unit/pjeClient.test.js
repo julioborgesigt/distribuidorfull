@@ -8,7 +8,7 @@ jest.mock('../../utils/logger', () => ({
   debug: jest.fn(),
 }));
 const { _internal } = require('../../utils/pjeClient');
-const { buildEnvelope, extractFault, esc } = _internal;
+const { buildEnvelope, extractFault, extractInsucesso, esc } = _internal;
 
 describe('pjeClient - esc', () => {
   test('escapa caracteres especiais de XML', () => {
@@ -39,5 +39,17 @@ describe('pjeClient - extractFault', () => {
       '<soap:Fault><faultcode>soap:Client</faultcode>' +
       '<faultstring>usuario ou senha invalidos</faultstring></soap:Fault>';
     expect(extractFault(body)).toBe('usuario ou senha invalidos');
+  });
+});
+
+describe('pjeClient - extractInsucesso', () => {
+  test('null quando sucesso=true', () => {
+    expect(extractInsucesso('<sucesso>true</sucesso><mensagem>ok</mensagem>')).toBeNull();
+  });
+  test('devolve a mensagem quando sucesso=false (sem Fault)', () => {
+    const body =
+      '<ns4:consultarAvisosPendentesResposta><sucesso>false</sucesso>' +
+      '<mensagem>Usuário ou senha inválidos</mensagem></ns4:consultarAvisosPendentesResposta>';
+    expect(extractInsucesso(body)).toBe('Usuário ou senha inválidos');
   });
 });
