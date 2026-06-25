@@ -101,6 +101,19 @@ function extractFault(body) {
   return msg.trim();
 }
 
+// O MNI sinaliza falhas de negócio (ex.: credenciais inválidas) SEM <Fault>,
+// apenas com <sucesso>false</sucesso><mensagem>...</mensagem>. Sem checar isso,
+// uma falha de autenticação seria confundida com "0 avisos". Devolve a mensagem
+// de erro quando sucesso=false, ou null quando ok.
+function extractInsucesso(body) {
+  const sucesso = (body.match(/<(?:\w+:)?sucesso>([^<]*)</i) || [])[1];
+  if (sucesso && sucesso.trim().toLowerCase() === 'false') {
+    const msg = (body.match(/<(?:\w+:)?mensagem>([^<]*)</i) || [])[1];
+    return (msg && msg.trim()) || 'falha não detalhada';
+  }
+  return null;
+}
+
 // Lista avisos pendentes do consultante. NÃO registra ciência.
 async function consultarAvisosPendentes(creds) {
   const { id, pass } = getCredentials(creds);
@@ -109,9 +122,9 @@ async function consultarAvisosPendentes(creds) {
     `<tip:senhaConsultante>${esc(pass)}</tip:senhaConsultante>`;
   const { body } = await postSoap(buildEnvelope('consultarAvisosPendentes', inner));
 
-  const fault = extractFault(body);
+  const fault = extractFault(body) || extractInsucesso(body);
   if (fault) {
-    logger.error('MNI consultarAvisosPendentes retornou Fault', { fault });
+    logger.error('MNI consultarAvisosPendentes falhou', { fault });
     throw new Error(`PJe: ${fault}`);
   }
   return parseAvisos(body);
@@ -127,9 +140,9 @@ async function consultarTeorComunicacao(idAviso, creds) {
     `<tip:identificadorAviso>${esc(idAviso)}</tip:identificadorAviso>`;
   const { body } = await postSoap(buildEnvelope('consultarTeorComunicacao', inner));
 
-  const fault = extractFault(body);
+  const fault = extractFault(body) || extractInsucesso(body);
   if (fault) {
-    logger.error('MNI consultarTeorComunicacao retornou Fault', { idAviso, fault });
+    logger.error('MNI consultarTeorComunicacao falhou', { idAviso, fault });
     throw new Error(`PJe: ${fault}`);
   }
   return parseTeor(body);
@@ -140,5 +153,5 @@ module.exports = {
   consultarAvisosPendentes,
   consultarTeorComunicacao,
   // exportados para teste
-  _internal: { buildEnvelope, extractFault, esc },
+  _internal: { buildEnvelope, extractFault, extractInsucesso, esc },
 };
