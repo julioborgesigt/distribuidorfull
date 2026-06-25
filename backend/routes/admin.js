@@ -190,6 +190,18 @@ router.post('/import-pje', pjeImportLimiter, adminController.importPje);
 
 /**
  * @swagger
+ * /api/admin/import-pje/status:
+ *   get:
+ *     summary: Status da importação do PJe em andamento
+ *     tags: [Administração - Processos]
+ *     responses:
+ *       200:
+ *         description: Estado atual (running, result, error)
+ */
+router.get('/import-pje/status', adminController.importPjeStatus);
+
+/**
+ * @swagger
  * /api/admin/processes:
  *   get:
  *     summary: Lista processos
