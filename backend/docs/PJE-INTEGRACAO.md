@@ -19,6 +19,16 @@ a ter uma **fonte** (`esaj` ou `pje`), exibida como badge e filtrável no painel
 > fila **sem dar ciência**, use `abrirTeor=false` (rota) ou
 > `PJE_CRON_ABRIR_TEOR=false` (cron).
 
+## Precedência de fonte (eSAJ x PJe)
+
+Cada processo é uma única linha (`numero_processo` é único). Quando o mesmo
+processo existe nas duas origens, o **PJe prevalece** por ser a informação mais
+atual:
+
+- Um import do **PJe assume** o processo (badge e dados passam a ser do PJe).
+- Um import do **eSAJ NÃO sobrescreve** um processo que já é do PJe.
+- Processos que só existem no eSAJ continuam normais.
+
 ## Configuração (.env do backend)
 
 ```env
