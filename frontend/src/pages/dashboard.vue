@@ -509,7 +509,7 @@
     :color="snackbarColor"
     location="top right"
     multi-line
-    :timeout="snackbarTimeout"
+    :timeout="-1"
     @update:model-value="onSnackbarToggle"
   >
     {{ snackbarText }}
@@ -518,7 +518,8 @@
       class="mt-2"
       color="rgba(255,255,255,0.7)"
       height="3"
-      :model-value="snackbarProgress"
+      :indeterminate="snackbarIndeterminate"
+      :model-value="snackbarIndeterminate ? undefined : snackbarProgress"
       rounded
     />
     <template #actions>
@@ -640,6 +641,7 @@
     snackbarColor,
     snackbarTimeout,
     snackbarProgress,
+    snackbarIndeterminate,
     notify,
     onSnackbarToggle,
   } = useSnackbar()
@@ -972,13 +974,12 @@
     if (!ok) return
 
     importandoPje.value = true
-    actionLoading.value = true
-    actionLoadingText.value = 'Importando do PJe (pode levar alguns minutos)...'
+    // Toast PERSISTENTE com barra indeterminada: fica até o toast de
+    // sucesso/erro aparecer. A importação roda em segundo plano (pode levar
+    // minutos abrindo os teores); acompanhamos pelo endpoint de status.
+    notify('Importação do PJe iniciada. Aguardando conclusão...', 'info', 0, { persistent: true })
     try {
-      // A importação roda em segundo plano (pode levar minutos abrindo os teores).
-      // A rota responde na hora; acompanhamos o resultado pelo endpoint de status.
       await apiClient.post('/admin/import-pje')
-      notify('Importação do PJe iniciada. Aguardando conclusão...')
       await aguardarImportPje()
     } catch (error) {
       if (error.response?.status === 409) {
@@ -988,7 +989,6 @@
       }
     } finally {
       importandoPje.value = false
-      actionLoading.value = false
     }
   }
 
@@ -1013,9 +1013,9 @@
           if (r.comPrazo != null) partes.push(`${r.comPrazo} com prazo`)
           if (r.adiados) partes.push(`${r.adiados} aguardando ciência`)
           if (r.falhasTeor) partes.push(`${r.falhasTeor} falha(s) ao abrir`)
-          notify(`Importação do PJe concluída: ${partes.join(', ')}.`)
+          notify(`Importação do PJe concluída: ${partes.join(', ')}.`, 'success', 6000)
         } else {
-          notify('Importação do PJe concluída.')
+          notify('Importação do PJe concluída.', 'success', 6000)
         }
         clearCache('cache:filterOptions') // novas classes/assuntos podem ter surgido
         await fetchFilterOptions()
