@@ -14,10 +14,13 @@
 
 const path = require('path');
 
-// Semente mínima e confiável (alta confiança nos nomes).
+// Semente mínima e confiável (alta confiança nos nomes). A tabela completa é
+// populada por scripts/atualizar-tpu.js (gera utils/tpu-data.json).
 const SEED = {
   classes: {
+    277: 'Procedimentos Investigatórios',
     279: 'Inquérito Policial',
+    280: 'Auto de Prisão em Flagrante',
   },
   assuntos: {},
 };

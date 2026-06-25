@@ -94,8 +94,24 @@ histórico. Endpoint: `GET /api/admin/import-pje/logs?limit=30`.
 
 O MNI devolve **códigos** (ex.: classe `279`). O `utils/tpu.js` traduz para nome
 (ex.: `Inquérito Policial`), com fallback legível (`Classe 279`) quando o código
-não está na tabela. Para popular a tabela completa do CNJ, crie/atualize
-`utils/tpu-data.json` no formato:
+não está na tabela.
+
+### Atualização automática pelo SGT/CNJ
+
+Rode o script abaixo (no servidor, que tem acesso à internet). Ele descobre os
+códigos ainda não traduzidos a partir dos próprios processos, busca os nomes no
+**webservice público do SGT** (`pesquisarItemPublicoWS`), grava em
+`utils/tpu-data.json` **e corrige os processos já importados**:
+
+```bash
+cd backend && node scripts/atualizar-tpu.js
+# opcional: SGT_ENDPOINT=https://wwwh.cnj.jus.br/sgt/sgt_ws.php (homologação)
+```
+
+Rode de novo sempre que aparecerem códigos novos no painel. Após rodar, reinicie
+o app (`touch tmp/restart.txt`) para as próximas importações já usarem os nomes.
+
+Também é possível editar `utils/tpu-data.json` à mão:
 
 ```json
 { "classes": { "279": "Inquérito Policial" }, "assuntos": { "3546": "..." } }
