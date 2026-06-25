@@ -175,6 +175,76 @@ async function main() {
   console.log('sucesso :', sucesso);
   console.log('mensagem:', mensagem);
   console.log('avisos  :', qtdAvisos);
+
+  // 4) PROBE OPCIONAL DO TEOR — só roda se PJE_TEOR_IDAVISO estiver definido.
+  //    ATENÇÃO: consultarTeorComunicacao REGISTRA CIÊNCIA e INICIA O PRAZO do
+  //    aviso consultado. Use um idAviso real que você ACEITE abrir. Serve para
+  //    inspecionar o formato do teor e construir o parser do prazo.
+  const idAviso = process.env.PJE_TEOR_IDAVISO;
+  if (!idAviso) {
+    console.log(
+      '\n[TEOR] Para inspecionar o teor de UM aviso (ISSO DÁ CIÊNCIA E INICIA O PRAZO),\n' +
+        '       rode com:  PJE_TEOR_IDAVISO=<idAviso>  (ex.: um dos idAviso listados acima).'
+    );
+    return;
+  }
+
+  // Mostra o schema de entrada da operação de teor, se a lib soap o expôs.
+  try {
+    const desc = client.describe();
+    for (const s of Object.keys(desc)) {
+      for (const p of Object.keys(desc[s])) {
+        const teorOp = Object.keys(desc[s][p]).find((o) =>
+          /consultarTeorComunicacao/i.test(o)
+        );
+        if (teorOp) {
+          console.log(`\nSchema de entrada de "${teorOp}":`);
+          console.dir(desc[s][p][teorOp].input, { depth: 4 });
+        }
+      }
+    }
+  } catch { /* ignore */ }
+
+  console.log(
+    `\n=== Chamando consultarTeorComunicacao para idAviso=${idAviso} (ABRE/DÁ CIÊNCIA) ===`
+  );
+  const teorEnvelope =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"` +
+    ` xmlns:ser="${SERVICE_NS}" xmlns:tip="${TIPOS_NS}">` +
+    `<soapenv:Header/>` +
+    `<soapenv:Body>` +
+    `<ser:consultarTeorComunicacao>` +
+    `<tip:idConsultante>${esc(CPF)}</tip:idConsultante>` +
+    `<tip:senhaConsultante>${esc(SENHA)}</tip:senhaConsultante>` +
+    `<tip:identificadorAviso>${esc(idAviso)}</tip:identificadorAviso>` +
+    `</ser:consultarTeorComunicacao>` +
+    `</soapenv:Body>` +
+    `</soapenv:Envelope>`;
+
+  let teorResp;
+  try {
+    teorResp = await postSoap(endpoint, teorEnvelope);
+  } catch (err) {
+    console.error('\n[FALHA] Erro de rede no POST do teor:', err.message);
+    return;
+  }
+  console.log('HTTP status:', teorResp.status);
+  const tbody = teorResp.body || '';
+  if (/<(\w+:)?Fault[> ]/i.test(tbody)) {
+    console.error('\n[FALHA] SOAP Fault no teor (provável nome de campo errado):\n');
+    console.log(tbody.slice(0, 4000));
+    return;
+  }
+  // O teor costuma vir como anexo MTOM (base64) e/ou texto. Mostramos o XML
+  // (sem o binário gigante) para identificar onde está o prazo/estrutura.
+  const semBinario = tbody.replace(/[A-Za-z0-9+/]{200,}={0,2}/g, '[BASE64_OMITIDO]');
+  console.log('\n[OK] Resposta do teor (XML, base64 omitido, até 8000 chars):\n');
+  console.log(semBinario.slice(0, 8000));
+  console.log(
+    '\n[DICA] Procure no XML acima por: prazo, "dias", mimetype/mimeType,\n' +
+      '       <documento>, descrição do ato. É daí que sai o prazo_processual.'
+  );
 }
 
 main().catch((e) => {
