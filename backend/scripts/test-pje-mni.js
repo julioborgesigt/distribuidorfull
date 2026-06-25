@@ -243,18 +243,26 @@ async function main() {
     return;
   }
 
-  // 5) PROBE OPCIONAL DO TEOR — só roda se PJE_TEOR_IDAVISO estiver definido.
-  //    ATENÇÃO: consultarTeorComunicacao REGISTRA CIÊNCIA e INICIA O PRAZO do
-  //    aviso consultado. Use um idAviso real que você ACEITE abrir. Serve para
-  //    inspecionar o formato do teor e construir o parser do prazo.
+  // 5) PROBE OPCIONAL DO TEOR.
+  //    Dois modos:
+  //    - PJE_TEOR_IDAVISO=<id>     : por aviso pendente. DÁ CIÊNCIA e INICIA O PRAZO.
+  //    - PJE_TEOR_NUMERO=<numero>  : por número de processo. Use em processo JÁ
+  //      CIENTE para confirmar que reler o teor devolve o prazo SEM efeito novo
+  //      (base do fluxo passivo).
   const idAviso = process.env.PJE_TEOR_IDAVISO;
-  if (!idAviso) {
+  const numeroTeor = process.env.PJE_TEOR_NUMERO;
+  if (!idAviso && !numeroTeor) {
     console.log(
-      '\n[TEOR] Para inspecionar o teor de UM aviso (ISSO DÁ CIÊNCIA E INICIA O PRAZO),\n' +
-        '       rode com:  PJE_TEOR_IDAVISO=<idAviso>  (ex.: um dos idAviso listados acima).'
+      '\n[TEOR] Modos de teste do teor:\n' +
+        '  PJE_TEOR_IDAVISO=<idAviso>  -> por aviso pendente (DÁ CIÊNCIA!)\n' +
+        '  PJE_TEOR_NUMERO=<numero>    -> por número (use em processo JÁ ciente; read-only)'
     );
     return;
   }
+  const usandoNumero = !idAviso && !!numeroTeor;
+  const idParaTeor = idAviso
+    ? `<tip:identificadorAviso>${esc(idAviso)}</tip:identificadorAviso>`
+    : `<tip:numeroProcesso>${esc(numeroTeor)}</tip:numeroProcesso>`;
 
   // Mostra o schema de entrada da operação de teor, se a lib soap o expôs.
   try {
@@ -273,7 +281,9 @@ async function main() {
   } catch { /* ignore */ }
 
   console.log(
-    `\n=== Chamando consultarTeorComunicacao para idAviso=${idAviso} (ABRE/DÁ CIÊNCIA) ===`
+    usandoNumero
+      ? `\n=== Chamando consultarTeorComunicacao por numero=${numeroTeor} (read-only se já ciente) ===`
+      : `\n=== Chamando consultarTeorComunicacao para idAviso=${idAviso} (ABRE/DÁ CIÊNCIA) ===`
   );
   const teorEnvelope =
     `<?xml version="1.0" encoding="UTF-8"?>` +
@@ -284,7 +294,7 @@ async function main() {
     `<ser:consultarTeorComunicacao>` +
     `<tip:idConsultante>${esc(CPF)}</tip:idConsultante>` +
     `<tip:senhaConsultante>${esc(SENHA)}</tip:senhaConsultante>` +
-    `<tip:identificadorAviso>${esc(idAviso)}</tip:identificadorAviso>` +
+    idParaTeor +
     `</ser:consultarTeorComunicacao>` +
     `</soapenv:Body>` +
     `</soapenv:Envelope>`;
