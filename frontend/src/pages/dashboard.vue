@@ -93,6 +93,12 @@
             title="Importar do PJe"
             @click="() => { drawerOpen = false; importarPje(); }"
           />
+          <v-list-item
+            base-color="green"
+            prepend-icon="mdi-history"
+            title="Logs do PJe"
+            @click="() => { drawerOpen = false; abrirLogsPje(); }"
+          />
         </template>
       </v-list>
 
@@ -396,6 +402,51 @@
     @users-changed="handleUsersChanged"
   />
 
+  <!-- Histórico de importações do PJe -->
+  <v-dialog v-model="dialogLogsPje" max-width="1150px" scrollable>
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon start>mdi-history</v-icon>
+        Histórico de Importações do PJe
+        <v-spacer />
+        <v-btn
+          icon="mdi-refresh"
+          :loading="loadingLogsPje"
+          variant="text"
+          @click="carregarLogsPje"
+        />
+        <v-btn icon="mdi-close" variant="text" @click="dialogLogsPje = false" />
+      </v-card-title>
+      <v-divider />
+      <v-card-text style="max-height: 70vh;">
+        <v-data-table
+          density="compact"
+          :headers="logsHeaders"
+          :items="logsPje"
+          :items-per-page="-1"
+          :loading="loadingLogsPje"
+          no-data-text="Nenhuma importação registrada ainda."
+        >
+          <template #item.created_at="{ item }">
+            {{ formatarDataHoraLog(item.created_at) }}
+          </template>
+          <template #item.duracaoMs="{ item }">
+            {{ (item.duracaoMs / 1000).toFixed(1) }}s
+          </template>
+          <template #item.status="{ item }">
+            <v-tooltip v-if="item.erro" location="top">
+              <template #activator="{ props: tip }">
+                <v-chip color="error" size="small" v-bind="tip">Erro</v-chip>
+              </template>
+              <span>{{ item.erro }}</span>
+            </v-tooltip>
+            <v-chip v-else color="success" size="small">OK</v-chip>
+          </template>
+        </v-data-table>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+
   <v-dialog v-model="dialogBulkAssign" max-width="500px" persistent>
     <v-card>
       <v-form ref="formBulkAssignRef" @submit.prevent="handleBulkAssign">
@@ -538,6 +589,23 @@
     { title: 'PJe', value: 'pje' },
   ]
   const importandoPje = ref(false)
+
+  // Histórico de importações do PJe
+  const dialogLogsPje = ref(false)
+  const logsPje = ref([])
+  const loadingLogsPje = ref(false)
+  const logsHeaders = [
+    { title: 'Data', key: 'created_at' },
+    { title: 'Por', key: 'usuario' },
+    { title: 'Avisos', key: 'avisos', align: 'center' },
+    { title: 'Criados', key: 'criados', align: 'center' },
+    { title: 'Atualizados', key: 'atualizados', align: 'center' },
+    { title: 'Com prazo', key: 'comPrazo', align: 'center' },
+    { title: 'Sem prazo', key: 'semPrazo', align: 'center' },
+    { title: 'Falhas', key: 'falhasTeor', align: 'center' },
+    { title: 'Duração', key: 'duracaoMs', align: 'center' },
+    { title: 'Status', key: 'status', align: 'center', sortable: false },
+  ]
 
   // =================================================================
   // 3. ESTADO DA TABELA E GRÁFICOS (PAGINAÇÃO DO SERVIDOR)
@@ -956,6 +1024,32 @@
       }
     }
     notify('A importação do PJe está demorando mais que o esperado; atualize a página em instantes.', 'warning')
+  }
+
+  // Abre o diálogo de histórico e carrega os logs.
+  async function abrirLogsPje () {
+    dialogLogsPje.value = true
+    await carregarLogsPje()
+  }
+
+  async function carregarLogsPje () {
+    loadingLogsPje.value = true
+    try {
+      const { data } = await apiClient.get('/admin/import-pje/logs')
+      logsPje.value = data.items || []
+    } catch {
+      notify('Erro ao carregar o histórico de importações do PJe.', 'error')
+    } finally {
+      loadingLogsPje.value = false
+    }
+  }
+
+  function formatarDataHoraLog (valor) {
+    try {
+      return format(new Date(valor), 'dd/MM/yyyy HH:mm')
+    } catch {
+      return valor
+    }
   }
 
   // Recarrega todos os dados da página (em paralelo para melhor performance)

@@ -14,6 +14,7 @@ module.exports = {
   uploadCSV: processController.uploadCSV,
   importPje: processController.importPje,
   importPjeStatus: processController.importPjeStatus,
+  importPjeLogs: processController.importPjeLogs,
   listProcesses: processController.listProcesses,
   manualAssignProcess: processController.manualAssignProcess,
   updateObservacoes: processController.updateObservacoes,

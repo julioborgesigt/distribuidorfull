@@ -19,7 +19,7 @@
 require('dotenv').config({ path: __dirname + '/../.env' });
 
 const { sequelize } = require('../models');
-const { coletarRows } = require('../services/pjeImportService');
+const { coletarRows, registrarLog } = require('../services/pjeImportService');
 const { upsertProcessos } = require('../controllers/processController');
 const logger = require('../utils/logger');
 
@@ -30,10 +30,24 @@ const logger = require('../utils/logger');
 
     const abrirTeor = process.env.PJE_CRON_ABRIR_TEOR !== 'false';
     const { avisos, rows, comPrazo, falhasTeor } = await coletarRows({ abrirTeor });
-    const totalRows = avisos > 0 ? await upsertProcessos(rows) : 0;
+    const { total: totalRows, criados, atualizados } =
+      avisos > 0 ? await upsertProcessos(rows) : { total: 0, criados: 0, atualizados: 0 };
 
-    const resumo = { avisos, totalRows, comPrazo, falhasTeor, abrirTeor, ms: Date.now() - inicio };
+    const resumo = { avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, abrirTeor, ms: Date.now() - inicio };
     logger.info('Cron de importação PJe concluído', resumo);
+
+    await registrarLog({
+      usuario: 'Cron automático',
+      avisos,
+      criados,
+      atualizados,
+      comPrazo,
+      semPrazo: Math.max(0, avisos - comPrazo),
+      falhasTeor,
+      duracaoMs: Date.now() - inicio,
+      status: 'ok',
+    });
+
     // eslint-disable-next-line no-console
     console.log(
       `[${new Date().toISOString()}] PJe: ${avisos} avisos, ${totalRows} processados, ` +
@@ -43,6 +57,12 @@ const logger = require('../utils/logger');
     process.exit(0);
   } catch (err) {
     logger.error('Cron de importação PJe falhou', { error: err.message, stack: err.stack });
+    await registrarLog({
+      usuario: 'Cron automático',
+      duracaoMs: Date.now() - inicio,
+      status: 'erro',
+      erro: (err.message || 'Erro no cron de importação PJe.').slice(0, 500),
+    });
     // eslint-disable-next-line no-console
     console.error(`[${new Date().toISOString()}] Falha na importação PJe:`, err.message);
     try { await sequelize.close(); } catch { /* ignore */ }
