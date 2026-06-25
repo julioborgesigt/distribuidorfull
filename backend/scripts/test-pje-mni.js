@@ -176,7 +176,74 @@ async function main() {
   console.log('mensagem:', mensagem);
   console.log('avisos  :', qtdAvisos);
 
-  // 4) PROBE OPCIONAL DO TEOR — só roda se PJE_TEOR_IDAVISO estiver definido.
+  // 4) PROBE OPCIONAL DE consultarProcesso — READ-ONLY, NÃO dá ciência.
+  //    Serve para verificar se o prazo (dataReferencia / "Data limite") de uma
+  //    intimação JÁ CIENTE pode ser lido sem causar efeito — base do fluxo
+  //    passivo. Use um número de processo que VOCÊ JÁ ABRIU (ciência tomada).
+  //    Ative com:  PJE_PROC_NUMERO=<numero sem máscara>
+  const procNumero = process.env.PJE_PROC_NUMERO;
+  if (procNumero) {
+    // Mostra o schema da operação (nomes exatos dos parâmetros booleanos).
+    try {
+      const desc = client.describe();
+      for (const s of Object.keys(desc)) {
+        for (const p of Object.keys(desc[s])) {
+          const op = Object.keys(desc[s][p]).find((o) =>
+            /consultarProcesso/i.test(o)
+          );
+          if (op) {
+            console.log(`\nSchema de entrada de "${op}":`);
+            console.dir(desc[s][p][op].input, { depth: 4 });
+          }
+        }
+      }
+    } catch { /* ignore */ }
+
+    console.log(
+      `\n=== Chamando consultarProcesso para ${procNumero} (READ-ONLY, sem ciência) ===`
+    );
+    const procEnvelope =
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"` +
+      ` xmlns:ser="${SERVICE_NS}" xmlns:tip="${TIPOS_NS}">` +
+      `<soapenv:Header/>` +
+      `<soapenv:Body>` +
+      `<ser:consultarProcesso>` +
+      `<tip:idConsultante>${esc(CPF)}</tip:idConsultante>` +
+      `<tip:senhaConsultante>${esc(SENHA)}</tip:senhaConsultante>` +
+      `<tip:numeroProcesso>${esc(procNumero)}</tip:numeroProcesso>` +
+      `<tip:movimentos>true</tip:movimentos>` +
+      `<tip:incluirCabecalho>true</tip:incluirCabecalho>` +
+      `</ser:consultarProcesso>` +
+      `</soapenv:Body>` +
+      `</soapenv:Envelope>`;
+
+    let procResp;
+    try {
+      procResp = await postSoap(endpoint, procEnvelope);
+    } catch (err) {
+      console.error('\n[FALHA] Erro de rede no POST de consultarProcesso:', err.message);
+      return;
+    }
+    console.log('HTTP status:', procResp.status);
+    const pbody = procResp.body || '';
+    if (/<(\w+:)?Fault[> ]/i.test(pbody)) {
+      console.error('\n[FALHA] SOAP Fault (talvez nome de parâmetro diferente):\n');
+      console.log(pbody.slice(0, 4000));
+      return;
+    }
+    const semBin = pbody.replace(/[A-Za-z0-9+/]{200,}={0,2}/g, '[BASE64_OMITIDO]');
+    console.log('\n[OK] Resposta de consultarProcesso (base64 omitido, até 9000 chars):\n');
+    console.log(semBin.slice(0, 9000));
+    console.log(
+      '\n[DICA] Procure por: dataReferencia, prazo, "Data limite", intimacao,\n' +
+        '       Confirmada a comunicação, dataCiencia. Queremos saber se o PRAZO\n' +
+        '       da intimação já ciente aparece aqui (sem precisar abrir o teor).'
+    );
+    return;
+  }
+
+  // 5) PROBE OPCIONAL DO TEOR — só roda se PJE_TEOR_IDAVISO estiver definido.
   //    ATENÇÃO: consultarTeorComunicacao REGISTRA CIÊNCIA e INICIA O PRAZO do
   //    aviso consultado. Use um idAviso real que você ACEITE abrir. Serve para
   //    inspecionar o formato do teor e construir o parser do prazo.
