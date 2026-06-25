@@ -9,6 +9,98 @@ const { Op, literal } = require('sequelize');
 const iconv = require('iconv-lite');
 const logger = require('../utils/logger');
 const { getRealIP, parseArrayFilter, processScopeWhere } = require('../utils/helpers');
+const pjeClient = require('../utils/pjeClient');
+const { formatNumeroCNJ, mniDateToISO, computePrazo } = require('../utils/pjeParser');
+const tpu = require('../utils/tpu');
+
+// Pipeline compartilhado de upsert de processos (usado pelo CSV do eSAJ e pela
+// importação do PJe). Recebe linhas já normalizadas no formato do model
+// (numero_processo, prazo_processual, classe_principal, assunto_principal,
+// tarjas, data_intimacao, fonte) e devolve o total de processos processados.
+//
+// Mantém a regra de negócio original: ao receber uma data_intimacao mais
+// recente, marca como não cumprido e incrementa reiteracoes. A `fonte` só é
+// gravada na criação — registros já existentes preservam a origem original.
+async function upsertProcessos(results) {
+  const latestProcessesMap = new Map();
+
+  for (const currentRow of results) {
+    const numeroProcesso = currentRow.numero_processo;
+
+    if (!latestProcessesMap.has(numeroProcesso)) {
+      latestProcessesMap.set(numeroProcesso, currentRow);
+    } else {
+      const existingRow = latestProcessesMap.get(numeroProcesso);
+      const existingDate = new Date(existingRow.data_intimacao);
+      const currentDate = new Date(currentRow.data_intimacao);
+
+      if (currentDate > existingDate) {
+        latestProcessesMap.set(numeroProcesso, currentRow);
+      }
+    }
+  }
+
+  // Otimização: busca todos os processos existentes em uma única query
+  const allNumeros = Array.from(latestProcessesMap.keys());
+  const existingProcesses = await Process.findAll({
+    where: { numero_processo: { [Op.in]: allNumeros } }
+  });
+  const existingMap = new Map(existingProcesses.map(p => [p.numero_processo, p]));
+
+  // Separa novos registros dos que precisam de atualização
+  const newRows = [];
+  const updateFns = []; // Funções lazy — só executam dentro da transaction
+
+  for (const row of latestProcessesMap.values()) {
+    const existing = existingMap.get(row.numero_processo);
+
+    if (existing) {
+      const updateData = {};
+      if (row.prazo_processual !== existing.prazo_processual) {
+        updateData.prazo_processual = row.prazo_processual;
+      }
+      if (row.classe_principal !== existing.classe_principal) {
+        updateData.classe_principal = row.classe_principal;
+      }
+      if (row.assunto_principal !== existing.assunto_principal) {
+        updateData.assunto_principal = row.assunto_principal;
+      }
+      if (row.tarjas !== existing.tarjas) {
+        updateData.tarjas = row.tarjas;
+      }
+      if (row.data_intimacao !== existing.data_intimacao) {
+        const newDate = new Date(row.data_intimacao);
+        const storedDate = new Date(existing.data_intimacao);
+        if (newDate > storedDate) {
+          updateData.data_intimacao = row.data_intimacao;
+          updateData.cumprido = false;
+          updateData.reiteracoes = (existing.cumprido === false ? (existing.reiteracoes || 0) + 1 : 1);
+        }
+      }
+      if (Object.keys(updateData).length > 0) {
+        updateFns.push((t) => existing.update(updateData, { transaction: t }));
+      }
+    } else {
+      newRows.push(row);
+    }
+  }
+
+  // Executa tudo dentro de uma única transaction atômica.
+  // Updates são processados em lotes de 50 para não sobrecarregar
+  // o pool de conexões com importações de até 10 mil linhas.
+  const CHUNK_SIZE = 50;
+  await sequelize.transaction(async (t) => {
+    if (newRows.length > 0) {
+      await Process.bulkCreate(newRows, { individualHooks: true, transaction: t });
+    }
+    for (let i = 0; i < updateFns.length; i += CHUNK_SIZE) {
+      const chunk = updateFns.slice(i, i + CHUNK_SIZE);
+      await Promise.all(chunk.map(fn => fn(t)));
+    }
+  });
+
+  return latestProcessesMap.size;
+}
 
 // Upload e importação de CSV
 exports.uploadCSV = (req, res) => {
@@ -49,95 +141,21 @@ exports.uploadCSV = (req, res) => {
                 classe_principal: data['Classe principal'] ? data['Classe principal'].trim() : '',
                 assunto_principal: data['Assunto principal'] ? data['Assunto principal'].trim() : '',
                 tarjas: data['Tarjas'] ? data['Tarjas'].trim() : '',
-                data_intimacao: parseDate(data['Data da intimacao'])
+                data_intimacao: parseDate(data['Data da intimacao']),
+                fonte: 'esaj'
             });
         }
     })
     .on('end', async () => {
       try {
-        const latestProcessesMap = new Map();
-
-        for (const currentRow of results) {
-          const numeroProcesso = currentRow.numero_processo;
-
-          if (!latestProcessesMap.has(numeroProcesso)) {
-            latestProcessesMap.set(numeroProcesso, currentRow);
-          } else {
-            const existingRow = latestProcessesMap.get(numeroProcesso);
-            const existingDate = new Date(existingRow.data_intimacao);
-            const currentDate = new Date(currentRow.data_intimacao);
-
-            if (currentDate > existingDate) {
-              latestProcessesMap.set(numeroProcesso, currentRow);
-            }
-          }
-        }
-
-        // Otimização: busca todos os processos existentes em uma única query
-        const allNumeros = Array.from(latestProcessesMap.keys());
-        const existingProcesses = await Process.findAll({
-          where: { numero_processo: { [Op.in]: allNumeros } }
-        });
-        const existingMap = new Map(existingProcesses.map(p => [p.numero_processo, p]));
-
-        // Separa novos registros dos que precisam de atualização
-        const newRows = [];
-        const updateFns = []; // Funções lazy — só executam dentro da transaction
-
-        for (const row of latestProcessesMap.values()) {
-          const existing = existingMap.get(row.numero_processo);
-
-          if (existing) {
-            const updateData = {};
-            if (row.prazo_processual !== existing.prazo_processual) {
-              updateData.prazo_processual = row.prazo_processual;
-            }
-            if (row.classe_principal !== existing.classe_principal) {
-              updateData.classe_principal = row.classe_principal;
-            }
-            if (row.assunto_principal !== existing.assunto_principal) {
-              updateData.assunto_principal = row.assunto_principal;
-            }
-            if (row.tarjas !== existing.tarjas) {
-              updateData.tarjas = row.tarjas;
-            }
-            if (row.data_intimacao !== existing.data_intimacao) {
-              const newDate = new Date(row.data_intimacao);
-              const storedDate = new Date(existing.data_intimacao);
-              if (newDate > storedDate) {
-                updateData.data_intimacao = row.data_intimacao;
-                updateData.cumprido = false;
-                updateData.reiteracoes = (existing.cumprido === false ? (existing.reiteracoes || 0) + 1 : 1);
-              }
-            }
-            if (Object.keys(updateData).length > 0) {
-              updateFns.push((t) => existing.update(updateData, { transaction: t }));
-            }
-          } else {
-            newRows.push(row);
-          }
-        }
-
-        // Executa tudo dentro de uma única transaction atômica.
-        // Updates são processados em lotes de 50 para não sobrecarregar
-        // o pool de conexões com CSVs de até 10 mil linhas.
-        const CHUNK_SIZE = 50;
-        await sequelize.transaction(async (t) => {
-          if (newRows.length > 0) {
-            await Process.bulkCreate(newRows, { individualHooks: true, transaction: t });
-          }
-          for (let i = 0; i < updateFns.length; i += CHUNK_SIZE) {
-            const chunk = updateFns.slice(i, i + CHUNK_SIZE);
-            await Promise.all(chunk.map(fn => fn(t)));
-          }
-        });
+        const totalRows = await upsertProcessos(results);
 
         await fsPromises.unlink(filePath);
         logger.info('CSV importado com sucesso', {
-          totalRows: latestProcessesMap.size,
+          totalRows,
           userId: req.userId
         });
-        res.json({ message: 'CSV importado com sucesso. Registros mais recentes foram processados.', totalRows: latestProcessesMap.size });
+        res.json({ message: 'CSV importado com sucesso. Registros mais recentes foram processados.', totalRows });
 
       } catch (error) {
         logger.error('Erro ao salvar dados do CSV', {
@@ -158,6 +176,91 @@ exports.uploadCSV = (req, res) => {
       });
       res.status(500).json({ error: 'Erro ao ler o arquivo CSV.' });
     });
+};
+
+// Importação de processos do PJe via webservice MNI.
+//
+// Fluxo: consultarAvisosPendentes (não dá ciência) e, para cada aviso,
+// consultarTeorComunicacao para obter o prazo estruturado. ATENÇÃO: a consulta
+// do teor REGISTRA CIÊNCIA e INICIA O PRAZO do aviso. Por isso a abertura do
+// teor é controlada por `abrirTeor` (default true, conforme decisão do cliente);
+// com `abrirTeor=false` importa apenas a fila, sem prazo e sem dar ciência.
+exports.importPje = async (req, res) => {
+  const abrirTeor = String(req.query.abrirTeor ?? 'true') !== 'false';
+  try {
+    const avisos = await pjeClient.consultarAvisosPendentes();
+
+    if (avisos.length === 0) {
+      logger.info('Importação PJe: nenhum aviso pendente', { userId: req.userId });
+      return res.json({ message: 'Nenhum aviso pendente no PJe.', totalRows: 0, avisos: 0 });
+    }
+
+    const rows = [];
+    let comPrazo = 0;
+    let falhasTeor = 0;
+
+    for (const aviso of avisos) {
+      const dataIntimacaoISO = mniDateToISO(aviso.dataDisponibilizacao);
+      let prazo = { prazo_processual: '', prazo_vencimento: null };
+
+      if (abrirTeor) {
+        try {
+          // ESTA chamada dá ciência e inicia o prazo do aviso.
+          const teor = await pjeClient.consultarTeorComunicacao(aviso.idAviso);
+          prazo = computePrazo({
+            dataIntimacaoISO,
+            tipoPrazo: teor.tipoPrazo,
+            dataReferencia: teor.dataReferencia,
+            prazoDias: teor.prazoDias,
+          });
+          if (prazo.prazo_processual) comPrazo += 1;
+        } catch (err) {
+          falhasTeor += 1;
+          logger.warn('Falha ao obter teor de aviso PJe', {
+            idAviso: aviso.idAviso,
+            error: err.message,
+          });
+        }
+      }
+
+      rows.push({
+        numero_processo: formatNumeroCNJ(aviso.numeroProcesso),
+        prazo_processual: prazo.prazo_processual || '',
+        classe_principal: tpu.classeNome(aviso.classeProcessual),
+        assunto_principal: tpu.assuntoNome(aviso.assuntoCodigo),
+        tarjas: aviso.nivelSigilo && Number(aviso.nivelSigilo) > 0 ? 'Sigiloso' : '',
+        data_intimacao: dataIntimacaoISO,
+        fonte: 'pje',
+      });
+    }
+
+    const totalRows = await upsertProcessos(rows);
+
+    logger.info('Importação PJe concluída', {
+      avisos: avisos.length,
+      totalRows,
+      comPrazo,
+      falhasTeor,
+      abrirTeor,
+      userId: req.userId,
+    });
+
+    res.json({
+      message: `Importação do PJe concluída. ${avisos.length} avisos processados.`,
+      totalRows,
+      avisos: avisos.length,
+      comPrazo,
+      falhasTeor,
+    });
+  } catch (error) {
+    logger.error('Erro na importação do PJe', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.userId,
+      ip: getRealIP(req),
+    });
+    res.status(502).json({ error: error.message || 'Erro ao importar do PJe.' });
+  }
 };
 
 // Lista processos com paginação, filtros e ordenação do lado do servidor
@@ -223,6 +326,11 @@ exports.listProcesses = async (req, res) => {
     const tarjasFilter = parseArrayFilter(tarjas);
     if (tarjasFilter) {
       options.where.tarjas = { [Op.in]: tarjasFilter };
+    }
+
+    const fonteFilter = parseArrayFilter(req.query.fonte);
+    if (fonteFilter) {
+      options.where.fonte = { [Op.in]: fonteFilter };
     }
 
     const userIdFilter = parseArrayFilter(userId);
