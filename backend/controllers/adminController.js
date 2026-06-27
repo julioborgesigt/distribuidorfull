@@ -15,6 +15,8 @@ module.exports = {
   importPje: processController.importPje,
   importPjeStatus: processController.importPjeStatus,
   importPjeLogs: processController.importPjeLogs,
+  atualizarTpu: processController.atualizarTpu,
+  atualizarTpuStatus: processController.atualizarTpuStatus,
   listProcesses: processController.listProcesses,
   manualAssignProcess: processController.manualAssignProcess,
   updateObservacoes: processController.updateObservacoes,

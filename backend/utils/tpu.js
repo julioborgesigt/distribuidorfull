@@ -51,4 +51,11 @@ function assuntoNome(codigo) {
   return lookup('assuntos', codigo, 'Assunto');
 }
 
-module.exports = { classeNome, assuntoNome };
+// Mescla novas traduções na tabela em memória (usado após atualizar a TPU em
+// runtime, para valer nas próximas importações sem reiniciar o processo).
+function mesclar(parcial) {
+  if (parcial && parcial.classes) Object.assign(data.classes, parcial.classes);
+  if (parcial && parcial.assuntos) Object.assign(data.assuntos, parcial.assuntos);
+}
+
+module.exports = { classeNome, assuntoNome, mesclar };

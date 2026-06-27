@@ -220,6 +220,30 @@ router.get('/import-pje/logs', adminController.importPjeLogs);
 
 /**
  * @swagger
+ * /api/admin/atualizar-tpu:
+ *   post:
+ *     summary: Atualiza a tradução de classes/assuntos (TPU) via SGT/CNJ
+ *     tags: [Administração - Processos]
+ *     responses:
+ *       202:
+ *         description: Atualização iniciada em segundo plano
+ */
+router.post('/atualizar-tpu', pjeImportLimiter, adminController.atualizarTpu);
+
+/**
+ * @swagger
+ * /api/admin/atualizar-tpu/status:
+ *   get:
+ *     summary: Status da atualização de códigos (TPU)
+ *     tags: [Administração - Processos]
+ *     responses:
+ *       200:
+ *         description: Estado atual (running, result, error)
+ */
+router.get('/atualizar-tpu/status', adminController.atualizarTpuStatus);
+
+/**
+ * @swagger
  * /api/admin/processes:
  *   get:
  *     summary: Lista processos
