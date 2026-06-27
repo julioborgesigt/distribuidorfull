@@ -10,6 +10,7 @@ const iconv = require('iconv-lite');
 const logger = require('../utils/logger');
 const { getRealIP, parseArrayFilter, processScopeWhere } = require('../utils/helpers');
 const pjeImportService = require('../services/pjeImportService');
+const tpuService = require('../services/tpuService');
 
 // Pipeline compartilhado de upsert de processos (usado pelo CSV do eSAJ e pela
 // importação do PJe). Recebe linhas já normalizadas no formato do model
@@ -311,6 +312,50 @@ exports.importPjeLogs = async (req, res) => {
 // Status da última/atual importação do PJe (para o frontend acompanhar).
 exports.importPjeStatus = (req, res) => {
   res.json(pjeImportStatus);
+};
+
+// Estado da atualização da TPU (tradução de códigos). Roda em segundo plano
+// porque consulta o SGT por código.
+let tpuStatus = {
+  running: false,
+  startedAt: null,
+  finishedAt: null,
+  result: null,
+  error: null,
+};
+
+// Dispara a atualização de códigos (classes/assuntos) via SGT.
+exports.atualizarTpu = (req, res) => {
+  if (tpuStatus.running) {
+    return res.status(409).json({ error: 'Já existe uma atualização de códigos em andamento.' });
+  }
+  tpuStatus = {
+    running: true,
+    startedAt: new Date().toISOString(),
+    finishedAt: null,
+    result: null,
+    error: null,
+  };
+  res.status(202).json({ message: 'Atualização de códigos iniciada em segundo plano.', running: true });
+
+  (async () => {
+    try {
+      const resumo = await tpuService.atualizarTpu();
+      tpuStatus.result = resumo;
+      logger.info('Atualização TPU concluída', resumo);
+    } catch (error) {
+      tpuStatus.error = error.message || 'Erro ao atualizar códigos.';
+      logger.error('Erro na atualização TPU', { error: error.message, stack: error.stack });
+    } finally {
+      tpuStatus.running = false;
+      tpuStatus.finishedAt = new Date().toISOString();
+    }
+  })();
+};
+
+// Status da última/atual atualização da TPU.
+exports.atualizarTpuStatus = (req, res) => {
+  res.json(tpuStatus);
 };
 
 // Lista processos com paginação, filtros e ordenação do lado do servidor
