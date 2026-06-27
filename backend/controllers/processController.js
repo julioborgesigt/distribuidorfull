@@ -276,6 +276,14 @@ exports.importPje = (req, res) => {
         duracaoMs: Date.now() - inicio,
         status: 'ok',
       });
+
+      // Logo após importar, traduz os códigos novos (classes/assuntos). Não
+      // falha a importação se a tradução der problema.
+      try {
+        pjeImportStatus.result.tpu = await tpuService.atualizarTpu();
+      } catch (e) {
+        logger.warn('Atualização TPU pós-importação falhou', { error: e.message });
+      }
     } catch (error) {
       pjeImportStatus.error = error.message || 'Erro ao importar do PJe.';
       logger.error('Erro na importação do PJe', {

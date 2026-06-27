@@ -1021,6 +1021,11 @@
           if (r.comPrazo != null) partes.push(`${r.comPrazo} com prazo`)
           if (r.adiados) partes.push(`${r.adiados} aguardando ciência`)
           if (r.falhasTeor) partes.push(`${r.falhasTeor} falha(s) ao abrir`)
+          if (r.tpu) {
+            const tc = r.tpu.classes?.resolvidos ?? 0
+            const ta = r.tpu.assuntos?.resolvidos ?? 0
+            if (tc || ta) partes.push(`${tc} classe(s) e ${ta} assunto(s) traduzidos`)
+          }
           notify(`Importação do PJe concluída: ${partes.join(', ')}.`, 'success', 6000)
         } else {
           notify('Importação do PJe concluída.', 'success', 6000)
