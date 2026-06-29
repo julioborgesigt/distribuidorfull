@@ -95,13 +95,6 @@
           />
           <v-list-item
             base-color="green"
-            :disabled="atualizandoTpu"
-            prepend-icon="mdi-tag-text-outline"
-            title="Atualizar códigos (TPU)"
-            @click="() => { drawerOpen = false; atualizarCodigos(); }"
-          />
-          <v-list-item
-            base-color="green"
             prepend-icon="mdi-history"
             title="Logs do PJe"
             @click="() => { drawerOpen = false; abrirLogsPje(); }"
@@ -597,7 +590,6 @@
     { title: 'PJe', value: 'pje' },
   ]
   const importandoPje = ref(false)
-  const atualizandoTpu = ref(false)
 
   // Histórico de importações do PJe
   const dialogLogsPje = ref(false)
@@ -1037,61 +1029,6 @@
       }
     }
     notify('A importação do PJe está demorando mais que o esperado; atualize a página em instantes.', 'warning')
-  }
-
-  // Atualiza a tradução de classes/assuntos (TPU) via SGT/CNJ.
-  async function atualizarCodigos () {
-    if (atualizandoTpu.value) return
-    atualizandoTpu.value = true
-    notify('Atualizando códigos (classes/assuntos)...', 'info', 0, { persistent: true })
-    try {
-      await apiClient.post('/admin/atualizar-tpu')
-      await aguardarTpu()
-    } catch (error) {
-      if (error.response?.status === 409) {
-        notify('Já existe uma atualização de códigos em andamento.', 'warning')
-      } else {
-        notify(error.response?.data?.error || 'Erro ao iniciar a atualização de códigos.', 'error')
-      }
-    } finally {
-      atualizandoTpu.value = false
-    }
-  }
-
-  async function aguardarTpu () {
-    const limiteMs = 8 * 60 * 1000
-    const inicio = Date.now()
-    while (Date.now() - inicio < limiteMs) {
-      await new Promise(resolve => setTimeout(resolve, 4000))
-      let data
-      try {
-        ({ data } = await apiClient.get('/admin/atualizar-tpu/status'))
-      } catch {
-        continue
-      }
-      if (data && !data.running) {
-        if (data.error) {
-          notify(`Atualização de códigos falhou: ${data.error}`, 'error')
-        } else if (data.result) {
-          const r = data.result
-          const c = r.classes || {}
-          const a = r.assuntos || {}
-          const partes = [
-            `${c.resolvidos ?? 0} classe(s)`,
-            `${a.resolvidos ?? 0} assunto(s)`,
-          ]
-          if (r.naoEncontrados && r.naoEncontrados.length) {
-            partes.push(`${r.naoEncontrados.length} não encontrado(s)`)
-          }
-          notify(`Códigos atualizados: ${partes.join(', ')}.`, 'success', 6000)
-        } else {
-          notify('Atualização de códigos concluída.', 'success', 6000)
-        }
-        await reloadAllData()
-        return
-      }
-    }
-    notify('A atualização de códigos está demorando; atualize a página em instantes.', 'warning')
   }
 
   // Abre o diálogo de histórico e carrega os logs.
