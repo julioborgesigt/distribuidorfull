@@ -21,6 +21,7 @@ require('dotenv').config({ path: __dirname + '/../.env' });
 const { sequelize } = require('../models');
 const { coletarRows, registrarLog } = require('../services/pjeImportService');
 const { upsertProcessos } = require('../controllers/processController');
+const { atualizarTpu } = require('../services/tpuService');
 const logger = require('../utils/logger');
 
 (async () => {
@@ -47,6 +48,17 @@ const logger = require('../utils/logger');
       duracaoMs: Date.now() - inicio,
       status: 'ok',
     });
+
+    // Traduz os códigos novos logo após importar (não derruba o cron se falhar).
+    try {
+      const tpu = await atualizarTpu();
+      console.log(
+        `[${new Date().toISOString()}] TPU: ${tpu.classes.resolvidos} classe(s), ` +
+          `${tpu.assuntos.resolvidos} assunto(s) traduzidos.`
+      );
+    } catch (e) {
+      logger.warn('Cron: atualização TPU falhou', { error: e.message });
+    }
 
     // eslint-disable-next-line no-console
     console.log(

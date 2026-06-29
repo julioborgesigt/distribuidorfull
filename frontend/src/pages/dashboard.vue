@@ -95,13 +95,6 @@
           />
           <v-list-item
             base-color="green"
-            :disabled="atualizandoTpu"
-            prepend-icon="mdi-tag-text-outline"
-            title="Atualizar códigos (TPU)"
-            @click="() => { drawerOpen = false; atualizarCodigos(); }"
-          />
-          <v-list-item
-            base-color="green"
             prepend-icon="mdi-history"
             title="Logs do PJe"
             @click="() => { drawerOpen = false; abrirLogsPje(); }"
@@ -345,20 +338,20 @@
       <div class="d-flex ga-2 flex-wrap justify-end">
         <v-btn
           color="primary"
-          :disabled="serverItems.length === 0 || actionLoading"
+          :disabled="totalItems === 0 || actionLoading"
           prepend-icon="mdi-download"
           variant="flat"
-          @click="downloadPDF(serverItems)"
+          @click="downloadFiltrados()"
         >
-          <span class="d-none d-md-inline">Baixar Exibidos</span>
+          <span class="d-none d-md-inline">Baixar Filtrados</span>
         </v-btn>
 
         <v-btn
           color="blue-grey"
-          :disabled="selected.length === 0"
+          :disabled="selected.length === 0 || actionLoading"
           prepend-icon="mdi-download-box-outline"
           variant="flat"
-          @click="downloadPDF(selected)"
+          @click="downloadSelecionados()"
         >
           <span class="d-none d-md-inline">Baixar Selecionados</span>
         </v-btn>
@@ -597,7 +590,6 @@
     { title: 'PJe', value: 'pje' },
   ]
   const importandoPje = ref(false)
-  const atualizandoTpu = ref(false)
 
   // Histórico de importações do PJe
   const dialogLogsPje = ref(false)
@@ -1021,6 +1013,11 @@
           if (r.comPrazo != null) partes.push(`${r.comPrazo} com prazo`)
           if (r.adiados) partes.push(`${r.adiados} aguardando ciência`)
           if (r.falhasTeor) partes.push(`${r.falhasTeor} falha(s) ao abrir`)
+          if (r.tpu) {
+            const tc = r.tpu.classes?.resolvidos ?? 0
+            const ta = r.tpu.assuntos?.resolvidos ?? 0
+            if (tc || ta) partes.push(`${tc} classe(s) e ${ta} assunto(s) traduzidos`)
+          }
           notify(`Importação do PJe concluída: ${partes.join(', ')}.`, 'success', 6000)
         } else {
           notify('Importação do PJe concluída.', 'success', 6000)
@@ -1032,61 +1029,6 @@
       }
     }
     notify('A importação do PJe está demorando mais que o esperado; atualize a página em instantes.', 'warning')
-  }
-
-  // Atualiza a tradução de classes/assuntos (TPU) via SGT/CNJ.
-  async function atualizarCodigos () {
-    if (atualizandoTpu.value) return
-    atualizandoTpu.value = true
-    notify('Atualizando códigos (classes/assuntos)...', 'info', 0, { persistent: true })
-    try {
-      await apiClient.post('/admin/atualizar-tpu')
-      await aguardarTpu()
-    } catch (error) {
-      if (error.response?.status === 409) {
-        notify('Já existe uma atualização de códigos em andamento.', 'warning')
-      } else {
-        notify(error.response?.data?.error || 'Erro ao iniciar a atualização de códigos.', 'error')
-      }
-    } finally {
-      atualizandoTpu.value = false
-    }
-  }
-
-  async function aguardarTpu () {
-    const limiteMs = 8 * 60 * 1000
-    const inicio = Date.now()
-    while (Date.now() - inicio < limiteMs) {
-      await new Promise(resolve => setTimeout(resolve, 4000))
-      let data
-      try {
-        ({ data } = await apiClient.get('/admin/atualizar-tpu/status'))
-      } catch {
-        continue
-      }
-      if (data && !data.running) {
-        if (data.error) {
-          notify(`Atualização de códigos falhou: ${data.error}`, 'error')
-        } else if (data.result) {
-          const r = data.result
-          const c = r.classes || {}
-          const a = r.assuntos || {}
-          const partes = [
-            `${c.resolvidos ?? 0} classe(s)`,
-            `${a.resolvidos ?? 0} assunto(s)`,
-          ]
-          if (r.naoEncontrados && r.naoEncontrados.length) {
-            partes.push(`${r.naoEncontrados.length} não encontrado(s)`)
-          }
-          notify(`Códigos atualizados: ${partes.join(', ')}.`, 'success', 6000)
-        } else {
-          notify('Atualização de códigos concluída.', 'success', 6000)
-        }
-        await reloadAllData()
-        return
-      }
-    }
-    notify('A atualização de códigos está demorando; atualize a página em instantes.', 'warning')
   }
 
   // Abre o diálogo de histórico e carrega os logs.
@@ -1232,22 +1174,61 @@
     return filtrosAtivos
   }
 
-  async function downloadPDF (dataToExport) {
-    const processesToExport = dataToExport === selected.value
-      ? [...dataToExport]
-      : [...serverItems.value]
+  // Adiciona os campos calculados de prazo (iguais aos da tabela) aos itens.
+  function comPrazoCalculado (items) {
+    return items.map(proc => {
+      const prazoNum = getPrazoRestanteNum(proc)
+      return {
+        ...proc,
+        prazoRestanteNum: prazoNum,
+        prazoRestanteStr: formatarPrazo(prazoNum),
+        prazoRestanteColor: getCorPrazo(prazoNum),
+      }
+    })
+  }
 
-    if (processesToExport.length === 0) {
+  // Exporta uma lista já pronta (com overlay e tratamento de erro).
+  async function exportarLista (items) {
+    if (!items || items.length === 0) {
       notify('Nenhum item para exportar.', 'info')
       return
     }
-
     actionLoading.value = true
     actionLoadingText.value = 'Gerando PDF...'
     await nextTick() // garante que o overlay renderiza antes do trabalho síncrono
-
     try {
-      await exportProcessesPDF(processesToExport, options.value.sortBy || [], buildFiltrosAtivos())
+      await exportProcessesPDF(items, options.value.sortBy || [], buildFiltrosAtivos())
+    } catch {
+      notify('Erro ao gerar PDF.', 'error')
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  // Baixa os processos SELECIONADOS na tela.
+  async function downloadSelecionados () {
+    await exportarLista([...selected.value])
+  }
+
+  // Baixa TODOS os processos que batem com o filtro atual (não só a página
+  // visível). Busca a lista completa no servidor com itemsPerPage=-1.
+  async function downloadFiltrados () {
+    actionLoading.value = true
+    actionLoadingText.value = 'Buscando todos os processos...'
+    try {
+      const params = buildQueryParams()
+      params.append('page', '1')
+      params.append('itemsPerPage', '-1')
+      params.append('sortBy', JSON.stringify(options.value.sortBy || []))
+      const { data } = await apiClient.get('/admin/processes', { params })
+      const items = comPrazoCalculado(data.items || [])
+      if (items.length === 0) {
+        notify('Nenhum processo para exportar.', 'info')
+        return
+      }
+      actionLoadingText.value = 'Gerando PDF...'
+      await nextTick()
+      await exportProcessesPDF(items, options.value.sortBy || [], buildFiltrosAtivos())
     } catch {
       notify('Erro ao gerar PDF.', 'error')
     } finally {

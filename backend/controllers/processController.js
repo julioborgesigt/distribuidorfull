@@ -276,6 +276,14 @@ exports.importPje = (req, res) => {
         duracaoMs: Date.now() - inicio,
         status: 'ok',
       });
+
+      // Logo após importar, traduz os códigos novos (classes/assuntos). Não
+      // falha a importação se a tradução der problema.
+      try {
+        pjeImportStatus.result.tpu = await tpuService.atualizarTpu();
+      } catch (e) {
+        logger.warn('Atualização TPU pós-importação falhou', { error: e.message });
+      }
     } catch (error) {
       pjeImportStatus.error = error.message || 'Erro ao importar do PJe.';
       logger.error('Erro na importação do PJe', {
@@ -392,8 +400,11 @@ exports.listProcesses = async (req, res) => {
     };
 
     if (search) {
-      // Busca por prefixo usa o índice UNIQUE (muito mais rápido que %search%)
-      options.where.numero_processo = { [Op.like]: `${search}%` };
+      // Busca por número (prefixo, usa o índice UNIQUE) OU dentro das observações.
+      options.where[Op.or] = [
+        { numero_processo: { [Op.like]: `${search}%` } },
+        { observacoes: { [Op.like]: `%${search}%` } },
+      ];
     }
 
     if (cumprido && cumprido !== 'null') {
