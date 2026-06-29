@@ -22,10 +22,9 @@
     </v-overlay>
 
     <v-data-table-server
-      class="elevation-1"
+      class="elevation-1 tabela-processos"
       fixed-header
       :headers="headers"
-      height="70vh"
       item-key="id"
       :items="props.items"
       :items-length="props.totalItems"
@@ -253,5 +252,13 @@
   position: sticky;
   top: 48px;
   z-index: 2;
+}
+
+/* Altura adaptativa: a tabela cresce com o conteúdo (sem scroll vertical com
+   poucas linhas, ex.: 10 por página) e só rola, com cabeçalho fixo, quando o
+   conteúdo passa de 70vh (ex.: ao exibir "todos"). */
+:deep(.tabela-processos .v-table__wrapper) {
+  max-height: 70vh;
+  overflow-y: auto;
 }
 </style>

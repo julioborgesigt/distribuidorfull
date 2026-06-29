@@ -345,20 +345,20 @@
       <div class="d-flex ga-2 flex-wrap justify-end">
         <v-btn
           color="primary"
-          :disabled="serverItems.length === 0 || actionLoading"
+          :disabled="totalItems === 0 || actionLoading"
           prepend-icon="mdi-download"
           variant="flat"
-          @click="downloadPDF(serverItems)"
+          @click="downloadFiltrados()"
         >
-          <span class="d-none d-md-inline">Baixar Exibidos</span>
+          <span class="d-none d-md-inline">Baixar Filtrados</span>
         </v-btn>
 
         <v-btn
           color="blue-grey"
-          :disabled="selected.length === 0"
+          :disabled="selected.length === 0 || actionLoading"
           prepend-icon="mdi-download-box-outline"
           variant="flat"
-          @click="downloadPDF(selected)"
+          @click="downloadSelecionados()"
         >
           <span class="d-none d-md-inline">Baixar Selecionados</span>
         </v-btn>
@@ -1237,22 +1237,61 @@
     return filtrosAtivos
   }
 
-  async function downloadPDF (dataToExport) {
-    const processesToExport = dataToExport === selected.value
-      ? [...dataToExport]
-      : [...serverItems.value]
+  // Adiciona os campos calculados de prazo (iguais aos da tabela) aos itens.
+  function comPrazoCalculado (items) {
+    return items.map(proc => {
+      const prazoNum = getPrazoRestanteNum(proc)
+      return {
+        ...proc,
+        prazoRestanteNum: prazoNum,
+        prazoRestanteStr: formatarPrazo(prazoNum),
+        prazoRestanteColor: getCorPrazo(prazoNum),
+      }
+    })
+  }
 
-    if (processesToExport.length === 0) {
+  // Exporta uma lista já pronta (com overlay e tratamento de erro).
+  async function exportarLista (items) {
+    if (!items || items.length === 0) {
       notify('Nenhum item para exportar.', 'info')
       return
     }
-
     actionLoading.value = true
     actionLoadingText.value = 'Gerando PDF...'
     await nextTick() // garante que o overlay renderiza antes do trabalho síncrono
-
     try {
-      await exportProcessesPDF(processesToExport, options.value.sortBy || [], buildFiltrosAtivos())
+      await exportProcessesPDF(items, options.value.sortBy || [], buildFiltrosAtivos())
+    } catch {
+      notify('Erro ao gerar PDF.', 'error')
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  // Baixa os processos SELECIONADOS na tela.
+  async function downloadSelecionados () {
+    await exportarLista([...selected.value])
+  }
+
+  // Baixa TODOS os processos que batem com o filtro atual (não só a página
+  // visível). Busca a lista completa no servidor com itemsPerPage=-1.
+  async function downloadFiltrados () {
+    actionLoading.value = true
+    actionLoadingText.value = 'Buscando todos os processos...'
+    try {
+      const params = buildQueryParams()
+      params.append('page', '1')
+      params.append('itemsPerPage', '-1')
+      params.append('sortBy', JSON.stringify(options.value.sortBy || []))
+      const { data } = await apiClient.get('/admin/processes', { params })
+      const items = comPrazoCalculado(data.items || [])
+      if (items.length === 0) {
+        notify('Nenhum processo para exportar.', 'info')
+        return
+      }
+      actionLoadingText.value = 'Gerando PDF...'
+      await nextTick()
+      await exportProcessesPDF(items, options.value.sortBy || [], buildFiltrosAtivos())
     } catch {
       notify('Erro ao gerar PDF.', 'error')
     } finally {

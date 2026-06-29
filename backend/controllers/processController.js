@@ -400,8 +400,11 @@ exports.listProcesses = async (req, res) => {
     };
 
     if (search) {
-      // Busca por prefixo usa o índice UNIQUE (muito mais rápido que %search%)
-      options.where.numero_processo = { [Op.like]: `${search}%` };
+      // Busca por número (prefixo, usa o índice UNIQUE) OU dentro das observações.
+      options.where[Op.or] = [
+        { numero_processo: { [Op.like]: `${search}%` } },
+        { observacoes: { [Op.like]: `%${search}%` } },
+      ];
     }
 
     if (cumprido && cumprido !== 'null') {
