@@ -68,9 +68,16 @@ editar `.env` no servidor após o deploy inicial. Fluxo:
 3. **Checagem de unidade única:** o backend conta as vinculações distintas
    (destinatários) entre os avisos pendentes retornados nesse teste. Se houver
    mais de uma, a credencial é **recusada** (não salva) com a lista das
-   unidades encontradas. Limitação: como o MNI só lista avisos *pendentes*,
-   uma unidade sem avisos pendentes no momento do teste não é detectada — a
-   checagem é best-effort, não uma garantia absoluta de unidade única.
+   unidades encontradas.
+   - A vinculação genérica **"Polícia Civil do Ceará"** (o órgão "guarda-chuva")
+     é **ignorada** nessa contagem — ela aparece junto da delegacia/vara real na
+     maioria dos avisos, por equívoco no cadastro das partes ou na intimação do
+     fórum, e não representa uma unidade própria adicional. Sem essa exclusão,
+     praticamente nenhuma credencial passaria na checagem, mesmo gerenciando
+     uma só delegacia. Ver `pjeParser.vinculacoesDistintas`.
+   - Limitação: como o MNI só lista avisos *pendentes*, uma unidade sem avisos
+     pendentes no momento do teste não é detectada — a checagem é best-effort,
+     não uma garantia absoluta de unidade única.
 4. Se válidas (e de unidade única, conforme acima), salva criptografado
    (AES-256-GCM, chave em `PJE_CRED_ENC_KEY`).
 5. A importação passa a usar as credenciais do banco (fallback para env vars se o
