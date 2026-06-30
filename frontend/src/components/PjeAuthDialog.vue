@@ -32,8 +32,7 @@
           type="info"
           variant="tonal"
         >
-          Nenhuma credencial salva. O sistema usará as variáveis de ambiente
-          <code>PJE_CPF</code> / <code>PJE_SENHA</code>.
+          Nenhuma credencial salva atualmente.
         </v-alert>
 
         <v-alert
@@ -43,9 +42,8 @@
           type="warning"
           variant="tonal"
         >
-          <strong>Atenção:</strong> estas credenciais dão acesso a dados sigilosos e
-          permitem peticionar no PJe em nome da conta cadastrada. Compartilhe apenas
-          com responsáveis pela integração.
+          <strong>Atenção:</strong> estas credenciais dão acesso às intimações PJe
+          da unidade que o usuário tem acesso.
         </v-alert>
 
         <!-- Formulário: só aparece quando não há credenciais salvas -->
@@ -54,17 +52,12 @@
             border="start"
             class="mb-4"
             density="compact"
-            type="info"
+            type="error"
             variant="tonal"
           >
-            <strong>Dica:</strong> se deseja gerenciar apenas <strong>uma unidade</strong>
-            (uma delegacia/vara específica), use as credenciais de um usuário do PJe
-            vinculado a essa única unidade representativa. O sistema recusa o
-            cadastro se detectar mais de uma unidade nos avisos pendentes no
-            momento do teste (uma unidade sem avisos pendentes agora pode não
-            ser detectada; a vinculação genérica "Polícia Civil do Ceará" não
-            conta como unidade própria). Para um usuário com várias unidades,
-            use o filtro "Vinculação" no painel para separá-las.
+            <strong>Atenção!!!:</strong> Não é aceito credenciais de usuários com
+            cadastro em mais de uma delegacia. Use as credenciais de um usuário
+            do PJe vinculado a essa única unidade representativa.
           </v-alert>
 
           <v-form ref="formRef" @submit.prevent="salvar">
@@ -103,9 +96,8 @@
             </v-row>
 
             <div class="text-caption text-medium-emphasis mb-1">
-              As credenciais são validadas contra o PJe antes de serem salvas e ficam
-              armazenadas <strong>criptografadas</strong> (AES-256-GCM). A chave de
-              criptografia vive apenas no ambiente do servidor — nunca no banco.
+              As credenciais são validadas antes de serem salvas e ficam armazenadas
+              de forma segura, criptografadas, no banco de dados.
             </div>
           </v-form>
         </template>
