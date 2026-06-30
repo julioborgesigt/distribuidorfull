@@ -218,6 +218,18 @@
           </v-col>
           <v-col cols="12" md="4">
             <v-autocomplete
+              v-model="filters.vinculacao"
+              chips
+              clearable
+              density="compact"
+              :items="uniqueVinculacoes"
+              label="Vinculação"
+              multiple
+              variant="outlined"
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-autocomplete
               v-model="filters.userId"
               chips
               clearable
@@ -576,6 +588,7 @@
     assunto: [],
     tarjas: [],
     fonte: [],
+    vinculacao: [],
     userId: [],
     prazo: null,
     cumprido: false, // Default é "Não Cumprido"
@@ -630,6 +643,7 @@
   const allClassesList = ref([]) // Lista de todas as classes disponíveis
   const allAssuntosList = ref([]) // Lista de todos os assuntos disponíveis
   const allTarjasList = ref([]) // Lista de todas as tarjas disponíveis
+  const allVinculacoesList = ref([]) // Lista de todas as vinculações disponíveis (PJe)
 
   // =================================================================
   // 4. ESTADO DOS MODAIS E SNACKBAR
@@ -709,6 +723,11 @@
   // Gera a lista de TARJAS (cumulativa - todas as opções disponíveis)
   const uniqueTarjas = computed(() => {
     return allTarjasList.value
+  })
+
+  // Gera a lista de VINCULAÇÕES (cumulativa - todas as opções disponíveis)
+  const uniqueVinculacoes = computed(() => {
+    return allVinculacoesList.value
   })
 
   // Computed para o StatsGrid (baseado na resposta da API)
@@ -811,6 +830,7 @@
       params.append('cumprido', filters.value.cumprido)
     }
     for (const v of filters.value.fonte || []) params.append('fonte', v)
+    for (const v of filters.value.vinculacao || []) params.append('vinculacao', v)
     return params
   }
 
@@ -931,6 +951,7 @@
       allClassesList.value = cached.classes
       allAssuntosList.value = cached.assuntos
       allTarjasList.value = cached.tarjas
+      allVinculacoesList.value = cached.vinculacoes || []
       return
     }
     try {
@@ -938,6 +959,7 @@
       allClassesList.value = data.classes
       allAssuntosList.value = data.assuntos
       allTarjasList.value = data.tarjas
+      allVinculacoesList.value = data.vinculacoes || []
       setCache('cache:filterOptions', data)
     } catch {
     // Silenciado: filtros usarão valores em cache ou ficarão vazios
@@ -952,6 +974,7 @@
       assunto: [],
       tarjas: [],
       fonte: [],
+      vinculacao: [],
       userId: [],
       prazo: null,
       cumprido: false,
