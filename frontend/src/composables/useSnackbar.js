@@ -8,6 +8,9 @@
 import { ref } from 'vue'
 
 const DEFAULT_TIMEOUT = 3000
+// Erros/avisos tendem a ter texto mais longo (e importam mais) — ficam mais
+// tempo na tela por padrão, a menos que o chamador passe um timeout explícito.
+const DEFAULT_ERROR_TIMEOUT = 9000
 
 export function useSnackbar () {
   const snackbar = ref(false)
@@ -29,15 +32,21 @@ export function useSnackbar () {
    * Exibe uma notificação.
    * @param {string} text - Mensagem
    * @param {string} color - success | error | warning | info
-   * @param {number} timeout - Duração em ms (ignorado se opts.persistent)
+   * @param {number} [timeout] - Duração em ms (ignorado se opts.persistent). Se
+   *        omitido, usa DEFAULT_ERROR_TIMEOUT para error/warning (mensagens
+   *        costumam ser mais longas) e DEFAULT_TIMEOUT para os demais.
    * @param {{persistent?: boolean}} opts - persistent = não fecha sozinho e mostra
    *        barra indeterminada; permanece até o próximo notify().
    */
-  const notify = (text, color = 'success', timeout = DEFAULT_TIMEOUT, opts = {}) => {
+  const notify = (text, color = 'success', timeout, opts = {}) => {
     clearTimers()
     snackbarText.value = text
     snackbarColor.value = color
     snackbar.value = true
+
+    if (timeout == null) {
+      timeout = (color === 'error' || color === 'warning') ? DEFAULT_ERROR_TIMEOUT : DEFAULT_TIMEOUT
+    }
 
     if (opts.persistent) {
       snackbarIndeterminate.value = true
