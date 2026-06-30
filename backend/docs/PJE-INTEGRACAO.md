@@ -42,13 +42,41 @@ vinculação (`null`) — o CSV não traz essa informação.
 ## Configuração (.env do backend)
 
 ```env
-PJE_CPF=00000000000            # CPF do consultante (só números)
-PJE_SENHA=suaSenhaDoPje        # senha do PJe
+PJE_CPF=00000000000            # CPF do consultante (só números) — fallback se não usar o modal
+PJE_SENHA=suaSenhaDoPje        # senha do PJe — fallback se não usar o modal
 PJE_MNI_ENDPOINT=https://pje.tjce.jus.br/pje1grau/intercomunicacao   # opcional (default)
 PJE_MNI_TIMEOUT=30000          # opcional, ms
 PJE_CRON_ABRIR_TEOR=true       # opcional; false = não dá ciência no cron
 PJE_CIENCIA_MIN_DIAS=5         # opcional; só toma ciência de avisos com N+ dias
+
+# Chave de criptografia para as credenciais PJe salvas via painel (AES-256-GCM).
+# Gere com: openssl rand -base64 32
+# OBRIGATÓRIA se você usar o botão "Autenticação PJe" do painel.
+# Deve ficar SOMENTE em backend/.env — nunca no banco nem no env_var_list do DomCloud.
+PJE_CRED_ENC_KEY=SUBSTITUA_AQUI
 ```
+
+## Credenciais pelo painel (recomendado)
+
+O botão **"Autenticação PJe"** no menu lateral (visível apenas para admin_super)
+abre um modal que salva CPF + senha **criptografados** no banco, sem precisar
+editar `.env` no servidor após o deploy inicial. Fluxo:
+
+1. Admin informa CPF e senha no modal.
+2. O backend valida as credenciais contra o MNI (`consultarAvisosPendentes` — não
+   registra ciência) antes de persistir.
+3. Se válidas, salva criptografado (AES-256-GCM, chave em `PJE_CRED_ENC_KEY`).
+4. A importação passa a usar as credenciais do banco (fallback para env vars se o
+   banco não tiver nenhuma salva).
+
+**Segurança:**
+- A senha nunca trafega de/para o frontend após o POST de salvamento.
+- O banco armazena apenas o texto cifrado; sem a chave, é inútil.
+- A chave (`PJE_CRED_ENC_KEY`) deve estar em `backend/.env`, **não** no
+  `env_var_list` do DomCloud (o shell do Passenger interpreta `$` e pode
+  truncar ou corromper valores).
+- Acesso ao modal exige `admin_super`; endpoints têm rate limit (10 req/5 min).
+- Remoção do registro (botão "Remover") reverte ao comportamento de env vars.
 
 ### Tomar ciência só perto do fim da janela (`PJE_CIENCIA_MIN_DIAS`)
 
@@ -68,8 +96,9 @@ amadurecem.
 > já ciente retorna erro — ou seja, o prazo só é capturável no momento da ciência.
 > Por isso não há um modo "passivo" (ler prazo sem tomar ciência).
 
-As credenciais ficam **apenas em variável de ambiente** — nunca no código ou no
-banco.
+Quando as credenciais estão salvas via painel, os env vars `PJE_CPF`/`PJE_SENHA`
+são ignorados (banco tem prioridade). Quando não há registro no banco, o sistema
+usa os env vars como fallback.
 
 ## Migration
 
