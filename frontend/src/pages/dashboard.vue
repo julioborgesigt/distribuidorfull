@@ -87,6 +87,12 @@
             @click="() => { drawerOpen = false; userDialogs?.abrirModalUpload(); }"
           />
           <v-list-item
+            base-color="indigo"
+            prepend-icon="mdi-shield-key-outline"
+            title="Autenticação PJe"
+            @click="() => { drawerOpen = false; pjeAuthDialog?.abrir(); }"
+          />
+          <v-list-item
             base-color="green"
             :disabled="importandoPje"
             prepend-icon="mdi-download-network-outline"
@@ -414,6 +420,9 @@
     @users-changed="handleUsersChanged"
   />
 
+  <!-- Modal: Credenciais PJe (admin_super) -->
+  <pje-auth-dialog ref="pjeAuthDialog" @notify="notify" />
+
   <!-- Histórico de importações do PJe -->
   <v-dialog v-model="dialogLogsPje" max-width="1150px" scrollable>
     <v-card>
@@ -563,6 +572,7 @@
   import StatsGrid from '../components/StatsGrid.vue'
   import TabelaProcessos from '../components/TabelaProcessos.vue'
   import UserAdminDialogs from '../components/UserAdminDialogs.vue'
+  import PjeAuthDialog from '../components/PjeAuthDialog.vue'
   const { mdAndUp, width } = useDisplay()
   const isWide = computed(() => width.value >= 1660)
   const { drawerOpen } = useDrawer()
@@ -661,6 +671,7 @@
   } = useSnackbar()
 
   const userDialogs = ref(null) // ref do componente UserAdminDialogs
+  const pjeAuthDialog = ref(null) // ref do componente PjeAuthDialog
   const menuInicio = ref(false)
   const menuFim = ref(false)
 
