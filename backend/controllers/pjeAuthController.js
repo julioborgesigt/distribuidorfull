@@ -10,6 +10,7 @@
 
 const pjeCredentialService = require('../services/pjeCredentialService');
 const pjeClient = require('../utils/pjeClient');
+const { vinculacoesDistintas } = require('../utils/pjeParser');
 const logger = require('../utils/logger');
 const { getRealIP } = require('../utils/helpers');
 
@@ -48,8 +49,9 @@ exports.salvar = async (req, res) => {
 
   // Testa as credenciais contra o webservice MNI (não registra ciência).
   // Qualquer erro (credencial errada, rede, endpoint) impede o salvamento.
+  let avisos;
   try {
-    await pjeClient.consultarAvisosPendentes({ cpf: cpfDigits, senha });
+    avisos = await pjeClient.consultarAvisosPendentes({ cpf: cpfDigits, senha });
   } catch (mniErr) {
     logger.warn('Falha ao validar credenciais PJe', {
       error: mniErr.message,
@@ -63,6 +65,26 @@ exports.salvar = async (req, res) => {
       ? 'Usuário ou senha errado(s), verifique.'
       : `Não foi possível conectar ao PJe. Verifique a conexão e tente novamente. (${mniErr.message})`;
     return res.status(400).json({ error: userMsg });
+  }
+
+  // Best-effort: barra credenciais de usuários vinculados a mais de uma
+  // unidade representativa, detectado pelos destinatários distintos entre os
+  // avisos pendentes no momento. Limitação: uma unidade sem avisos pendentes
+  // agora não aparece aqui — não há operação no MNI que liste as unidades de
+  // um consultante independente de haver avisos pendentes. A importação
+  // (pjeImportService) reforça essa mesma checagem a cada execução.
+  const unidades = vinculacoesDistintas(avisos);
+  if (unidades.length > 1) {
+    logger.warn('Credenciais PJe recusadas: usuário com múltiplas unidades', {
+      vinculacoes: unidades,
+      userId: req.userId,
+      ip: getRealIP(req),
+    });
+    return res.status(400).json({
+      error: `Este usuário do PJe está vinculado a mais de uma unidade representativa ` +
+        `(${unidades.join(', ')}). Cadastre credenciais de um usuário ` +
+        `vinculado a apenas uma unidade.`
+    });
   }
 
   // Salva criptografado

@@ -59,9 +59,11 @@
           >
             <strong>Dica:</strong> se deseja gerenciar apenas <strong>uma unidade</strong>
             (uma delegacia/vara específica), use as credenciais de um usuário do PJe
-            vinculado a essa única unidade representativa. Um usuário vinculado a
-            várias unidades trará os avisos de todas elas misturados — use o filtro
-            "Vinculação" no painel para separá-los depois.
+            vinculado a essa única unidade representativa. O sistema recusa o
+            cadastro se detectar mais de uma unidade nos avisos pendentes no
+            momento do teste (uma unidade sem avisos pendentes agora pode não
+            ser detectada). Para um usuário com várias unidades, use o filtro
+            "Vinculação" no painel para separá-las.
           </v-alert>
 
           <v-form ref="formRef" @submit.prevent="salvar">
