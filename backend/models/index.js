@@ -3,6 +3,7 @@ const { Sequelize } = require('sequelize');
 const UserModel = require('./user');
 const ProcessModel = require('./process');
 const PjeImportLogModel = require('./pjeImportLog');
+const PjeCredentialModel = require('./pjeCredential');
 const logger = require('../utils/logger');
 
 // Ajuste aqui suas credenciais e nome do banco
@@ -32,6 +33,7 @@ const sequelize = new Sequelize(
 const User = UserModel(sequelize);
 const Process = ProcessModel(sequelize);
 const PjeImportLog = PjeImportLogModel(sequelize);
+const PjeCredential = PjeCredentialModel(sequelize);
 
 // Relacionamentos (1-N: 1 usuário pode ter vários processos)
 User.hasMany(Process, { foreignKey: 'userId' });
@@ -41,5 +43,6 @@ module.exports = {
   sequelize,
   User,
   Process,
-  PjeImportLog
+  PjeImportLog,
+  PjeCredential
 };

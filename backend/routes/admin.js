@@ -3,6 +3,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const pjeAuthController = require('../controllers/pjeAuthController');
 const autenticarAdmin = require('../middlewares/autenticarAdmin');
 const requireSuperAdmin = require('../middlewares/requireSuperAdmin');
 const multer = require('multer');
@@ -161,6 +162,19 @@ const pjeImportLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+const pjeCredLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 10,
+  message: { error: 'Muitas tentativas de salvar credenciais. Aguarde alguns minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// --- Credenciais PJe (admin_super somente) ---
+router.get('/pje-auth/status', requireSuperAdmin, pjeAuthController.getStatus);
+router.post('/pje-auth/salvar', requireSuperAdmin, pjeCredLimiter, pjeAuthController.salvar);
+router.delete('/pje-auth', requireSuperAdmin, pjeAuthController.remover);
 
 /**
  * @swagger

@@ -8,6 +8,7 @@
 // aviso para capturar o prazo — e ISSO REGISTRA CIÊNCIA e INICIA O PRAZO.
 
 const pjeClient = require('../utils/pjeClient');
+const pjeCredentialService = require('./pjeCredentialService');
 const {
   formatNumeroCNJ,
   mniDateToISO,
@@ -52,7 +53,11 @@ async function coletarRows({
   abrirTeor = true,
   cienciaMinDias = Number(process.env.PJE_CIENCIA_MIN_DIAS) || 0,
 } = {}) {
-  const avisos = await pjeClient.consultarAvisosPendentes();
+  // Credenciais: banco tem prioridade sobre env vars (PJE_CPF/PJE_SENHA).
+  // null = pjeClient usa os env vars diretamente.
+  const creds = await pjeCredentialService.getCredentials().catch(() => null);
+
+  const avisos = await pjeClient.consultarAvisosPendentes(creds || undefined);
   const rows = [];
   let comPrazo = 0;
   let falhasTeor = 0;
@@ -71,7 +76,7 @@ async function coletarRows({
     if (abrirEste) {
       try {
         // Registra ciência e inicia o prazo do aviso.
-        const teor = await pjeClient.consultarTeorComunicacao(aviso.idAviso);
+        const teor = await pjeClient.consultarTeorComunicacao(aviso.idAviso, creds || undefined);
         prazo = computePrazo({
           dataIntimacaoISO: mniDateToISO(aviso.dataDisponibilizacao),
           tipoPrazo: teor.tipoPrazo,
