@@ -48,74 +48,85 @@
           com responsáveis pela integração.
         </v-alert>
 
-        <!-- Formulário -->
-        <v-form ref="formRef" @submit.prevent="salvar">
-          <v-row dense>
-            <v-col cols="12">
-              <v-text-field
-                v-model="form.cpf"
-                density="compact"
-                hint="Somente números, 11 dígitos (CPF do usuário do PJe)"
-                label="CPF"
-                maxlength="14"
-                :rules="[cpfRule]"
-                variant="outlined"
-                @input="mascararCpf"
-              />
-            </v-col>
-            <v-col cols="12">
-              <v-text-field
-                v-model="form.senha"
-                autocomplete="new-password"
-                density="compact"
-                label="Senha do PJe"
-                :rules="[senhaRule]"
-                :type="mostrarSenha ? 'text' : 'password'"
-                variant="outlined"
-              >
-                <template #append-inner>
-                  <v-icon
-                    :icon="mostrarSenha ? 'mdi-eye-off' : 'mdi-eye'"
-                    style="cursor:pointer"
-                    @click="mostrarSenha = !mostrarSenha"
-                  />
-                </template>
-              </v-text-field>
-            </v-col>
-          </v-row>
+        <!-- Formulário: só aparece quando não há credenciais salvas -->
+        <template v-if="!status.configured">
+          <v-form ref="formRef" @submit.prevent="salvar">
+            <v-row dense>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="form.cpf"
+                  density="compact"
+                  hint="Somente números, 11 dígitos (CPF do usuário do PJe)"
+                  label="CPF"
+                  maxlength="14"
+                  :rules="[cpfRule]"
+                  variant="outlined"
+                  @input="mascararCpf"
+                />
+              </v-col>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="form.senha"
+                  autocomplete="new-password"
+                  density="compact"
+                  label="Senha do PJe"
+                  :rules="[senhaRule]"
+                  :type="mostrarSenha ? 'text' : 'password'"
+                  variant="outlined"
+                >
+                  <template #append-inner>
+                    <v-icon
+                      :icon="mostrarSenha ? 'mdi-eye-off' : 'mdi-eye'"
+                      style="cursor:pointer"
+                      @click="mostrarSenha = !mostrarSenha"
+                    />
+                  </template>
+                </v-text-field>
+              </v-col>
+            </v-row>
 
-          <div class="text-caption text-medium-emphasis mb-1">
-            As credenciais são validadas contra o PJe antes de serem salvas e ficam
-            armazenadas <strong>criptografadas</strong> (AES-256-GCM). A chave de
-            criptografia vive apenas no ambiente do servidor — nunca no banco.
-          </div>
-        </v-form>
+            <div class="text-caption text-medium-emphasis mb-1">
+              As credenciais são validadas contra o PJe antes de serem salvas e ficam
+              armazenadas <strong>criptografadas</strong> (AES-256-GCM). A chave de
+              criptografia vive apenas no ambiente do servidor — nunca no banco.
+            </div>
+          </v-form>
+        </template>
+
+        <!-- Instrução quando já configurado -->
+        <div v-else class="text-body-2 text-medium-emphasis">
+          Para alterar as credenciais, remova as atuais e informe as novas.
+        </div>
       </v-card-text>
 
       <v-card-actions>
-        <v-btn
-          v-if="status.configured"
-          color="red"
-          :disabled="salvando"
-          :loading="removendo"
-          prepend-icon="mdi-delete-outline"
-          variant="tonal"
-          @click="remover"
-        >
-          Remover
-        </v-btn>
-        <v-spacer />
-        <v-btn :disabled="salvando || removendo" variant="text" @click="fechar">
-          Cancelar
-        </v-btn>
-        <v-btn
-          color="primary"
-          :loading="salvando"
-          prepend-icon="mdi-content-save"
-          @click="salvar"
-        >
-          Salvar e Testar
-        </v-btn>
+        <template v-if="status.configured">
+          <!-- Credenciais salvas: só Remover + Fechar -->
+          <v-btn
+            color="red"
+            :loading="removendo"
+            prepend-icon="mdi-delete-outline"
+            variant="tonal"
+            @click="remover"
+          >
+            Remover
+          </v-btn>
+          <v-spacer />
+          <v-btn :disabled="removendo" variant="text" @click="fechar">Fechar</v-btn>
+        </template>
+        <template v-else>
+          <!-- Sem credenciais: Cancelar + Salvar e Testar -->
+          <v-spacer />
+          <v-btn :disabled="salvando" variant="text" @click="fechar">Cancelar</v-btn>
+          <v-btn
+            color="primary"
+            :loading="salvando"
+            prepend-icon="mdi-content-save"
+            @click="salvar"
+          >
+            Salvar e Testar
+          </v-btn>
+        </template>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -193,6 +204,7 @@ async function salvar () {
     const cpfDigits = form.cpf.replace(/\D/g, '')
     const { data } = await apiClient.post('/admin/pje-auth/salvar', { cpf: cpfDigits, senha: form.senha })
     Object.assign(status, data)
+    form.cpf = ''
     form.senha = ''
     formRef.value?.resetValidation()
     emit('notify', 'Credenciais do PJe salvas e testadas com sucesso!', 'success')
@@ -209,6 +221,9 @@ async function remover () {
   try {
     await apiClient.delete('/admin/pje-auth')
     Object.assign(status, { configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null })
+    form.cpf = ''
+    form.senha = ''
+    formRef.value?.resetValidation()
     emit('notify', 'Credenciais removidas. O sistema usará as variáveis de ambiente.', 'success')
   } catch (err) {
     emit('notify', err.response?.data?.error || 'Erro ao remover credenciais.', 'error')
