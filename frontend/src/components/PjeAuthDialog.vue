@@ -50,6 +50,20 @@
 
         <!-- Formulário: só aparece quando não há credenciais salvas -->
         <template v-if="!status.configured">
+          <v-alert
+            border="start"
+            class="mb-4"
+            density="compact"
+            type="info"
+            variant="tonal"
+          >
+            <strong>Dica:</strong> se deseja gerenciar apenas <strong>uma unidade</strong>
+            (uma delegacia/vara específica), use as credenciais de um usuário do PJe
+            vinculado a essa única unidade representativa. Um usuário vinculado a
+            várias unidades trará os avisos de todas elas misturados — use o filtro
+            "Vinculação" no painel para separá-los depois.
+          </v-alert>
+
           <v-form ref="formRef" @submit.prevent="salvar">
             <v-row dense>
               <v-col cols="12">
