@@ -65,8 +65,15 @@ editar `.env` no servidor após o deploy inicial. Fluxo:
 1. Admin informa CPF e senha no modal.
 2. O backend valida as credenciais contra o MNI (`consultarAvisosPendentes` — não
    registra ciência) antes de persistir.
-3. Se válidas, salva criptografado (AES-256-GCM, chave em `PJE_CRED_ENC_KEY`).
-4. A importação passa a usar as credenciais do banco (fallback para env vars se o
+3. **Checagem de unidade única:** o backend conta as vinculações distintas
+   (destinatários) entre os avisos pendentes retornados nesse teste. Se houver
+   mais de uma, a credencial é **recusada** (não salva) com a lista das
+   unidades encontradas. Limitação: como o MNI só lista avisos *pendentes*,
+   uma unidade sem avisos pendentes no momento do teste não é detectada — a
+   checagem é best-effort, não uma garantia absoluta de unidade única.
+4. Se válidas (e de unidade única, conforme acima), salva criptografado
+   (AES-256-GCM, chave em `PJE_CRED_ENC_KEY`).
+5. A importação passa a usar as credenciais do banco (fallback para env vars se o
    banco não tiver nenhuma salva).
 
 **Segurança:**
