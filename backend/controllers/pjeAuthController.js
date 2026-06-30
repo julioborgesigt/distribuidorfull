@@ -51,14 +51,18 @@ exports.salvar = async (req, res) => {
   try {
     await pjeClient.consultarAvisosPendentes({ cpf: cpfDigits, senha });
   } catch (mniErr) {
-    logger.warn('Credenciais PJe recusadas pelo MNI', {
+    logger.warn('Falha ao validar credenciais PJe', {
       error: mniErr.message,
       userId: req.userId,
       ip: getRealIP(req),
     });
-    return res.status(400).json({
-      error: `Não foi possível validar as credenciais no PJe: ${mniErr.message}`
-    });
+    // pjeClient lança "PJe: ..." para erros de negócio do MNI (incluindo auth).
+    // Outros erros são de rede/conexão.
+    const isMniError = mniErr.message.startsWith('PJe:');
+    const userMsg = isMniError
+      ? 'Usuário ou senha errado(s), verifique.'
+      : `Não foi possível conectar ao PJe. Verifique a conexão e tente novamente. (${mniErr.message})`;
+    return res.status(400).json({ error: userMsg });
   }
 
   // Salva criptografado
