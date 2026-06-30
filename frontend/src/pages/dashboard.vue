@@ -36,7 +36,7 @@
       v-model="drawerOpen"
       location="left"
       style="top: 0; height: 100%; position: fixed; z-index: 1010;"
-      width="256"
+      width="288"
     >
       <!-- Topo: saudação + ações de admin -->
       <v-list>
@@ -63,48 +63,78 @@
         <template v-if="user?.admin_super">
           <v-divider class="mt-2" />
           <v-list-subheader>Administrador</v-list-subheader>
-          <v-list-item
-            prepend-icon="mdi-account-plus-outline"
-            title="Cadastrar Usuário"
-            @click="() => { drawerOpen = false; userDialogs?.abrirModalCadastro(); }"
-          />
-          <v-list-item
-            base-color="orange"
-            prepend-icon="mdi-lock-reset"
-            title="Resetar Senha"
-            @click="() => { drawerOpen = false; userDialogs?.abrirModalReset(); }"
-          />
-          <v-list-item
-            base-color="red"
-            prepend-icon="mdi-account-remove-outline"
-            title="Apagar Usuário"
-            @click="() => { drawerOpen = false; userDialogs?.abrirModalDelete(); }"
-          />
-          <v-list-item
-            base-color="teal"
-            prepend-icon="mdi-file-upload-outline"
-            title="Importar CSV"
-            @click="() => { drawerOpen = false; userDialogs?.abrirModalUpload(); }"
-          />
-          <v-list-item
-            base-color="indigo"
-            prepend-icon="mdi-shield-key-outline"
-            title="Autenticação PJe"
-            @click="() => { drawerOpen = false; pjeAuthDialog?.abrir(); }"
-          />
-          <v-list-item
-            base-color="green"
-            :disabled="importandoPje"
-            prepend-icon="mdi-download-network-outline"
-            title="Importar do PJe"
-            @click="() => { drawerOpen = false; importarPje(); }"
-          />
-          <v-list-item
-            base-color="green"
-            prepend-icon="mdi-history"
-            title="Logs do PJe"
-            @click="() => { drawerOpen = false; abrirLogsPje(); }"
-          />
+
+          <v-list-group value="usuarios">
+            <template #activator="{ props }">
+              <v-list-item
+                prepend-icon="mdi-account-cog-outline"
+                title="Gerenc. Usuários"
+                v-bind="props"
+              />
+            </template>
+            <v-list-item
+              prepend-icon="mdi-account-plus-outline"
+              title="Cadastrar Usuário"
+              @click="() => { drawerOpen = false; userDialogs?.abrirModalCadastro(); }"
+            />
+            <v-list-item
+              base-color="orange"
+              prepend-icon="mdi-lock-reset"
+              title="Resetar Senha"
+              @click="() => { drawerOpen = false; userDialogs?.abrirModalReset(); }"
+            />
+            <v-list-item
+              base-color="red"
+              prepend-icon="mdi-account-remove-outline"
+              title="Apagar Usuário"
+              @click="() => { drawerOpen = false; userDialogs?.abrirModalDelete(); }"
+            />
+          </v-list-group>
+
+          <v-list-group value="esaj">
+            <template #activator="{ props }">
+              <v-list-item
+                prepend-icon="mdi-file-table-outline"
+                title="Gerenciar eSAJ"
+                v-bind="props"
+              />
+            </template>
+            <v-list-item
+              base-color="teal"
+              prepend-icon="mdi-file-upload-outline"
+              title="Importar CSV"
+              @click="() => { drawerOpen = false; userDialogs?.abrirModalUpload(); }"
+            />
+          </v-list-group>
+
+          <v-list-group value="pje">
+            <template #activator="{ props }">
+              <v-list-item
+                prepend-icon="mdi-gavel"
+                title="Gerenciar PJe"
+                v-bind="props"
+              />
+            </template>
+            <v-list-item
+              base-color="indigo"
+              prepend-icon="mdi-shield-key-outline"
+              title="Autenticação PJe"
+              @click="() => { drawerOpen = false; pjeAuthDialog?.abrir(); }"
+            />
+            <v-list-item
+              base-color="green"
+              :disabled="importandoPje"
+              prepend-icon="mdi-download-network-outline"
+              title="Importar do PJe"
+              @click="() => { drawerOpen = false; importarPje(); }"
+            />
+            <v-list-item
+              base-color="green"
+              prepend-icon="mdi-history"
+              title="Logs do PJe"
+              @click="() => { drawerOpen = false; abrirLogsPje(); }"
+            />
+          </v-list-group>
         </template>
       </v-list>
 

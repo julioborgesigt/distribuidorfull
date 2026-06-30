@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     CumpridosChart: typeof import('./src/components/CumpridosChart.vue')['default']
+    PjeAuthDialog: typeof import('./src/components/PjeAuthDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     StatsGrid: typeof import('./src/components/StatsGrid.vue')['default']
