@@ -62,8 +62,9 @@
             vinculado a essa única unidade representativa. O sistema recusa o
             cadastro se detectar mais de uma unidade nos avisos pendentes no
             momento do teste (uma unidade sem avisos pendentes agora pode não
-            ser detectada). Para um usuário com várias unidades, use o filtro
-            "Vinculação" no painel para separá-las.
+            ser detectada; a vinculação genérica "Polícia Civil do Ceará" não
+            conta como unidade própria). Para um usuário com várias unidades,
+            use o filtro "Vinculação" no painel para separá-las.
           </v-alert>
 
           <v-form ref="formRef" @submit.prevent="salvar">

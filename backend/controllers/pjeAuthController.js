@@ -69,10 +69,13 @@ exports.salvar = async (req, res) => {
 
   // Best-effort: barra credenciais de usuários vinculados a mais de uma
   // unidade representativa, detectado pelos destinatários distintos entre os
-  // avisos pendentes no momento. Limitação: uma unidade sem avisos pendentes
-  // agora não aparece aqui — não há operação no MNI que liste as unidades de
-  // um consultante independente de haver avisos pendentes. A importação
-  // (pjeImportService) reforça essa mesma checagem a cada execução.
+  // avisos pendentes no momento (vinculacoesDistintas já ignora a vinculação
+  // genérica "Polícia Civil do Ceará", que aparece junto da delegacia/vara
+  // real na maioria dos avisos e não conta como unidade própria). Limitação:
+  // uma unidade sem avisos pendentes agora não aparece aqui — não há operação
+  // no MNI que liste as unidades de um consultante independente de haver
+  // avisos pendentes. A importação (pjeImportService) reforça essa mesma
+  // checagem a cada execução.
   const unidades = vinculacoesDistintas(avisos);
   if (unidades.length > 1) {
     logger.warn('Credenciais PJe recusadas: usuário com múltiplas unidades', {

@@ -109,12 +109,30 @@ describe('pjeParser - vinculacaoFromDestinatario', () => {
 });
 
 describe('pjeParser - vinculacoesDistintas', () => {
-  test('detecta múltiplas unidades entre os avisos', () => {
+  test('ignora a vinculação genérica "Polícia Civil do Ceará" (guarda-chuva do órgão)', () => {
+    // AVISOS_XML tem "policia civil do ceara" (genérica) + "DELEGACIA DE
+    // POLICIA CIVIL DE IGUATU" (unidade real) — só a segunda deve contar.
     const avisos = parseAvisos(AVISOS_XML);
-    expect(vinculacoesDistintas(avisos)).toEqual([
-      'POLICIA CIVIL DO CEARA',
-      'DELEGACIA DE POLICIA CIVIL DE IGUATU',
-    ]);
+    expect(vinculacoesDistintas(avisos)).toEqual(['DELEGACIA DE POLICIA CIVIL DE IGUATU']);
+  });
+  test('ignora a genérica mesmo com acentuação diferente', () => {
+    const avisos = [
+      { vinculacao: 'POLÍCIA CIVIL DO CEARÁ' },
+      { vinculacao: 'DELEGACIA X' },
+    ];
+    expect(vinculacoesDistintas(avisos)).toEqual(['DELEGACIA X']);
+  });
+  test('só a genérica entre os avisos resulta em lista vazia (não bloqueia)', () => {
+    const avisos = [{ vinculacao: 'POLICIA CIVIL DO CEARA' }, { vinculacao: 'policia civil do ceara' }];
+    expect(vinculacoesDistintas(avisos)).toEqual([]);
+  });
+  test('detecta múltiplas unidades REAIS (excluindo a genérica)', () => {
+    const avisos = [
+      { vinculacao: 'POLICIA CIVIL DO CEARA' },
+      { vinculacao: 'DELEGACIA A' },
+      { vinculacao: 'DELEGACIA B' },
+    ];
+    expect(vinculacoesDistintas(avisos)).toEqual(['DELEGACIA A', 'DELEGACIA B']);
   });
   test('uma única unidade entre os avisos', () => {
     const avisos = [{ vinculacao: 'A' }, { vinculacao: 'A' }];

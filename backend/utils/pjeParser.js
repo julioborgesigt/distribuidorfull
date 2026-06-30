@@ -158,12 +158,28 @@ function computePrazo({ dataIntimacaoISO, tipoPrazo, dataReferencia, prazoDias }
   return out;
 }
 
-// Lista as vinculações distintas (não vazias) entre uma lista de avisos —
-// usado para checar se uma credencial/consulta abrange mais de uma unidade
-// representativa. Best-effort: só enxerga unidades com avisos PENDENTES no
-// momento da consulta (o MNI não lista unidades sem avisos pendentes).
+// "Polícia Civil do Ceará" é a vinculação "guarda-chuva" do órgão — aparece
+// junto da delegacia/vara real na maioria dos avisos, por equívoco no
+// cadastro das partes ou na intimação do fórum, e não representa uma unidade
+// específica adicional. É ignorada na contagem de unidades distintas (sem
+// isso, praticamente nenhuma credencial passaria na checagem de "unidade
+// única", mesmo gerenciando uma só delegacia).
+const VINCULACAO_GENERICA = 'POLICIA CIVIL DO CEARA';
+
+// Compara ignorando maiúsculas/minúsculas e acentos (sensitivity: 'base'),
+// já que o MNI não é consistente na acentuação do nome do destinatário.
+function ehVinculacaoGenerica(v) {
+  return String(v || '').trim().localeCompare(VINCULACAO_GENERICA, 'pt', { sensitivity: 'base' }) === 0;
+}
+
+// Lista as vinculações distintas (não vazias, exceto a genérica acima) entre
+// uma lista de avisos — usado para checar se uma credencial/consulta abrange
+// mais de uma unidade representativa específica. Best-effort: só enxerga
+// unidades com avisos PENDENTES no momento da consulta (o MNI não lista
+// unidades sem avisos pendentes).
 function vinculacoesDistintas(avisos) {
-  return [...new Set((avisos || []).map(a => a.vinculacao).filter(Boolean))];
+  const todas = [...new Set((avisos || []).map(a => a.vinculacao).filter(Boolean))];
+  return todas.filter(v => !ehVinculacaoGenerica(v));
 }
 
 module.exports = {
