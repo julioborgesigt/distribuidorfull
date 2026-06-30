@@ -515,8 +515,7 @@
           variant="tonal"
         >
           Nenhuma credencial cadastrada em <strong>"Autenticação PJe"</strong>.
-          Configure-a antes de importar — sem credenciais válidas (no painel ou
-          nas variáveis de ambiente do servidor), a importação falhará.
+          Configure-a para ter acesso à função importar.
         </v-alert>
         <v-alert
           v-else-if="pjeAuthStatusImport.configured"
@@ -531,18 +530,25 @@
         </v-alert>
 
         <p class="mb-2">
-          Isto consulta os avisos pendentes e abre as intimações que já
-          atingiram o limiar de ciência configurado, para capturar o prazo.
+          Ao importar do PJe o sistema consulta os avisos pendentes e abre as
+          intimações que chegaram há 5 dias, para checar o teor e o prazo.
         </p>
         <p class="mb-0">
           <strong>Abrir a intimação REGISTRA CIÊNCIA e INICIA O PRAZO no PJe.</strong>
-          As demais entram no painel sem prazo e são abertas num import futuro.
+          As intimações com menos de 5 dias entram no painel sem prazo e são
+          abertas num import futuro.
         </p>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn variant="text" @click="dialogImportPje = false">Cancelar</v-btn>
-        <v-btn color="green" variant="flat" @click="confirmarImportPje">
+        <v-btn
+          color="green"
+          :disabled="pjeAuthStatusImport.checking || !pjeAuthStatusImport.configured"
+          :loading="pjeAuthStatusImport.checking"
+          variant="flat"
+          @click="confirmarImportPje"
+        >
           Importar
         </v-btn>
       </v-card-actions>
