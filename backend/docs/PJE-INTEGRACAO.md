@@ -29,6 +29,16 @@ atual:
 - Um import do **eSAJ NÃO sobrescreve** um processo que já é do PJe.
 - Processos que só existem no eSAJ continuam normais.
 
+## Vinculação
+
+Cada aviso do PJe traz o `<destinatario><pessoa nome="...">` — o órgão a quem a
+intimação foi endereçada (ex.: `DELEGACIA DE POLICIA CIVIL DE IGUATU` ou
+`POLICIA CIVIL DO CEARA`). Esse nome é capturado em `parseAvisos`, normalizado
+em **maiúsculas** (o MNI devolve capitalização inconsistente entre órgãos) e
+gravado no campo `vinculacao` do processo. É filtrável no painel (autocomplete,
+já que pode haver dezenas de vinculações distintas). Processos do eSAJ não têm
+vinculação (`null`) — o CSV não traz essa informação.
+
 ## Configuração (.env do backend)
 
 ```env
@@ -63,8 +73,8 @@ banco.
 
 ## Migration
 
-A coluna `fonte` é criada por migration idempotente (registros existentes ficam
-como `esaj`):
+As colunas `fonte` e `vinculacao` são criadas por migrations idempotentes
+(registros existentes ficam com `fonte = 'esaj'` e `vinculacao = null`):
 
 ```bash
 npm run db:migrate
