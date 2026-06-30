@@ -34,12 +34,13 @@
   <Teleport to="body">
     <v-navigation-drawer
       v-model="drawerOpen"
+      class="app-drawer"
       location="left"
       style="top: 0; height: 100%; position: fixed; z-index: 1010;"
-      width="288"
+      width="230"
     >
       <!-- Topo: saudação + ações de admin -->
-      <v-list>
+      <v-list density="compact" nav>
         <v-list-item
           v-if="user"
           prepend-icon="mdi-account-circle"
@@ -141,7 +142,7 @@
       <!-- Rodapé fixo: tema e sair -->
       <template #append>
         <v-divider />
-        <v-list>
+        <v-list density="compact" nav>
           <v-list-item
             :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
             :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
@@ -1450,5 +1451,21 @@
 <style scoped>
 .toast-snackbar :deep(.v-snackbar__wrapper) {
   opacity: 0.88;
+}
+
+/* Reduz o recuo dos subitens dos submenus (v-list-group) — o padrão do
+   Vuetify soma a largura do prepend-icon do grupo (40px) ao indent-size
+   (16px), deixando os itens filhos recuados demais para um drawer estreito. */
+.app-drawer :deep(.v-list-group) {
+  --list-indent-size: 8px;
+}
+.app-drawer :deep(.v-list-group--prepend) {
+  --prepend-width: 24px;
+}
+/* Com o drawer mais estreito, deixa o título quebrar em 2 linhas em vez de
+   truncar com "..." — preserva a legibilidade sem precisar de mais largura. */
+.app-drawer :deep(.v-list-item-title) {
+  white-space: normal;
+  line-height: 1.2;
 }
 </style>
