@@ -47,23 +47,17 @@ exports.salvar = async (req, res) => {
   }
 
   // Testa as credenciais contra o webservice MNI (não registra ciência).
-  // Se o MNI rejeitar, não salva para não sobrescrever credenciais válidas.
+  // Qualquer erro (credencial errada, rede, endpoint) impede o salvamento.
   try {
-    await pjeClient.consultarAvisosPendentes({ id: cpfDigits, pass: senha });
+    await pjeClient.consultarAvisosPendentes({ cpf: cpfDigits, senha });
   } catch (mniErr) {
     logger.warn('Credenciais PJe recusadas pelo MNI', {
       error: mniErr.message,
       userId: req.userId,
       ip: getRealIP(req),
     });
-    const msg = mniErr.message || '';
-    if (msg.includes('Credenciais') || msg.includes('senha') || msg.includes('Usu') || msg.includes('Login') || msg.includes('senha') || msg.includes('autenti') || msg.includes('nvalid')) {
-      return res.status(400).json({ error: `Credenciais rejeitadas pelo PJe: ${msg}` });
-    }
-    // Falha de rede/endpoint indisponível: ainda assim não salva (pode ser credencial errada)
     return res.status(400).json({
-      error: `Não foi possível validar as credenciais junto ao PJe: ${msg}. ` +
-        'Verifique CPF, senha e se o endpoint do PJe está acessível.'
+      error: `Não foi possível validar as credenciais no PJe: ${mniErr.message}`
     });
   }
 
