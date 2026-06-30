@@ -124,6 +124,16 @@ async function main() {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
+  // Opcional: filtra por uma vinculação específica (idRepresentado).
+  // Ative com PJE_ID_REPRESENTADO=<documento/identificador da vinculação>.
+  const idRepresentado = process.env.PJE_ID_REPRESENTADO;
+  const repreXml = idRepresentado
+    ? `<tip:idRepresentado>${esc(idRepresentado)}</tip:idRepresentado>`
+    : '';
+  if (idRepresentado) {
+    console.log(`\n[VINCULAÇÃO] Filtrando avisos por idRepresentado=${idRepresentado}`);
+  }
+
   const envelope =
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"` +
@@ -131,6 +141,7 @@ async function main() {
     `<soapenv:Header/>` +
     `<soapenv:Body>` +
     `<ser:consultarAvisosPendentes>` +
+    repreXml +
     `<tip:idConsultante>${esc(CPF)}</tip:idConsultante>` +
     `<tip:senhaConsultante>${esc(SENHA)}</tip:senhaConsultante>` +
     `</ser:consultarAvisosPendentes>` +
