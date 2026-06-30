@@ -30,7 +30,8 @@ function getCredentials({ cpf, senha } = {}) {
   const pass = senha || process.env.PJE_SENHA;
   if (!id || !pass) {
     throw new Error(
-      'Credenciais do PJe ausentes. Defina PJE_CPF e PJE_SENHA no ambiente.'
+      'Credenciais do PJe ausentes. Configure em "Autenticação PJe" no painel ' +
+      '(ou defina PJE_CPF e PJE_SENHA no ambiente, para o cron).'
     );
   }
   return { id, pass };
