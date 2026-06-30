@@ -10,6 +10,7 @@ const {
   parseTeor,
   computePrazo,
   vinculacaoFromDestinatario,
+  vinculacoesDistintas,
 } = require('../../utils/pjeParser');
 
 // Trecho real da resposta de consultarAvisosPendentes (2 avisos).
@@ -104,6 +105,25 @@ describe('pjeParser - vinculacaoFromDestinatario', () => {
   });
   test('devolve null quando não há nome', () => {
     expect(vinculacaoFromDestinatario('')).toBeNull();
+  });
+});
+
+describe('pjeParser - vinculacoesDistintas', () => {
+  test('detecta múltiplas unidades entre os avisos', () => {
+    const avisos = parseAvisos(AVISOS_XML);
+    expect(vinculacoesDistintas(avisos)).toEqual([
+      'POLICIA CIVIL DO CEARA',
+      'DELEGACIA DE POLICIA CIVIL DE IGUATU',
+    ]);
+  });
+  test('uma única unidade entre os avisos', () => {
+    const avisos = [{ vinculacao: 'A' }, { vinculacao: 'A' }];
+    expect(vinculacoesDistintas(avisos)).toEqual(['A']);
+  });
+  test('ignora avisos sem vinculação e lida com lista vazia/nula', () => {
+    expect(vinculacoesDistintas([{ vinculacao: null }, {}])).toEqual([]);
+    expect(vinculacoesDistintas([])).toEqual([]);
+    expect(vinculacoesDistintas(null)).toEqual([]);
   });
 });
 

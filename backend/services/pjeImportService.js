@@ -14,6 +14,7 @@ const {
   mniDateToISO,
   computePrazo,
   deveAbrirTeor,
+  vinculacoesDistintas,
 } = require('../utils/pjeParser');
 const tpu = require('../utils/tpu');
 const logger = require('../utils/logger');
@@ -58,6 +59,20 @@ async function coletarRows({
   const creds = await pjeCredentialService.getCredentials().catch(() => null);
 
   const avisos = await pjeClient.consultarAvisosPendentes(creds || undefined);
+
+  // A credencial deve estar vinculada a uma única unidade representativa (já
+  // checado ao salvar em "Autenticação PJe", mas uma unidade sem avisos
+  // pendentes naquele momento pode não ter sido detectada). Reforça aqui,
+  // antes de processar qualquer aviso, para nunca misturar unidades.
+  const unidades = vinculacoesDistintas(avisos);
+  if (unidades.length > 1) {
+    throw new Error(
+      `A credencial do PJe em uso está vinculada a mais de uma unidade ` +
+      `representativa (${unidades.join(', ')}). A importação foi cancelada — ` +
+      `configure uma credencial de unidade única em "Autenticação PJe".`
+    );
+  }
+
   const rows = [];
   let comPrazo = 0;
   let falhasTeor = 0;

@@ -10,6 +10,7 @@
 
 const pjeCredentialService = require('../services/pjeCredentialService');
 const pjeClient = require('../utils/pjeClient');
+const { vinculacoesDistintas } = require('../utils/pjeParser');
 const logger = require('../utils/logger');
 const { getRealIP } = require('../utils/helpers');
 
@@ -70,17 +71,18 @@ exports.salvar = async (req, res) => {
   // unidade representativa, detectado pelos destinatários distintos entre os
   // avisos pendentes no momento. Limitação: uma unidade sem avisos pendentes
   // agora não aparece aqui — não há operação no MNI que liste as unidades de
-  // um consultante independente de haver avisos pendentes.
-  const vinculacoesDistintas = [...new Set((avisos || []).map(a => a.vinculacao).filter(Boolean))];
-  if (vinculacoesDistintas.length > 1) {
+  // um consultante independente de haver avisos pendentes. A importação
+  // (pjeImportService) reforça essa mesma checagem a cada execução.
+  const unidades = vinculacoesDistintas(avisos);
+  if (unidades.length > 1) {
     logger.warn('Credenciais PJe recusadas: usuário com múltiplas unidades', {
-      vinculacoes: vinculacoesDistintas,
+      vinculacoes: unidades,
       userId: req.userId,
       ip: getRealIP(req),
     });
     return res.status(400).json({
       error: `Este usuário do PJe está vinculado a mais de uma unidade representativa ` +
-        `(${vinculacoesDistintas.join(', ')}). Cadastre credenciais de um usuário ` +
+        `(${unidades.join(', ')}). Cadastre credenciais de um usuário ` +
         `vinculado a apenas uma unidade.`
     });
   }

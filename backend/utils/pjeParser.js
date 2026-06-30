@@ -158,6 +158,14 @@ function computePrazo({ dataIntimacaoISO, tipoPrazo, dataReferencia, prazoDias }
   return out;
 }
 
+// Lista as vinculações distintas (não vazias) entre uma lista de avisos —
+// usado para checar se uma credencial/consulta abrange mais de uma unidade
+// representativa. Best-effort: só enxerga unidades com avisos PENDENTES no
+// momento da consulta (o MNI não lista unidades sem avisos pendentes).
+function vinculacoesDistintas(avisos) {
+  return [...new Set((avisos || []).map(a => a.vinculacao).filter(Boolean))];
+}
+
 module.exports = {
   attr,
   el,
@@ -170,4 +178,5 @@ module.exports = {
   parseTeor,
   computePrazo,
   vinculacaoFromDestinatario,
+  vinculacoesDistintas,
 };
