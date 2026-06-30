@@ -126,7 +126,7 @@
               :disabled="importandoPje"
               prepend-icon="mdi-download-network-outline"
               title="Importar do PJe"
-              @click="() => { drawerOpen = false; importarPje(); }"
+              @click="() => { drawerOpen = false; abrirConfirmImportPje(); }"
             />
             <v-list-item
               base-color="green"
@@ -498,6 +498,57 @@
     </v-card>
   </v-dialog>
 
+  <!-- Confirmação: Importar do PJe -->
+  <v-dialog v-model="dialogImportPje" max-width="560px">
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon color="green" start>mdi-download-network-outline</v-icon>
+        Importar do PJe
+      </v-card-title>
+      <v-card-text>
+        <v-alert
+          v-if="!pjeAuthStatusImport.checking && !pjeAuthStatusImport.configured"
+          border="start"
+          class="mb-4"
+          density="compact"
+          type="warning"
+          variant="tonal"
+        >
+          Nenhuma credencial cadastrada em <strong>"Autenticação PJe"</strong>.
+          Configure-a antes de importar — sem credenciais válidas (no painel ou
+          nas variáveis de ambiente do servidor), a importação falhará.
+        </v-alert>
+        <v-alert
+          v-else-if="pjeAuthStatusImport.configured"
+          border="start"
+          class="mb-4"
+          density="compact"
+          type="info"
+          variant="tonal"
+        >
+          Será usada a credencial salva em "Autenticação PJe": CPF
+          <strong>{{ pjeAuthStatusImport.cpfDisplay }}</strong>.
+        </v-alert>
+
+        <p class="mb-2">
+          Isto consulta os avisos pendentes e abre as intimações que já
+          atingiram o limiar de ciência configurado, para capturar o prazo.
+        </p>
+        <p class="mb-0">
+          <strong>Abrir a intimação REGISTRA CIÊNCIA e INICIA O PRAZO no PJe.</strong>
+          As demais entram no painel sem prazo e são abertas num import futuro.
+        </p>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="dialogImportPje = false">Cancelar</v-btn>
+        <v-btn color="green" variant="flat" @click="confirmarImportPje">
+          Importar
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <v-dialog v-model="dialogBulkAssign" max-width="500px" persistent>
     <v-card>
       <v-form ref="formBulkAssignRef" @submit.prevent="handleBulkAssign">
@@ -589,7 +640,7 @@
   // =================================================================
   // 1. IMPORTS
   // =================================================================
-  import { computed, nextTick, onMounted, ref, watch } from 'vue'
+  import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
   import { useDisplay, useTheme } from 'vuetify'
   import apiClient from '@/api/axios'
   import { useDrawer } from '@/composables/useDrawer'
@@ -1024,19 +1075,31 @@
     }
   }
 
-  // Importa processos do PJe (webservice MNI). ATENÇÃO: por padrão abre o teor
-  // de cada aviso, o que registra ciência e inicia o prazo — por isso pedimos
-  // confirmação explícita antes de disparar.
+  // Confirmação de importação do PJe (webservice MNI). ATENÇÃO: por padrão abre
+  // o teor de cada aviso, o que registra ciência e inicia o prazo — por isso o
+  // diálogo confirma explicitamente antes de disparar.
+  const dialogImportPje = ref(false)
+  const pjeAuthStatusImport = reactive({ checking: true, configured: false, cpfDisplay: null })
+
+  async function abrirConfirmImportPje () {
+    if (importandoPje.value) return
+    pjeAuthStatusImport.checking = true
+    dialogImportPje.value = true
+    try {
+      const { data } = await apiClient.get('/admin/pje-auth/status')
+      Object.assign(pjeAuthStatusImport, { checking: false, configured: false, cpfDisplay: null }, data)
+    } catch {
+      Object.assign(pjeAuthStatusImport, { checking: false, configured: false, cpfDisplay: null })
+    }
+  }
+
+  function confirmarImportPje () {
+    dialogImportPje.value = false
+    importarPje()
+  }
+
   async function importarPje () {
     if (importandoPje.value) return
-    const ok = window.confirm(
-      'Importar do PJe?\n\nIsto consulta os avisos pendentes e ABRE as intimações ' +
-        'que já atingiram o limiar de ciência configurado, para capturar o prazo. ' +
-        'Abrir a intimação REGISTRA CIÊNCIA e INICIA O PRAZO no PJe. As demais ' +
-        'entram no painel sem prazo e são abertas num import futuro. Continuar?'
-    )
-    if (!ok) return
-
     importandoPje.value = true
     // Toast PERSISTENTE com barra indeterminada: fica até o toast de
     // sucesso/erro aparecer. A importação roda em segundo plano (pode levar
