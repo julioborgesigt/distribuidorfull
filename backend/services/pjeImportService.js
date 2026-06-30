@@ -38,6 +38,7 @@ function avisoToRow(aviso, prazo) {
     tarjas: aviso.nivelSigilo && Number(aviso.nivelSigilo) > 0 ? 'Sigiloso' : '',
     data_intimacao: mniDateToISO(aviso.dataDisponibilizacao),
     fonte: 'pje',
+    vinculacao: aviso.vinculacao || null,
   };
 }
 

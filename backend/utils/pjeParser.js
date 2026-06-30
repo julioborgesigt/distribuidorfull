@@ -79,6 +79,8 @@ function parseAvisos(xml) {
     const bloco = m[0];
     const processoBloco =
       (bloco.match(/<(?:\w+:)?processo\b[\s\S]*?<\/(?:\w+:)?processo>/) || [bloco])[0];
+    const destinatarioBloco =
+      (bloco.match(/<(?:\w+:)?destinatario\b[\s\S]*?<\/(?:\w+:)?destinatario>/) || [''])[0];
 
     avisos.push({
       idAviso: attr(bloco, 'idAviso'),
@@ -90,9 +92,19 @@ function parseAvisos(xml) {
       nivelSigilo: attr(processoBloco, 'nivelSigilo'),
       orgaoJulgador: attr(processoBloco, 'nomeOrgao'),
       dataDisponibilizacao: el(bloco, 'dataDisponibilizacao'),
+      // Vinculação: nome do destinatário do aviso, normalizado em maiúsculas
+      // (o MNI devolve capitalização inconsistente entre órgãos).
+      vinculacao: vinculacaoFromDestinatario(destinatarioBloco),
     });
   }
   return avisos;
+}
+
+// Extrai e normaliza o nome do destinatário (<pessoa nome="...">) de um bloco
+// <destinatario>. Devolve null se não houver nome.
+function vinculacaoFromDestinatario(destinatarioBloco) {
+  const nome = attr(destinatarioBloco, 'nome');
+  return nome ? nome.trim().toUpperCase() : null;
 }
 
 // Extrai do XML de consultarTeorComunicacao os dados de prazo (estruturados nos
@@ -157,4 +169,5 @@ module.exports = {
   parseAvisos,
   parseTeor,
   computePrazo,
+  vinculacaoFromDestinatario,
 };
