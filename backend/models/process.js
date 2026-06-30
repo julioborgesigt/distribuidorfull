@@ -64,6 +64,13 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM('esaj', 'pje'),
       allowNull: false,
       defaultValue: 'esaj'
+    },
+    // Vinculação (destinatário do aviso no PJe): nome da delegacia/órgão a que
+    // o processo está endereçado, ex. "DELEGACIA DE POLICIA CIVIL DE IGUATU".
+    // Sempre normalizado em maiúsculas. Null para processos vindos do eSAJ.
+    vinculacao: {
+      type: DataTypes.STRING(255),
+      allowNull: true
     }
 
   }, {
@@ -81,6 +88,7 @@ module.exports = (sequelize) => {
       { fields: ['cumprido', 'prazo_vencimento'], name: 'idx_cumprido_prazo_vencimento' },
       { fields: ['userId', 'cumprido'], name: 'idx_userid_cumprido' },
       { fields: ['fonte'] },
+      { fields: ['vinculacao'] },
     ],
     hooks: {
       beforeCreate: (process) => {
