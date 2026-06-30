@@ -81,6 +81,10 @@ async function upsertProcessos(results) {
       if (row.fonte && row.fonte !== existing.fonte) {
         updateData.fonte = row.fonte;
       }
+      // vinculacao só vem do PJe; o eSAJ (que não a envia) não deve apagá-la.
+      if (row.vinculacao !== undefined && row.vinculacao !== existing.vinculacao) {
+        updateData.vinculacao = row.vinculacao;
+      }
       if (row.data_intimacao !== existing.data_intimacao) {
         const newDate = new Date(row.data_intimacao);
         const storedDate = new Date(existing.data_intimacao);
@@ -437,6 +441,11 @@ exports.listProcesses = async (req, res) => {
     const fonteFilter = parseArrayFilter(req.query.fonte);
     if (fonteFilter) {
       options.where.fonte = { [Op.in]: fonteFilter };
+    }
+
+    const vinculacaoFilter = parseArrayFilter(req.query.vinculacao);
+    if (vinculacaoFilter) {
+      options.where.vinculacao = { [Op.in]: vinculacaoFilter };
     }
 
     const userIdFilter = parseArrayFilter(userId);

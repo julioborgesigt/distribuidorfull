@@ -9,6 +9,7 @@ const {
   parseAvisos,
   parseTeor,
   computePrazo,
+  vinculacaoFromDestinatario,
 } = require('../../utils/pjeParser');
 
 // Trecho real da resposta de consultarAvisosPendentes (2 avisos).
@@ -83,12 +84,26 @@ describe('pjeParser - parseAvisos', () => {
       assuntoCodigo: '3546',
       nivelSigilo: '0',
       dataDisponibilizacao: '20260615152502',
+      vinculacao: 'POLICIA CIVIL DO CEARA',
     });
     expect(avisos[0].orgaoJulgador).toMatch(/Núcleo Regional/);
   });
   test('isola o assunto de cada processo (não vaza do anterior)', () => {
     expect(avisos[1].assuntoCodigo).toBe('12194');
     expect(avisos[1].numeroProcesso).toBe('30000683020268069091');
+  });
+  test('normaliza a vinculação para maiúsculas', () => {
+    expect(avisos[1].vinculacao).toBe('DELEGACIA DE POLICIA CIVIL DE IGUATU');
+  });
+});
+
+describe('pjeParser - vinculacaoFromDestinatario', () => {
+  test('extrai e normaliza o nome do destinatário', () => {
+    const bloco = '<ns2:destinatario><ns2:pessoa nome="policia civil do ceara"/></ns2:destinatario>';
+    expect(vinculacaoFromDestinatario(bloco)).toBe('POLICIA CIVIL DO CEARA');
+  });
+  test('devolve null quando não há nome', () => {
+    expect(vinculacaoFromDestinatario('')).toBeNull();
   });
 });
 

@@ -1,0 +1,91 @@
+// /controllers/pjeAuthController.js
+//
+// Gerencia as credenciais PJe armazenadas no banco (criptografadas).
+// Todos os endpoints exigem admin_super (requireSuperAdmin aplicado nas rotas).
+//
+// Endpoints:
+//   GET  /pje-auth/status  — status sem revelar a senha
+//   POST /pje-auth/salvar  — valida CPF + testa conexão MNI + salva criptografado
+//   DELETE /pje-auth       — remove as credenciais salvas (volta para env vars)
+
+const pjeCredentialService = require('../services/pjeCredentialService');
+const pjeClient = require('../utils/pjeClient');
+const logger = require('../utils/logger');
+const { getRealIP } = require('../utils/helpers');
+
+exports.getStatus = async (req, res) => {
+  try {
+    const status = await pjeCredentialService.getStatus();
+    res.json(status);
+  } catch (err) {
+    logger.error('Erro ao buscar status das credenciais PJe', { error: err.message });
+    res.status(500).json({ error: 'Erro ao verificar credenciais armazenadas.' });
+  }
+};
+
+exports.salvar = async (req, res) => {
+  const { cpf, senha } = req.body || {};
+
+  // Validação de formato
+  if (!cpf || !senha) {
+    return res.status(400).json({ error: 'CPF e senha são obrigatórios.' });
+  }
+  const cpfDigits = String(cpf).replace(/\D/g, '');
+  if (cpfDigits.length !== 11) {
+    return res.status(400).json({ error: 'CPF inválido. Informe 11 dígitos.' });
+  }
+  if (String(senha).trim().length === 0) {
+    return res.status(400).json({ error: 'Senha não pode ser vazia.' });
+  }
+
+  // Verifica se a chave de criptografia está configurada antes de tentar o teste
+  try {
+    const { encrypt } = require('../utils/credenciaisCrypto');
+    encrypt('_probe_');
+  } catch (keyErr) {
+    return res.status(500).json({ error: keyErr.message });
+  }
+
+  // Testa as credenciais contra o webservice MNI (não registra ciência).
+  // Se o MNI rejeitar, não salva para não sobrescrever credenciais válidas.
+  try {
+    await pjeClient.consultarAvisosPendentes({ id: cpfDigits, pass: senha });
+  } catch (mniErr) {
+    logger.warn('Credenciais PJe recusadas pelo MNI', {
+      error: mniErr.message,
+      userId: req.userId,
+      ip: getRealIP(req),
+    });
+    const msg = mniErr.message || '';
+    if (msg.includes('Credenciais') || msg.includes('senha') || msg.includes('Usu') || msg.includes('Login') || msg.includes('senha') || msg.includes('autenti') || msg.includes('nvalid')) {
+      return res.status(400).json({ error: `Credenciais rejeitadas pelo PJe: ${msg}` });
+    }
+    // Falha de rede/endpoint indisponível: ainda assim não salva (pode ser credencial errada)
+    return res.status(400).json({
+      error: `Não foi possível validar as credenciais junto ao PJe: ${msg}. ` +
+        'Verifique CPF, senha e se o endpoint do PJe está acessível.'
+    });
+  }
+
+  // Salva criptografado
+  try {
+    await pjeCredentialService.saveCredentials(cpfDigits, senha, req.userId);
+    logger.info('Credenciais PJe salvas/atualizadas', { userId: req.userId, ip: getRealIP(req) });
+    const status = await pjeCredentialService.getStatus();
+    res.json({ message: 'Credenciais salvas com sucesso.', ...status });
+  } catch (saveErr) {
+    logger.error('Erro ao salvar credenciais PJe', { error: saveErr.message });
+    res.status(500).json({ error: saveErr.message });
+  }
+};
+
+exports.remover = async (req, res) => {
+  try {
+    await pjeCredentialService.clearCredentials();
+    logger.info('Credenciais PJe removidas do banco', { userId: req.userId, ip: getRealIP(req) });
+    res.json({ message: 'Credenciais removidas. O sistema voltará a usar as variáveis de ambiente PJE_CPF/PJE_SENHA.' });
+  } catch (err) {
+    logger.error('Erro ao remover credenciais PJe', { error: err.message });
+    res.status(500).json({ error: 'Erro ao remover credenciais.' });
+  }
+};

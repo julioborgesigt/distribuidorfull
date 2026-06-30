@@ -182,7 +182,7 @@ exports.getDashboardStats = async (req, res) => {
 // Valores únicos para os filtros do dashboard (classe, assunto, tarjas)
 exports.getFilterOptions = async (req, res) => {
   try {
-    const [classes, assuntos, tarjas] = await Promise.all([
+    const [classes, assuntos, tarjas, vinculacoes] = await Promise.all([
       Process.findAll({
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('classe_principal')), 'value']],
         where: { classe_principal: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
@@ -197,6 +197,11 @@ exports.getFilterOptions = async (req, res) => {
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('tarjas')), 'value']],
         where: { tarjas: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
         raw: true
+      }),
+      Process.findAll({
+        attributes: [[sequelize.fn('DISTINCT', sequelize.col('vinculacao')), 'value']],
+        where: { vinculacao: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
+        raw: true
       })
     ]);
 
@@ -210,7 +215,8 @@ exports.getFilterOptions = async (req, res) => {
       assuntos: assuntos.map(r => r.value).sort(),
       tarjas: Array.from(tarjasSet).sort(),
       // Origem do registro — enum fixo, exposto para o filtro do dashboard.
-      fontes: ['esaj', 'pje']
+      fontes: ['esaj', 'pje'],
+      vinculacoes: vinculacoes.map(r => r.value).sort()
     });
   } catch (error) {
     logger.error('Erro ao buscar opções de filtros', { error: error.message });

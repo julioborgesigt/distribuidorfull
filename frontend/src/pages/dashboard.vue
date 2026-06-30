@@ -87,6 +87,12 @@
             @click="() => { drawerOpen = false; userDialogs?.abrirModalUpload(); }"
           />
           <v-list-item
+            base-color="indigo"
+            prepend-icon="mdi-shield-key-outline"
+            title="Autenticação PJe"
+            @click="() => { drawerOpen = false; pjeAuthDialog?.abrir(); }"
+          />
+          <v-list-item
             base-color="green"
             :disabled="importandoPje"
             prepend-icon="mdi-download-network-outline"
@@ -212,6 +218,18 @@
               item-value="value"
               :items="fonteOptions"
               label="Fonte (Origem)"
+              multiple
+              variant="outlined"
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-autocomplete
+              v-model="filters.vinculacao"
+              chips
+              clearable
+              density="compact"
+              :items="uniqueVinculacoes"
+              label="Vinculação"
               multiple
               variant="outlined"
             />
@@ -402,6 +420,9 @@
     @users-changed="handleUsersChanged"
   />
 
+  <!-- Modal: Credenciais PJe (admin_super) -->
+  <pje-auth-dialog ref="pjeAuthDialog" @notify="notify" />
+
   <!-- Histórico de importações do PJe -->
   <v-dialog v-model="dialogLogsPje" max-width="1150px" scrollable>
     <v-card>
@@ -551,6 +572,7 @@
   import StatsGrid from '../components/StatsGrid.vue'
   import TabelaProcessos from '../components/TabelaProcessos.vue'
   import UserAdminDialogs from '../components/UserAdminDialogs.vue'
+  import PjeAuthDialog from '../components/PjeAuthDialog.vue'
   const { mdAndUp, width } = useDisplay()
   const isWide = computed(() => width.value >= 1660)
   const { drawerOpen } = useDrawer()
@@ -576,6 +598,7 @@
     assunto: [],
     tarjas: [],
     fonte: [],
+    vinculacao: [],
     userId: [],
     prazo: null,
     cumprido: false, // Default é "Não Cumprido"
@@ -630,6 +653,7 @@
   const allClassesList = ref([]) // Lista de todas as classes disponíveis
   const allAssuntosList = ref([]) // Lista de todos os assuntos disponíveis
   const allTarjasList = ref([]) // Lista de todas as tarjas disponíveis
+  const allVinculacoesList = ref([]) // Lista de todas as vinculações disponíveis (PJe)
 
   // =================================================================
   // 4. ESTADO DOS MODAIS E SNACKBAR
@@ -647,6 +671,7 @@
   } = useSnackbar()
 
   const userDialogs = ref(null) // ref do componente UserAdminDialogs
+  const pjeAuthDialog = ref(null) // ref do componente PjeAuthDialog
   const menuInicio = ref(false)
   const menuFim = ref(false)
 
@@ -709,6 +734,11 @@
   // Gera a lista de TARJAS (cumulativa - todas as opções disponíveis)
   const uniqueTarjas = computed(() => {
     return allTarjasList.value
+  })
+
+  // Gera a lista de VINCULAÇÕES (cumulativa - todas as opções disponíveis)
+  const uniqueVinculacoes = computed(() => {
+    return allVinculacoesList.value
   })
 
   // Computed para o StatsGrid (baseado na resposta da API)
@@ -811,6 +841,7 @@
       params.append('cumprido', filters.value.cumprido)
     }
     for (const v of filters.value.fonte || []) params.append('fonte', v)
+    for (const v of filters.value.vinculacao || []) params.append('vinculacao', v)
     return params
   }
 
@@ -931,6 +962,7 @@
       allClassesList.value = cached.classes
       allAssuntosList.value = cached.assuntos
       allTarjasList.value = cached.tarjas
+      allVinculacoesList.value = cached.vinculacoes || []
       return
     }
     try {
@@ -938,6 +970,7 @@
       allClassesList.value = data.classes
       allAssuntosList.value = data.assuntos
       allTarjasList.value = data.tarjas
+      allVinculacoesList.value = data.vinculacoes || []
       setCache('cache:filterOptions', data)
     } catch {
     // Silenciado: filtros usarão valores em cache ou ficarão vazios
@@ -952,6 +985,7 @@
       assunto: [],
       tarjas: [],
       fonte: [],
+      vinculacao: [],
       userId: [],
       prazo: null,
       cumprido: false,
