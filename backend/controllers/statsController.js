@@ -4,7 +4,7 @@
 const { sequelize, User, Process } = require('../models');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
-const { getRealIP, parseArrayFilter } = require('../utils/helpers');
+const { getRealIP, parseArrayFilter, processScopeWhere } = require('../utils/helpers');
 
 // Helper: Constrói a cláusula WHERE para os stats (ignora 'cumprido')
 const buildStatsWhereClause = (req) => {
@@ -182,25 +182,30 @@ exports.getDashboardStats = async (req, res) => {
 // Valores únicos para os filtros do dashboard (classe, assunto, tarjas)
 exports.getFilterOptions = async (req, res) => {
   try {
+    // Mesmo escopo de listProcesses/getDashboardStats: admin_padrao só vê
+    // valores dos processos atribuídos a ele — sem isso, os DISTINCT
+    // vazavam metadados de processos de outros usuários.
+    const scope = processScopeWhere(req);
+
     const [classes, assuntos, tarjas, vinculacoes] = await Promise.all([
       Process.findAll({
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('classe_principal')), 'value']],
-        where: { classe_principal: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
+        where: { ...scope, classe_principal: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
         raw: true
       }),
       Process.findAll({
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('assunto_principal')), 'value']],
-        where: { assunto_principal: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
+        where: { ...scope, assunto_principal: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
         raw: true
       }),
       Process.findAll({
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('tarjas')), 'value']],
-        where: { tarjas: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
+        where: { ...scope, tarjas: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
         raw: true
       }),
       Process.findAll({
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('vinculacao')), 'value']],
-        where: { vinculacao: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
+        where: { ...scope, vinculacao: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] } },
         raw: true
       })
     ]);

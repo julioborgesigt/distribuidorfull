@@ -11,12 +11,17 @@ O projeto tem uma postura de segurança **madura** — visivelmente resultado de
 
 Foram identificados **3 achados de severidade média** (dependência vulnerável, vazamento de mensagens de erro internas, limites de segurança em memória por processo) e **8 de baixa severidade / hardening**, detalhados abaixo.
 
-| Severidade | Quantidade |
-|------------|-----------|
-| Crítica    | 0 |
-| Alta       | 0 |
-| Média      | 3 |
-| Baixa      | 8 |
+> **Atualização (01/07/2026):** todas as correções foram aplicadas nesta mesma branch
+> (ver seção [Status das correções](#status-das-correções) ao final). A suíte de
+> testes do backend (106 testes) passa integralmente e `npm audit` reporta
+> 0 vulnerabilidades em backend e frontend.
+
+| Severidade | Quantidade | Corrigidos |
+|------------|-----------|------------|
+| Crítica    | 0 | — |
+| Alta       | 0 | — |
+| Média      | 3 | 3 |
+| Baixa      | 8 | 8 |
 
 ---
 
@@ -150,10 +155,26 @@ Em `.domcloud.yml`:
 
 ---
 
-## Prioridade sugerida de correção
+## Status das correções
 
-1. **M2** — mensagem genérica para erros 5xx em produção (mudança de 5 linhas, elimina vazamento de informação a não autenticados).
-2. **M1** — atualizar sequelize / override do uuid.
-3. **M3** — garantir instância única no Passenger ou lock compartilhado (especialmente pelo risco de ciência duplicada no PJe).
-4. **B1, B2, B4** — hardening rápido (origin, health, unlink).
-5. **B3, B5–B8** — na próxima janela de manutenção.
+Todas aplicadas em 01/07/2026, nesta branch:
+
+| Achado | Status | Correção aplicada |
+|--------|--------|-------------------|
+| M1 | ✅ Corrigido | `overrides` do `uuid@^11.1.1` em `backend/package.json` + lockfile atualizado. `npm audit`: 0 vulnerabilidades. Sequelize 6.37.8 verificado funcionando com uuid v11 (v1/v4 via CommonJS). |
+| M2 | ✅ Corrigido | `errorHandler.js`: erros 5xx em produção retornam mensagem genérica; o detalhe continua indo para o log. |
+| M3 | ✅ Corrigido (parte crítica) | Lock nomeado do MySQL (`GET_LOCK`) compartilhado entre a importação manual (`processController.importPje`) e o cron (`import-pje-cron.js`) — elimina o risco de **ciência duplicada** entre processos/instâncias. O rate limit de login continua em memória (limitação conhecida; migrar para store compartilhado se o Passenger rodar com mais de um processo). |
+| B1 | ✅ Corrigido | `csrfProtection.js`: localhost removido da allowlist em produção; fallback por substring removido (parse inválido → nega); requisição crítica **sem** Origin/Referer agora é bloqueada em produção. |
+| B2 | ✅ Corrigido | `/health` em produção retorna apenas `status`/`timestamp`/`database`; versão, memória, uptime e mensagem de erro do banco só fora de produção. |
+| B3 | ✅ Corrigido | `getFilterOptions` agora aplica `processScopeWhere` — admin_padrao só vê valores dos próprios processos. |
+| B4 | ✅ Corrigido | `uploadCSV` remove o arquivo de `uploads/` também nos dois caminhos de erro. |
+| B5 | ✅ Corrigido | `sanitizeBodyForLog` recursivo (objetos aninhados e arrays, com limite de profundidade). |
+| B6 | ✅ Corrigido | `listUsers` com clamp de `limit` (1–1000) e `offset` (≥0). |
+| B7 | ✅ Corrigido | Cookie `__Host-token` em produção (nome centralizado em `cookieHelper.COOKIE_NAME`); boot emite warning se `JWT_SECRET` < 32 caracteres (warning e não exit, para não derrubar um ambiente já implantado — rotacione o segredo se o aviso aparecer). |
+| B8 | ✅ Corrigido | `.domcloud.yml` repassa `JWT_EXPIRATION` e `PJE_CRED_ENC_KEY` ao `.env` gerado e usa `npm ci --omit=dev`; `.env.example` documenta as variáveis do PJe. |
+
+**Notas de deploy/operação:**
+
+- O cookie de sessão mudou de nome em produção (`token` → `__Host-token`): sessões ativas no momento do deploy receberão 401 e o frontend fará logout automático — os usuários só precisam logar de novo.
+- Se a tela "Autenticação PJe" for usada em produção, defina `PJE_CRED_ENC_KEY` no painel do DomCloud (gere com `openssl rand -base64 32`).
+- Verificação pós-correção: 106 testes do backend passando; `npm audit` com 0 vulnerabilidades em backend e frontend.

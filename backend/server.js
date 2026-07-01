@@ -32,6 +32,16 @@ if (missingVars.length > 0) {
   process.exit(1);
 }
 
+// JWT_SECRET curto enfraquece toda a autenticação (força bruta do HMAC).
+// Warning (e não exit) para não derrubar um ambiente já em produção — mas
+// deve ser corrigido: gere com node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+if (process.env.JWT_SECRET.length < 32) {
+  logger.warn(
+    `JWT_SECRET tem apenas ${process.env.JWT_SECRET.length} caracteres — use no mínimo 32. ` +
+    'Rotacione o segredo o quanto antes (isso invalidará as sessões ativas).'
+  );
+}
+
 const app = express();
 
 app.set('trust proxy', 1); // Confiar apenas no primeiro proxy reverso (DomCloud/Nginx)
@@ -190,18 +200,24 @@ app.get(/^(?!\/api|\/api-docs|\/health).*$/, (req, res) => {
  *         description: Sistema com problemas
  */
 app.get('/health', async (req, res) => {
+  // Em produção o endpoint é público, então expõe o mínimo (status + banco).
+  // Versão, ambiente, uptime e memória ajudam fingerprinting/reconhecimento —
+  // ficam disponíveis apenas fora de produção; o detalhe do erro vai pro log.
+  const isProd = process.env.NODE_ENV === 'production';
   const healthcheck = {
-    uptime: process.uptime(),
     status: 'ok',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    version: require('./package.json').version,
     database: 'unknown',
-    memory: {
-      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      unit: 'MB'
-    }
+    ...(isProd ? {} : {
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      version: require('./package.json').version,
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        unit: 'MB'
+      }
+    })
   };
 
   try {
@@ -215,7 +231,9 @@ app.get('/health', async (req, res) => {
 
     healthcheck.status = 'error';
     healthcheck.database = 'disconnected';
-    healthcheck.error = error.message;
+    if (!isProd) {
+      healthcheck.error = error.message;
+    }
 
     res.status(503).json(healthcheck);
   }

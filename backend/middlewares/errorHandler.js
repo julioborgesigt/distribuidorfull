@@ -16,14 +16,23 @@ const logger = require('../utils/logger');
  */
 const SENSITIVE_FIELD_PATTERN = /senha|password|token|jwt|secret|cpf|cnpj/i;
 
-const sanitizeBodyForLog = (body) => {
-  if (!body || typeof body !== 'object') return body;
+// Recursivo: um body aninhado (ex.: { user: { senha } }) também precisa ser
+// redigido — a versão anterior só cobria o primeiro nível. maxDepth evita
+// custo excessivo em payloads patológicos (JSON não tem ciclos).
+const sanitizeBodyForLog = (body, depth = 0) => {
+  if (!body || typeof body !== 'object' || depth > 5) return body;
+
+  if (Array.isArray(body)) {
+    return body.map(item => sanitizeBodyForLog(item, depth + 1));
+  }
 
   const sanitized = { ...body };
 
   Object.keys(sanitized).forEach(field => {
     if (sanitized[field] && SENSITIVE_FIELD_PATTERN.test(field)) {
       sanitized[field] = '[REDACTED]';
+    } else if (sanitized[field] && typeof sanitized[field] === 'object') {
+      sanitized[field] = sanitizeBodyForLog(sanitized[field], depth + 1);
     }
   });
 
@@ -45,9 +54,15 @@ const errorHandler = (err, req, res, next) => {
   // Determinar status code
   const statusCode = err.statusCode || err.status || 500;
 
+  // Em produção, erros 5xx retornam mensagem genérica: err.message de erros
+  // não tratados (Sequelize, bibliotecas) pode expor detalhes internos
+  // (tabelas, caminhos) a clientes não autenticados. O detalhe completo já
+  // foi logado acima.
+  const hideDetails = statusCode >= 500 && process.env.NODE_ENV === 'production';
+
   // Preparar resposta
   const response = {
-    error: err.message || 'Erro interno do servidor',
+    error: hideDetails ? 'Erro interno do servidor' : (err.message || 'Erro interno do servidor'),
     status: statusCode,
   };
 

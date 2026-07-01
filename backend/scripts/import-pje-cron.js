@@ -19,15 +19,27 @@
 require('dotenv').config({ path: __dirname + '/../.env' });
 
 const { sequelize } = require('../models');
-const { coletarRows, registrarLog } = require('../services/pjeImportService');
+const { coletarRows, registrarLog, acquireImportLock } = require('../services/pjeImportService');
 const { upsertProcessos } = require('../controllers/processController');
 const { atualizarTpu } = require('../services/tpuService');
 const logger = require('../utils/logger');
 
 (async () => {
   const inicio = Date.now();
+  let importLock = null;
   try {
     await sequelize.authenticate();
+
+    // Mesmo lock (MySQL GET_LOCK) usado pela importação manual — impede que o
+    // cron e um clique no painel rodem juntos e deem ciência duplicada.
+    importLock = await acquireImportLock();
+    if (!importLock) {
+      logger.info('Cron PJe: outra importação em andamento, pulando esta execução.');
+      // eslint-disable-next-line no-console
+      console.log(`[${new Date().toISOString()}] PJe: importação já em andamento, pulando.`);
+      await sequelize.close();
+      process.exit(0);
+    }
 
     const abrirTeor = process.env.PJE_CRON_ABRIR_TEOR !== 'false';
     const { avisos, rows, comPrazo, falhasTeor } = await coletarRows({ abrirTeor });
@@ -65,6 +77,7 @@ const logger = require('../utils/logger');
       `[${new Date().toISOString()}] PJe: ${avisos} avisos, ${totalRows} processados, ` +
         `${comPrazo} com prazo, ${falhasTeor} falha(s).`
     );
+    await importLock.release();
     await sequelize.close();
     process.exit(0);
   } catch (err) {
@@ -77,6 +90,7 @@ const logger = require('../utils/logger');
     });
     // eslint-disable-next-line no-console
     console.error(`[${new Date().toISOString()}] Falha na importação PJe:`, err.message);
+    if (importLock) { await importLock.release().catch(() => {}); }
     try { await sequelize.close(); } catch { /* ignore */ }
     process.exit(1);
   }

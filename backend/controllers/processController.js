@@ -209,6 +209,9 @@ exports.uploadCSV = async (req, res) => {
         res.json({ message: 'CSV importado com sucesso. Registros mais recentes foram processados.', totalRows });
 
       } catch (error) {
+        // O arquivo contém dados de processos judiciais — não pode ficar
+        // órfão em uploads/ quando a importação falha.
+        await fsPromises.unlink(filePath).catch(() => {});
         logger.error('Erro ao salvar dados do CSV', {
           error: error.message,
           stack: error.stack,
@@ -218,7 +221,8 @@ exports.uploadCSV = async (req, res) => {
         res.status(500).json({ error: 'Erro ao salvar dados do CSV.' });
       }
     })
-    .on('error', (error) => {
+    .on('error', async (error) => {
+      await fsPromises.unlink(filePath).catch(() => {});
       logger.error('Erro ao ler o arquivo CSV', {
         error: error.message,
         stack: error.stack,
@@ -249,7 +253,7 @@ let pjeImportStatus = {
 // do teor REGISTRA CIÊNCIA e INICIA O PRAZO do aviso. Por isso a abertura do
 // teor é controlada por `abrirTeor` (default true, conforme decisão do cliente);
 // com `abrirTeor=false` importa apenas a fila, sem prazo e sem dar ciência.
-exports.importPje = (req, res) => {
+exports.importPje = async (req, res) => {
   const abrirTeor = String(req.query.abrirTeor ?? 'true') !== 'false';
   // Limiar de ciência: query tem prioridade; senão usa PJE_CIENCIA_MIN_DIAS.
   const cienciaMinDias =
@@ -260,6 +264,22 @@ exports.importPje = (req, res) => {
   if (pjeImportStatus.running) {
     return res.status(409).json({
       error: 'Já existe uma importação do PJe em andamento.',
+    });
+  }
+
+  // Lock entre processos (MySQL GET_LOCK): o guard acima só protege ESTE
+  // processo Node. Com Passenger multi-processo ou o cron rodando junto,
+  // duas importações concorrentes dariam ciência duplicada nos avisos.
+  let importLock;
+  try {
+    importLock = await pjeImportService.acquireImportLock();
+  } catch (lockErr) {
+    logger.error('Erro ao adquirir lock de importação PJe', { error: lockErr.message });
+    return res.status(500).json({ error: 'Erro ao iniciar a importação do PJe.' });
+  }
+  if (!importLock) {
+    return res.status(409).json({
+      error: 'Já existe uma importação do PJe em andamento (outra instância ou cron).',
     });
   }
 
@@ -330,6 +350,7 @@ exports.importPje = (req, res) => {
         erro: (error.message || 'Erro ao importar do PJe.').slice(0, 500),
       });
     } finally {
+      await importLock.release();
       pjeImportStatus.running = false;
       pjeImportStatus.finishedAt = new Date().toISOString();
     }

@@ -20,12 +20,17 @@ passenger:
     # NUNCA commite credenciais reais no repositório.
     # DB_HOST deve ser "localhost": o MySQL do DOM Cloud roda na mesma máquina e o
     # usuário do banco só tem permissão para conexões locais.
+    # PJE_CRED_ENC_KEY: chave AES-256 (base64, 32 bytes) usada para criptografar as
+    # credenciais do PJe no banco — sem ela a tela "Autenticação PJe" não funciona.
+    # Gere com: openssl rand -base64 32
     - JWT_SECRET=${JWT_SECRET}
+    - JWT_EXPIRATION=${JWT_EXPIRATION}
     - DB_HOST=${DB_HOST}
     - DB_USER=${DB_USER}
     - DB_PASS=${DB_PASS}
     - DB_NAME=${DB_NAME}
     - FRONTEND_URL=${FRONTEND_URL}
+    - PJE_CRED_ENC_KEY=${PJE_CRED_ENC_KEY}
     - NODE_ENV=production
 
 commands:
@@ -33,16 +38,21 @@ commands:
   - |
     cat > backend/.env <<EOF
     JWT_SECRET=$JWT_SECRET
+    JWT_EXPIRATION=$JWT_EXPIRATION
     DB_HOST=$DB_HOST
     DB_USER=$DB_USER
     DB_PASS=$DB_PASS
     DB_NAME=$DB_NAME
     FRONTEND_URL=$FRONTEND_URL
+    PJE_CRED_ENC_KEY=$PJE_CRED_ENC_KEY
     NODE_ENV=production
     EOF
   - sed -i 's/^[[:space:]]*//' backend/.env
-  # 2. Instala apenas as dependências de produção do backend
-  - npm install --omit=dev --prefix backend
+  # Variáveis vazias (não configuradas no painel) não atrapalham: o app trata
+  # string vazia como ausente e usa os defaults.
+  # 2. Instala as dependências de produção EXATAMENTE como no package-lock.json
+  # (npm ci garante que produção usa as versões auditadas, ao contrário do npm install)
+  - npm ci --omit=dev --prefix backend
   # 3. Aplica migrations de schema pendentes (substitui o antigo sequelize.sync)
   - npm run db:migrate --prefix backend
   # 4. Garante que a pasta de logs existe para o Winston
