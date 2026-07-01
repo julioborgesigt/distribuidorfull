@@ -125,8 +125,46 @@ const generateRandomPassword = (length = 10) => {
     password += allChars[crypto.randomInt(allChars.length)];
   }
 
-  // Embaralha a senha para não ter padrão previsível
-  return password.split('').sort(() => crypto.randomInt(3) - 1).join('');
+  // Embaralha a senha para não ter padrão previsível (ex.: sempre maiúscula
+  // primeiro). Fisher–Yates com crypto.randomInt: sort() com comparador
+  // aleatório NÃO gera distribuição uniforme (viés bem conhecido, depende do
+  // algoritmo de ordenação) — Fisher–Yates é o jeito correto de embaralhar.
+  const chars = password.split('');
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+};
+
+// Assinaturas (magic bytes) de formatos binários comuns, usadas para
+// detectar um arquivo disfarçado de CSV — o MIME type e a extensão que o
+// multer valida vêm do CLIENTE (portanto falsificáveis); isto inspeciona o
+// conteúdo real.
+const BINARY_SIGNATURES = [
+  Buffer.from('%PDF'),                      // PDF
+  Buffer.from([0x50, 0x4b, 0x03, 0x04]),    // ZIP / Office (docx, xlsx, pptx...)
+  Buffer.from([0x89, 0x50, 0x4e, 0x47]),    // PNG
+  Buffer.from([0xff, 0xd8, 0xff]),          // JPEG
+  Buffer.from('GIF8'),                      // GIF
+  Buffer.from([0x7f, 0x45, 0x4c, 0x46]),    // ELF (binário Linux)
+  Buffer.from('MZ'),                        // Windows PE/EXE
+  Buffer.from([0x1f, 0x8b]),                // gzip
+];
+
+/**
+ * Heurística leve para detectar arquivos binários disfarçados de CSV: checa
+ * assinaturas de formatos binários comuns e a presença de bytes NUL, que não
+ * deveriam aparecer em texto CSV legítimo (Latin-1 ou UTF-8).
+ * @param {Buffer} buffer - Primeiros bytes do arquivo (alguns KB bastam)
+ * @returns {boolean} True se o conteúdo parece binário, não texto/CSV
+ */
+const looksLikeBinaryFile = (buffer) => {
+  if (!buffer || buffer.length === 0) return false;
+  if (BINARY_SIGNATURES.some(sig => buffer.subarray(0, sig.length).equals(sig))) {
+    return true;
+  }
+  return buffer.includes(0x00);
 };
 
 /**
@@ -151,4 +189,5 @@ module.exports = {
   generateRandomPassword,
   processScopeWhere,
   passwordVersion,
+  looksLikeBinaryFile,
 };
