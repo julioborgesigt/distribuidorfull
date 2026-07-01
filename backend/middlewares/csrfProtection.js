@@ -1,53 +1,37 @@
 // Middleware de proteção CSRF e validações de origem
-// NOTA: Como esta API usa JWT em headers (Authorization: Bearer token),
-// a proteção CSRF tradicional com cookies não é necessária.
-// Navegadores não enviam headers customizados automaticamente em requisições cross-site,
-// o que já fornece proteção contra CSRF.
-//
-// Este middleware adiciona camadas extras de segurança:
-// 1. Validação de Origin/Referer para endpoints críticos
-// 2. Verificação de header customizado para APIs
-// 3. Rate limiting já implementado em operações sensíveis
+// NOTA: a autenticação primária é via cookie JWT httpOnly (ver cookieHelper.js
+// e autenticarAdmin.js — o header Authorization é só um fallback). Como
+// cookies SÃO enviados automaticamente em requisições cross-site pelo
+// navegador, CSRF é sim uma preocupação real aqui. As defesas em camadas são:
+// 1. Cookie com SameSite=Strict em produção (cookieHelper.js) — o navegador
+//    nem envia o cookie em requisições cross-site.
+// 2. Allowlist estrita de Origin no CORS global (server.js) — bloqueia
+//    qualquer requisição (não só preflight) de origem não cadastrada.
+// 3. Validação extra de Origin/Referer para as operações mais sensíveis
+//    (abaixo), como defesa em profundidade caso as duas acima sejam
+//    enfraquecidas no futuro.
+// 4. Rate limiting nas operações sensíveis.
 
 const logger = require('../utils/logger');
 const { getRealIP } = require('../utils/helpers');
-
-/**
- * Valida o header X-Requested-With para garantir que é uma requisição AJAX
- * Isso adiciona uma camada extra de proteção mesmo com JWT
- */
-const validateAjaxHeader = (req, res, next) => {
-  // Permite requisições sem validação para rotas públicas
-  if (req.path === '/health' || req.path === '/' || req.path.startsWith('/api-docs')) {
-    return next();
-  }
-
-  const requestedWith = req.headers['x-requested-with'];
-
-  // Em produção, pode-se exigir o header XMLHttpRequest
-  // Por ora, apenas logamos se não estiver presente
-  if (!requestedWith) {
-    logger.debug('Requisição sem header X-Requested-With', {
-      path: req.path,
-      method: req.method,
-      ip: getRealIP(req),
-      origin: req.headers.origin || 'não especificado'
-    });
-  }
-
-  next();
-};
 
 /**
  * Valida Origin/Referer para operações críticas
  * Útil como defesa em profundidade
  */
 const validateOriginForCriticalOps = (req, res, next) => {
-  // Lista de operações críticas que requerem validação extra
+  // Lista de operações críticas que requerem validação extra.
+  // Inclui criação de conta e troca/remoção de credenciais do PJe: são pelo
+  // menos tão sensíveis quanto reset-password/delete-matricula (criar um
+  // admin_super ou sequestrar as credenciais do PJe), mas ficaram de fora
+  // dessa lista até esta revisão.
   const criticalPaths = [
     '/api/admin/delete-matricula',
     '/api/admin/bulk-delete',
-    '/api/admin/reset-password'
+    '/api/admin/reset-password',
+    '/api/admin/pre-cadastro',
+    '/api/admin/pje-auth/salvar',
+    '/api/admin/pje-auth'
   ];
 
   // Verifica se é uma operação crítica
@@ -119,7 +103,6 @@ const addSecurityHeaders = (req, res, next) => {
 };
 
 module.exports = {
-  validateAjaxHeader,
   validateOriginForCriticalOps,
   addSecurityHeaders
 };

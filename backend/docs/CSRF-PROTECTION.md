@@ -1,133 +1,114 @@
-# Proteção CSRF - Análise e Implementação
+# Proteção CSRF — Análise e Implementação
 
-## Por que CSRF é de Baixa Prioridade Nesta API?
+## Contexto: autenticação via cookie httpOnly
 
-### Contexto: APIs REST com JWT em Headers
+A autenticação primária desta API é via **cookie JWT `httpOnly`** (ver
+`utils/cookieHelper.js` e `middlewares/autenticarAdmin.js`). O header
+`Authorization: Bearer <token>` existe apenas como *fallback* — a maior parte
+do tráfego real (o frontend Vue via `axios`, com `withCredentials: true`) usa
+o cookie.
 
-Esta API utiliza **autenticação JWT via header Authorization (Bearer token)**, não cookies. Isso significa que:
+Isso importa porque **cookies são enviados automaticamente pelo navegador em
+requisições cross-site** — é exatamente esse comportamento que um ataque CSRF
+explora. Diferente de uma API que autentica só por header (onde o atacante
+não consegue forçar o navegador da vítima a incluir um header customizado),
+aqui CSRF é uma preocupação real, e a proteção vem de camadas explícitas, não
+da arquitetura "de graça".
 
-1. **Navegadores não enviam headers customizados automaticamente** em requisições cross-site
-2. **Apenas JavaScript** pode adicionar o header `Authorization: Bearer <token>`
-3. **Ataques CSRF tradicionais não funcionam**, pois dependem de cookies sendo enviados automaticamente
+## Camadas de proteção implementadas
 
-### Exemplo de Ataque CSRF (que NÃO funciona aqui):
+### 1. `SameSite=Strict` no cookie (produção)
 
-```html
-<!-- Ataque CSRF tradicional (não funciona com JWT em headers) -->
-<form action="https://api.example.com/api/admin/delete-matricula" method="POST">
-  <input name="matricula" value="12345">
-  <input type="submit" value="Ganhe um prêmio!">
-</form>
+`utils/cookieHelper.js` define o cookie `token` com `sameSite: 'strict'` em
+produção. Isso é a defesa principal: o navegador **não envia o cookie** em
+nenhuma requisição que se origine de outro site (nem form POST, nem fetch,
+nem link clicado) — sem o cookie, `autenticarAdmin` rejeita a requisição antes
+de qualquer lógica de negócio rodar.
+
+Em desenvolvimento é `sameSite: 'lax'` (para não atrapalhar fluxos locais de
+teste) — `Lax` ainda bloqueia CSRF via POST/PUT/PATCH/DELETE cross-site,
+relaxando só a navegação GET de top-level.
+
+### 2. Allowlist estrita de Origin no CORS (`server.js`)
+
+O middleware `cors` (montado globalmente via `app.use(cors(...))`, portanto
+aplicado a toda requisição, não só a preflights) verifica o header `Origin`
+contra uma lista fixa (`FRONTEND_URL`, `FRONTEND_URL_2`, `FRONTEND_URL_3`, e
+`localhost` em dev). Uma origem fora da lista recebe erro 403 antes de chegar
+nas rotas — `middlewares/errorHandler.js` respeita `error.statusCode`, então o
+erro do CORS realmente interrompe a requisição.
+
+Requisições sem header `Origin` são permitidas (necessário para clientes
+não-navegador: curl, Postman, apps mobile) — navegadores modernos incluem
+`Origin` em toda requisição cross-site com método "unsafe" (POST/PUT/PATCH/
+DELETE), então esse caso não cobre o cenário típico de CSRF via navegador.
+
+### 3. Validação de Origin/Referer para operações críticas (`validateOriginForCriticalOps`)
+
+Defesa em profundidade adicional, redundante com a camada 2 por design — só
+importa se as camadas 1 ou 2 forem enfraquecidas por engano no futuro (ex.:
+alguém relaxa `SameSite` para resolver um problema de embed e esquece do
+impacto). Cobre as rotas mais sensíveis do sistema:
+
+```javascript
+const criticalPaths = [
+  '/api/admin/delete-matricula',
+  '/api/admin/bulk-delete',
+  '/api/admin/reset-password',
+  '/api/admin/pre-cadastro',       // cria conta, inclusive admin_super
+  '/api/admin/pje-auth/salvar',    // troca as credenciais do PJe
+  '/api/admin/pje-auth'            // remove as credenciais do PJe
+];
 ```
 
-**Por que não funciona:**
-- O formulário HTML só envia cookies automaticamente
-- Não consegue enviar o header `Authorization: Bearer <token>`
-- A API rejeita requisições sem JWT válido
+### 4. Rate limiting
 
-## Proteções Implementadas
+Já implementado nas operações sensíveis (login, primeiro login, operações em
+massa, importação do PJe, salvar credenciais do PJe) — não impede CSRF por si
+só, mas limita o dano de tentativas repetidas/automatizadas.
 
-Mesmo com JWT em headers, implementamos **defesa em profundidade**:
-
-### 1. Headers de Segurança (addSecurityHeaders)
+### 5. Headers de segurança (`addSecurityHeaders`)
 
 ```javascript
 X-Frame-Options: DENY              // Previne Clickjacking
 X-Content-Type-Options: nosniff    // Previne MIME sniffing
-X-XSS-Protection: 1; mode=block    // Ativa proteção XSS do navegador
 ```
 
-### 2. Validação de Header AJAX (validateAjaxHeader)
+(O Helmet, montado em `server.js`, cobre CSP, HSTS e os demais headers padrão.)
 
-- Valida presença de `X-Requested-With` em requisições
-- Dificulta ataques automatizados
-- Garante que requisições vêm de clientes AJAX legítimos
+## Testando as proteções
 
-### 3. Validação de Origin para Operações Críticas (validateOriginForCriticalOps)
+```bash
+# Teste 1: Requisição sem cookie/token (deve falhar com 401)
+curl -X POST http://localhost:3000/api/admin/delete-matricula \
+  -H "Content-Type: application/json" \
+  -d '{"matricula":"12345"}'
 
-Operações críticas validadas:
-- `/api/admin/delete-matricula` - Exclusão de usuários
-- `/api/admin/bulk-delete` - Exclusão em massa
-- `/api/admin/reset-password` - Reset de senhas
+# Teste 2: Origem não permitida (deve falhar com 403 — bloqueado pelo CORS
+# global antes mesmo de chegar na rota)
+curl -X POST http://localhost:3000/api/admin/delete-matricula \
+  -H "Content-Type: application/json" \
+  -H "Cookie: token=<jwt_valido>" \
+  -H "Origin: http://malicious-site.com" \
+  -d '{"matricula":"12345"}'
 
-**Validação:**
-```javascript
-// Verifica se Origin/Referer está na lista de permitidos
-const allowedOrigins = [
-  'https://distribuidorvue.onrender.com',
-  'http://localhost:8080',
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:8080',
-  process.env.FRONTEND_URL
-];
+# Teste 3: Requisição válida (origem permitida + cookie válido)
+curl -X POST http://localhost:3000/api/admin/delete-matricula \
+  -H "Content-Type: application/json" \
+  -H "Cookie: token=<jwt_valido>" \
+  -H "Origin: http://localhost:3001" \
+  -d '{"matricula":"12345"}'
 ```
-
-### 4. Rate Limiting
-
-Já implementado para operações sensíveis:
-- Login: 5 tentativas / 15 min
-- Bulk operations: 10 operações / 1 min
-- Primeiro login: 3 tentativas / 15 min
-
-### 5. CORS Configurado
-
-```javascript
-allowedOrigins: [
-  'https://distribuidorvue.onrender.com',
-  'http://localhost:8080',
-  // ... outras origens permitidas
-]
-```
-
-## Quando CSRF É uma Preocupação?
-
-CSRF é crítico quando:
-- ✅ Autenticação via **cookies de sessão**
-- ✅ Cookies com flag `SameSite=None`
-- ✅ Operações state-changing sem proteção
-
-CSRF é baixa prioridade quando:
-- ✅ **Autenticação via JWT em headers** (nosso caso)
-- ✅ Headers customizados obrigatórios
-- ✅ API-only (sem renderização de HTML)
 
 ## Referências
 
 - [OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
-- [JWT and CSRF](https://stackoverflow.com/questions/21357182/csrf-token-necessary-when-using-stateless-sessionless-authentication)
+- [MDN: SameSite cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite)
 - [REST Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html)
-
-## Testes
-
-Para testar as proteções CSRF:
-
-```bash
-# Teste 1: Requisição sem JWT (deve falhar)
-curl -X POST http://localhost:3000/api/admin/delete-matricula \
-  -H "Content-Type: application/json" \
-  -d '{"matricula":"12345"}'
-
-# Teste 2: Requisição com JWT de origem não permitida (deve ser logada)
-curl -X POST http://localhost:3000/api/admin/delete-matricula \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -H "Origin: http://malicious-site.com" \
-  -d '{"matricula":"12345"}'
-
-# Teste 3: Requisição válida (deve funcionar)
-curl -X POST http://localhost:3000/api/admin/delete-matricula \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -H "Origin: http://localhost:8080" \
-  -H "X-Requested-With: XMLHttpRequest" \
-  -d '{"matricula":"12345"}'
-```
 
 ## Conclusão
 
-A proteção CSRF nesta API é **robusta por design** devido ao uso de JWT em headers. As camadas adicionais implementadas fornecem **defesa em profundidade** contra ataques sofisticados.
-
-**Status:** ✅ Protegido contra CSRF
-**Prioridade:** Baixa (já mitigado por arquitetura)
-**Camadas de proteção:** 5 (Headers, AJAX validation, Origin check, Rate limiting, CORS)
+**Status:** protegido contra CSRF por múltiplas camadas independentes
+(`SameSite=Strict` + CORS por allowlist de Origin são as que efetivamente
+bloqueiam a requisição; a validação de Origin nas rotas críticas e o rate
+limiting são reforço, não a defesa primária).

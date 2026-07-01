@@ -19,7 +19,6 @@ const {
   validateJSON
 } = require('./middlewares/errorHandler');
 const {
-  validateAjaxHeader,
   validateOriginForCriticalOps,
   addSecurityHeaders
 } = require('./middlewares/csrfProtection');
@@ -134,7 +133,6 @@ app.use(validateJSON);
 
 // Middlewares de proteção CSRF e segurança adicional
 app.use(addSecurityHeaders);
-app.use(validateAjaxHeader);
 app.use(validateOriginForCriticalOps);
 
 // --- 1. ROTAS DE API ---

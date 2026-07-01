@@ -8,7 +8,7 @@ const { sequelize, User, Process, PjeImportLog } = require('../models');
 const { Op, literal } = require('sequelize');
 const iconv = require('iconv-lite');
 const logger = require('../utils/logger');
-const { getRealIP, parseArrayFilter, processScopeWhere } = require('../utils/helpers');
+const { getRealIP, parseArrayFilter, processScopeWhere, looksLikeBinaryFile } = require('../utils/helpers');
 const pjeImportService = require('../services/pjeImportService');
 const tpuService = require('../services/tpuService');
 
@@ -124,12 +124,42 @@ async function upsertProcessos(results) {
 }
 
 // Upload e importação de CSV
-exports.uploadCSV = (req, res) => {
+exports.uploadCSV = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Nenhum arquivo foi enviado.' });
   }
 
   const filePath = req.file.path;
+
+  // O MIME type e a extensão que o multer validou (routes/admin.js) vêm do
+  // CLIENTE — são falsificáveis. Aqui inspecionamos o conteúdo real dos
+  // primeiros bytes do arquivo em disco antes de processá-lo como CSV.
+  try {
+    const handle = await fsPromises.open(filePath, 'r');
+    const { buffer, bytesRead } = await handle.read(Buffer.alloc(4096), 0, 4096, 0);
+    await handle.close();
+    // Só os bytes de fato lidos: Buffer.alloc já vem zerado, então usar o
+    // buffer inteiro faria arquivos menores que 4096 bytes parecerem ter
+    // bytes NUL de sobra (falso positivo em looksLikeBinaryFile).
+    if (looksLikeBinaryFile(buffer.subarray(0, bytesRead))) {
+      await fsPromises.unlink(filePath).catch(() => {});
+      logger.warn('Upload de CSV rejeitado: conteúdo parece binário', {
+        userId: req.userId,
+        ip: getRealIP(req),
+        originalname: req.file.originalname,
+      });
+      return res.status(400).json({ error: 'O arquivo enviado não parece ser um CSV válido.' });
+    }
+  } catch (error) {
+    logger.error('Erro ao inspecionar arquivo CSV enviado', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.userId,
+      ip: getRealIP(req)
+    });
+    return res.status(500).json({ error: 'Erro ao processar o arquivo enviado.' });
+  }
+
   const results = [];
 
   const parseDate = (dateStr) => {
