@@ -37,10 +37,10 @@
       class="app-drawer"
       location="left"
       style="top: 0; height: 100%; position: fixed; z-index: 1010;"
-      width="230"
+      :width="DRAWER_WIDTH"
     >
       <!-- Topo: saudação + ações de admin -->
-      <v-list density="compact" nav>
+      <v-list density="compact">
         <v-list-item
           v-if="user"
           prepend-icon="mdi-account-circle"
@@ -142,7 +142,7 @@
       <!-- Rodapé fixo: tema e sair -->
       <template #append>
         <v-divider />
-        <v-list density="compact" nav>
+        <v-list density="compact">
           <v-list-item
             :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
             :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
@@ -650,7 +650,7 @@
   import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
   import { useDisplay, useTheme } from 'vuetify'
   import apiClient from '@/api/axios'
-  import { useDrawer } from '@/composables/useDrawer'
+  import { DRAWER_WIDTH, useDrawer } from '@/composables/useDrawer'
   import { useSnackbar } from '@/composables/useSnackbar'
   import { useAuthStore } from '@/stores/auth'
   import { exportProcessesPDF } from '@/utils/pdfExport'
@@ -1456,6 +1456,9 @@
 /* Reduz o recuo dos subitens dos submenus (v-list-group) — o padrão do
    Vuetify soma a largura do prepend-icon do grupo (40px) ao indent-size
    (16px), deixando os itens filhos recuados demais para um drawer estreito. */
+.app-drawer :deep(.v-list) {
+  --indent-padding: -8px;
+}
 .app-drawer :deep(.v-list-group) {
   --list-indent-size: 8px;
 }
