@@ -4,18 +4,25 @@
 const logger = require('../utils/logger');
 
 /**
- * Sanitiza o body da requisição removendo campos sensíveis antes de logar
+ * Sanitiza o body da requisição removendo campos sensíveis antes de logar.
+ * Casa por SUBSTRING (case-insensitive) em vez de nomes exatos — uma lista de
+ * nomes exatos já ficou desatualizada uma vez (o campo `cpf` das credenciais
+ * do PJe não estava coberto) e vai ficar de novo a cada campo novo. Cobrindo
+ * por padrão (senha/password, token/jwt, cpf/cnpj) reduz a chance de um
+ * futuro campo sensível vazar para os logs sem ninguém lembrar de atualizar
+ * esta lista.
  * @param {Object} body - Body da requisição
  * @returns {Object} Body sanitizado
  */
+const SENSITIVE_FIELD_PATTERN = /senha|password|token|jwt|secret|cpf|cnpj/i;
+
 const sanitizeBodyForLog = (body) => {
   if (!body || typeof body !== 'object') return body;
 
   const sanitized = { ...body };
-  const sensitiveFields = ['senha', 'novaSenha', 'senhaAtual', 'password', 'token', 'jwt'];
 
-  sensitiveFields.forEach(field => {
-    if (sanitized[field]) {
+  Object.keys(sanitized).forEach(field => {
+    if (sanitized[field] && SENSITIVE_FIELD_PATTERN.test(field)) {
       sanitized[field] = '[REDACTED]';
     }
   });
