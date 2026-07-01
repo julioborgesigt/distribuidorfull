@@ -3,10 +3,11 @@
 
     <v-app-bar
       app
-      :class="['container-estreito', 'rounded', { 'drawer-open': drawerOpen && isWide }]"
+      class="container-estreito rounded"
       color="surface"
       density="compact"
       elevation="2"
+      :style="{ '--drawer-shift': appBarShift + 'px' }"
     >
       <v-btn
         aria-label="Abrir menu"
@@ -41,7 +42,7 @@
   import { storeToRefs } from 'pinia'
   import { computed } from 'vue'
   import { useDisplay, useTheme } from 'vuetify'
-  import { useDrawer } from '@/composables/useDrawer'
+  import { DRAWER_WIDTH, useDrawer } from '@/composables/useDrawer'
   import { useAuthStore } from '@/stores/auth'
 
   const theme = useTheme()
@@ -52,6 +53,12 @@
   const { user } = storeToRefs(authStore)
 
   const { drawerOpen } = useDrawer()
+
+  // Em telas largas, o drawer empurra o conteúdo (não sobrepõe) — desloca o
+  // centro do app-bar (fixed) na mesma medida para acompanhar o v-main, que
+  // já se ajusta sozinho por não ser fixed. Usa DRAWER_WIDTH (mesma constante
+  // do dashboard.vue) para nunca ficar dessincronizado se a largura mudar.
+  const appBarShift = computed(() => (drawerOpen.value && isWide.value) ? DRAWER_WIDTH / 2 : 0)
 </script>
 
 <!--
@@ -69,15 +76,14 @@
 
   /* CORREÇÃO: Esta é a forma robusta de centrar
     um elemento 'fixed' (a v-app-bar).
+    --drawer-shift (via :style, calculado a partir de DRAWER_WIDTH) desloca o
+    centro do app-bar exatamente na mesma medida que o drawer empurra o
+    v-main, para os dois ficarem alinhados. 0px quando o drawer está fechado
+    ou a tela não é larga o bastante para o drawer empurrar o conteúdo.
   */
-  left: 50% !important;
+  left: calc(50% + var(--drawer-shift, 0px)) !important;
   transform: translateX(-50%) !important;
   transition: left 0.2s ease;
-}
-
-/* Quando o drawer (256px) está aberto, desloca o centro do app bar */
-.container-estreito.drawer-open {
-  left: calc(50% + 128px) !important;
 }
 
 /* Esta regra garante que o container DENTRO do v-main
