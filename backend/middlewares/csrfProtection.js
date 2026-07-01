@@ -16,32 +16,6 @@ const logger = require('../utils/logger');
 const { getRealIP } = require('../utils/helpers');
 
 /**
- * Valida o header X-Requested-With para garantir que é uma requisição AJAX
- * Isso adiciona uma camada extra de proteção mesmo com JWT
- */
-const validateAjaxHeader = (req, res, next) => {
-  // Permite requisições sem validação para rotas públicas
-  if (req.path === '/health' || req.path === '/' || req.path.startsWith('/api-docs')) {
-    return next();
-  }
-
-  const requestedWith = req.headers['x-requested-with'];
-
-  // Em produção, pode-se exigir o header XMLHttpRequest
-  // Por ora, apenas logamos se não estiver presente
-  if (!requestedWith) {
-    logger.debug('Requisição sem header X-Requested-With', {
-      path: req.path,
-      method: req.method,
-      ip: getRealIP(req),
-      origin: req.headers.origin || 'não especificado'
-    });
-  }
-
-  next();
-};
-
-/**
  * Valida Origin/Referer para operações críticas
  * Útil como defesa em profundidade
  */
@@ -129,7 +103,6 @@ const addSecurityHeaders = (req, res, next) => {
 };
 
 module.exports = {
-  validateAjaxHeader,
   validateOriginForCriticalOps,
   addSecurityHeaders
 };
