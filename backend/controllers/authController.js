@@ -3,10 +3,11 @@ const { User } = require('../models');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
-const { getRealIP, passwordVersion } = require('../utils/helpers');
+const { getRealIP, passwordVersion, getJwtExpiration } = require('../utils/helpers');
 const { setTokenCookie, clearTokenCookie } = require('../utils/cookieHelper');
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '2h';
+// Validado: um JWT_EXPIRATION malformado faria jwt.sign lançar em TODO login
+const JWT_EXPIRATION = getJwtExpiration();
 
 // Mensagem única para matrícula inexistente e senha errada — evita enumeração
 // de usuários válidos pelo formulário de login
@@ -194,7 +195,7 @@ exports.firstLogin = async (req, res) => {
     // Verifica e decodifica o token temporário gerado no login
     let decoded;
     try {
-      decoded = jwt.verify(firstLoginToken, JWT_SECRET);
+      decoded = jwt.verify(firstLoginToken, JWT_SECRET, { algorithms: ['HS256'] });
     } catch (tokenErr) {
       if (tokenErr.name === 'TokenExpiredError') {
         logger.warn('Token de primeiro login expirado', { ip: clientIP });

@@ -15,6 +15,25 @@ const passwordVersion = (senhaHash) => {
   return crypto.createHash('sha256').update(String(senhaHash)).digest('hex').slice(0, 16);
 };
 
+// Formatos de expiração aceitos pelo jsonwebtoken (biblioteca vercel/ms):
+// "120", "2h", "30m", "7d", "2 days" etc.
+const JWT_EXPIRATION_PATTERN =
+  /^\d+\s*(ms|s|m|h|d|w|y|msecs?|secs?|mins?|hrs?|milliseconds?|seconds?|minutes?|hours?|days?|weeks?|years?)?$/i;
+
+/**
+ * Retorna JWT_EXPIRATION validado, com fallback seguro para '2h'.
+ * Um valor inválido (typo tipo "2hs", ou um placeholder "${JWT_EXPIRATION}"
+ * não substituído pelo template de deploy) faria jwt.sign LANÇAR — ou seja,
+ * TODOS os logins retornariam 500. Melhor degradar para o default e avisar.
+ * @returns {string} Expiração válida para jwt.sign
+ */
+const getJwtExpiration = () => {
+  const raw = (process.env.JWT_EXPIRATION || '').trim();
+  if (!raw) return '2h';
+  if (!JWT_EXPIRATION_PATTERN.test(raw)) return '2h';
+  return raw;
+};
+
 /**
  * Converte filtros de query (string ou array) para array
  * @param {string|string[]} val - Valor do filtro
@@ -190,4 +209,5 @@ module.exports = {
   processScopeWhere,
   passwordVersion,
   looksLikeBinaryFile,
+  getJwtExpiration,
 };

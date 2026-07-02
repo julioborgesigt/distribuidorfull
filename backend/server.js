@@ -42,6 +42,16 @@ if (process.env.JWT_SECRET.length < 32) {
   );
 }
 
+// JWT_EXPIRATION malformado (typo ou placeholder de deploy não substituído)
+// é degradado para '2h' por getJwtExpiration() — avisa para ser corrigido.
+const { getJwtExpiration } = require('./utils/helpers');
+if (process.env.JWT_EXPIRATION && getJwtExpiration() !== process.env.JWT_EXPIRATION.trim()) {
+  logger.warn(
+    `JWT_EXPIRATION com valor inválido ("${process.env.JWT_EXPIRATION}") — usando o padrão 2h. ` +
+    'Corrija a variável de ambiente (ex.: 2h, 30m, 7d).'
+  );
+}
+
 const app = express();
 
 app.set('trust proxy', 1); // Confiar apenas no primeiro proxy reverso (DomCloud/Nginx)

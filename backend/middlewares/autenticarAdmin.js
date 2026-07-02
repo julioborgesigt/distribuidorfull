@@ -24,8 +24,9 @@ const autenticarAdmin = async (req, res, next) => {
   }
 
   try {
-    // 1. Decodifica o token
-    const decoded = jwt.verify(token, JWT_SECRET);
+    // 1. Decodifica o token (algoritmo fixado: impede downgrade/confusão de
+    // algoritmo caso a biblioteca mude os defaults no futuro)
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
 
     // 2. Busca o usuário no banco de dados
     const user = await User.findByPk(decoded.id);
