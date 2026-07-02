@@ -3,13 +3,14 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const logger = require('../utils/logger');
 const { getRealIP, passwordVersion } = require('../utils/helpers');
+const { COOKIE_NAME } = require('../utils/cookieHelper');
 
 // Corrigido: Lendo o segredo das variáveis de ambiente
-const JWT_SECRET = process.env.JWT_SECRET; 
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const autenticarAdmin = async (req, res, next) => {
   // Prioridade: cookie httpOnly > header Authorization (fallback)
-  let token = req.cookies?.token;
+  let token = req.cookies?.[COOKIE_NAME];
 
   if (!token) {
     const authHeader = req.headers['authorization'];

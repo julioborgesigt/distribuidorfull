@@ -3,6 +3,12 @@
 
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '2h';
 
+// Em produção o cookie usa o prefixo __Host-: o navegador só o aceita se
+// vier com Secure, Path=/ e sem Domain — impede que um subdomínio
+// comprometido sobrescreva o cookie de sessão. Fora de produção (HTTP)
+// o prefixo não é permitido pelo navegador, então mantém o nome simples.
+const COOKIE_NAME = process.env.NODE_ENV === 'production' ? '__Host-token' : 'token';
+
 /**
  * Converte a string de expiração JWT (ex: '2h', '7d') para milissegundos
  */
@@ -31,12 +37,12 @@ const setTokenCookie = (res, token) => {
   const isProduction = process.env.NODE_ENV === 'production';
   const maxAge = parseExpirationToMs(JWT_EXPIRATION);
 
-  res.cookie('token', token, {
+  res.cookie(COOKIE_NAME, token, {
     httpOnly: true,              // Não acessível via JavaScript (protege contra XSS)
-    secure: isProduction,        // HTTPS only em produção
+    secure: isProduction,        // HTTPS only em produção (obrigatório para __Host-)
     sameSite: isProduction ? 'strict' : 'lax', // Proteção CSRF
     maxAge,                      // Expira junto com o JWT
-    path: '/',                   // Disponível em todas as rotas
+    path: '/',                   // Disponível em todas as rotas (obrigatório para __Host-)
   });
 };
 
@@ -47,7 +53,7 @@ const setTokenCookie = (res, token) => {
 const clearTokenCookie = (res) => {
   const isProduction = process.env.NODE_ENV === 'production';
 
-  res.cookie('token', '', {
+  res.cookie(COOKIE_NAME, '', {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'strict' : 'lax',
@@ -56,4 +62,4 @@ const clearTokenCookie = (res) => {
   });
 };
 
-module.exports = { setTokenCookie, clearTokenCookie };
+module.exports = { setTokenCookie, clearTokenCookie, COOKIE_NAME };

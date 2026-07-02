@@ -41,18 +41,33 @@ const validateOriginForCriticalOps = (req, res, next) => {
     return next();
   }
 
+  const isProduction = process.env.NODE_ENV === 'production';
   const origin = req.headers.origin || req.headers.referer;
+  // Localhost só é aceitável fora de produção — mesma regra do CORS em
+  // server.js. Mantê-lo em produção permitiria que um app local malicioso
+  // na máquina da vítima passasse por esta camada.
   const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
+    ...(isProduction ? [] : ['http://localhost:3000', 'http://localhost:3001']),
     process.env.FRONTEND_URL,
     process.env.FRONTEND_URL_2,
     process.env.FRONTEND_URL_3
   ].filter(Boolean);
 
-  // Se não há origin/referer, permite mas loga
+  // Sem Origin/Referer: navegadores modernos sempre enviam Origin em
+  // requisições não-GET, então em produção a ausência indica cliente
+  // não-navegador (curl/script) — que não deveria executar operações
+  // críticas com cookie de sessão. Em desenvolvimento apenas loga.
   if (!origin) {
-    logger.warn('Operação crítica sem Origin/Referer', {
+    if (isProduction) {
+      logger.logSecurityEvent('Operação crítica sem Origin/Referer bloqueada', {
+        path: req.path,
+        method: req.method,
+        ip: getRealIP(req),
+        userId: req.userId
+      });
+      return res.status(403).json({ error: 'Origem não permitida para esta operação' });
+    }
+    logger.warn('Operação crítica sem Origin/Referer (permitida fora de produção)', {
       path: req.path,
       method: req.method,
       ip: getRealIP(req),
@@ -61,14 +76,18 @@ const validateOriginForCriticalOps = (req, res, next) => {
     return next();
   }
 
-  // Valida se o origin está na lista de permitidos
+  // Valida se o origin está na lista de permitidos.
+  // Comparação estrita por origem (scheme + host + porta). Se o header não
+  // for uma URL parseável, NEGA — o antigo fallback por substring
+  // (origin.includes(allowed)) era contornável com um header malformado
+  // contendo a URL permitida em qualquer posição.
   const isAllowed = allowedOrigins.some(allowed => {
     try {
       const originUrl = new URL(origin);
       const allowedUrl = new URL(allowed);
       return originUrl.origin === allowedUrl.origin;
     } catch {
-      return origin.includes(allowed);
+      return false;
     }
   });
 

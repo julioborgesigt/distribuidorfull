@@ -18,7 +18,54 @@ const {
 } = require('../utils/pjeParser');
 const tpu = require('../utils/tpu');
 const logger = require('../utils/logger');
-const { PjeImportLog } = require('../models');
+const { PjeImportLog, sequelize } = require('../models');
+
+// --- Lock de importação entre processos/instâncias ---
+//
+// O guard em memória do controller (pjeImportStatus.running) só vale dentro
+// de UM processo Node. O Passenger pode manter vários processos do app, e o
+// cron roda num processo próprio — duas importações simultâneas abririam o
+// teor dos mesmos avisos DUAS VEZES (ciência duplicada no PJe).
+//
+// GET_LOCK do MySQL é um lock nomeado do servidor de banco, válido para
+// qualquer processo que use o mesmo banco. Ele pertence à CONEXÃO que o
+// adquiriu, então usamos uma transaction não gerenciada apenas para "fixar"
+// uma conexão do pool durante toda a importação; se o processo morrer no
+// meio, a conexão cai e o MySQL libera o lock sozinho.
+const IMPORT_LOCK_NAME = 'distribuidor_pje_import';
+
+async function acquireImportLock() {
+  const t = await sequelize.transaction();
+  try {
+    const rows = await sequelize.query('SELECT GET_LOCK(?, 0) AS ok', {
+      replacements: [IMPORT_LOCK_NAME],
+      type: sequelize.QueryTypes.SELECT,
+      transaction: t,
+    });
+    if (!rows[0] || Number(rows[0].ok) !== 1) {
+      await t.rollback();
+      return null; // outra importação (outro processo/cron) está em andamento
+    }
+  } catch (err) {
+    await t.rollback().catch(() => {});
+    throw err;
+  }
+  return {
+    release: async () => {
+      try {
+        await sequelize.query('SELECT RELEASE_LOCK(?)', {
+          replacements: [IMPORT_LOCK_NAME],
+          type: sequelize.QueryTypes.SELECT,
+          transaction: t,
+        });
+      } catch (err) {
+        logger.warn('Falha ao liberar lock de importação PJe', { error: err.message });
+      } finally {
+        await t.commit().catch(() => {});
+      }
+    },
+  };
+}
 
 // Grava um registro no histórico de importações do PJe. Nunca lança — uma falha
 // ao logar não deve derrubar a importação.
@@ -114,4 +161,4 @@ async function coletarRows({
   return { avisos: avisos.length, rows, comPrazo, falhasTeor, adiados };
 }
 
-module.exports = { coletarRows, avisoToRow, registrarLog };
+module.exports = { coletarRows, avisoToRow, registrarLog, acquireImportLock };

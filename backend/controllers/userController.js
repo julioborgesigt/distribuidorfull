@@ -9,12 +9,15 @@ const { getRealIP, isValidPassword, generateRandomPassword } = require('../utils
 // Lista usuários (apenas matrícula e nome) - COM PAGINAÇÃO
 exports.listUsers = async (req, res) => {
   try {
-    const { limit = 1000, offset = 0 } = req.query;
+    // Clamp: parseInt de valor não numérico vira NaN (erro 500 no Sequelize)
+    // e um limit sem teto permite respostas arbitrariamente grandes.
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 1000, 1), 1000);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
     const users = await User.findAll({
       attributes: ['id', 'matricula', 'nome'],
-      limit: parseInt(limit, 10),
-      offset: parseInt(offset, 10),
+      limit,
+      offset,
       order: [['nome', 'ASC']]
     });
 
