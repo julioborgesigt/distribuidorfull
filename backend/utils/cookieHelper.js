@@ -1,7 +1,10 @@
 // /utils/cookieHelper.js
 // Configuração centralizada do cookie JWT httpOnly
 
-const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '2h';
+const { getJwtExpiration } = require('./helpers');
+
+// Mesma fonte validada usada no authController — cookie e JWT expiram juntos
+const JWT_EXPIRATION = getJwtExpiration();
 
 // Em produção o cookie usa o prefixo __Host-: o navegador só o aceita se
 // vier com Secure, Path=/ e sem Domain — impede que um subdomínio
