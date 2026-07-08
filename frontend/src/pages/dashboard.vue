@@ -39,58 +39,60 @@
       style="top: 0; height: 100%; position: fixed; z-index: 1010;"
       :width="DRAWER_WIDTH"
     >
-      <!-- Topo: saudação + ações de admin -->
-      <v-list density="compact">
-        <v-list-item
-          v-if="user"
-          prepend-icon="mdi-account-circle"
-          :subtitle="user.nome"
-          title="Bem-vindo"
-        >
-          <template #append>
-            <v-btn
-              v-if="!isWide"
-              aria-label="Fechar menu"
-              icon
-              size="small"
-              variant="text"
-              @click="drawerOpen = false"
+      <!-- Cabeçalho do drawer: avatar + nome + papel -->
+      <div class="drawer-header">
+        <div class="d-flex align-center ga-3">
+          <v-avatar color="primary" size="42" variant="tonal">
+            <v-icon size="24">mdi-account</v-icon>
+          </v-avatar>
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="text-caption text-medium-emphasis">Bem-vindo</div>
+            <div class="text-subtitle-1 font-weight-bold text-truncate">{{ user?.nome }}</div>
+            <v-chip
+              class="mt-1"
+              :color="papelChip.color"
+              density="comfortable"
+              label
+              size="x-small"
+              variant="flat"
             >
-              <v-icon size="20">mdi-close</v-icon>
-            </v-btn>
-          </template>
-        </v-list-item>
+              {{ papelChip.label }}
+            </v-chip>
+          </div>
+          <v-btn
+            v-if="!isWide"
+            aria-label="Fechar menu"
+            icon
+            size="small"
+            variant="text"
+            @click="drawerOpen = false"
+          >
+            <v-icon size="20">mdi-close</v-icon>
+          </v-btn>
+        </div>
+      </div>
 
-        <template v-if="authStore.isGestor">
-          <v-divider class="mt-2" />
-          <v-list-subheader>Administrador</v-list-subheader>
+      <!-- Menu de administração (accordion: só um submenu aberto por vez) -->
+      <v-list
+        v-if="authStore.isGestor"
+        class="admin-nav"
+        density="comfortable"
+        nav
+        open-strategy="single"
+      >
+        <v-list-subheader class="text-uppercase font-weight-bold">Administrador</v-list-subheader>
 
-          <!-- Unidade ativa (só super global): define a unidade usada para
-               importar/CSV/PJe e para filtrar a visão. -->
-          <v-list-item v-if="authStore.isSuper">
-            <v-select
-              v-model="selectedUnidadeId"
-              clearable
-              density="compact"
-              hide-details
-              item-title="nome"
-              item-value="id"
-              :items="unidadesList"
-              label="Unidade ativa (todas)"
-              variant="outlined"
-            />
-          </v-list-item>
+        <!-- Gestão de unidades (só super global) -->
+        <v-list-item
+          v-if="authStore.isSuper"
+          class="menu-top"
+          prepend-icon="mdi-office-building-cog-outline"
+          rounded="lg"
+          title="Gerenciar Unidades"
+          @click="() => { drawerOpen = false; unidadesDialog?.abrir(); }"
+        />
 
-          <!-- Gestão de unidades (só super global) -->
-          <v-list-item
-            v-if="authStore.isSuper"
-            base-color="deep-purple"
-            prepend-icon="mdi-office-building-cog-outline"
-            title="Gerenciar Unidades"
-            @click="() => { drawerOpen = false; unidadesDialog?.abrir(); }"
-          />
-
-          <v-list-group value="usuarios">
+        <v-list-group class="menu-top" value="usuarios">
             <template #activator="{ props }">
               <v-list-item
                 prepend-icon="mdi-account-cog-outline"
@@ -122,7 +124,7 @@
             />
           </v-list-group>
 
-          <v-list-group value="esaj">
+          <v-list-group class="menu-top" value="esaj">
             <template #activator="{ props }">
               <v-list-item
                 prepend-icon="mdi-file-table-outline"
@@ -138,7 +140,7 @@
             />
           </v-list-group>
 
-          <v-list-group value="pje">
+          <v-list-group class="menu-top" value="pje">
             <template #activator="{ props }">
               <v-list-item
                 prepend-icon="mdi-gavel"
@@ -166,21 +168,22 @@
               @click="() => { drawerOpen = false; abrirLogsPje(); }"
             />
           </v-list-group>
-        </template>
       </v-list>
 
       <!-- Rodapé fixo: tema e sair -->
       <template #append>
         <v-divider />
-        <v-list density="compact">
+        <v-list class="admin-nav" density="comfortable" nav>
           <v-list-item
             :prepend-icon="theme.global.current.value.dark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
+            rounded="lg"
             :title="theme.global.current.value.dark ? 'Tema Claro' : 'Tema Escuro'"
             @click="toggleTheme"
           />
           <v-list-item
             base-color="error"
             prepend-icon="mdi-logout"
+            rounded="lg"
             title="Sair"
             @click="() => { drawerOpen = false; authStore.logout(); }"
           />
@@ -486,7 +489,7 @@
   <pje-auth-dialog ref="pjeAuthDialog" @notify="notify" />
 
   <!-- Modal: Gerenciar Unidades (super global) -->
-  <unidades-dialog ref="unidadesDialog" @changed="carregarUnidades" @notify="notify" />
+  <unidades-dialog ref="unidadesDialog" @changed="unidadeAtiva.carregar()" @notify="notify" />
 
   <!-- Histórico de importações do PJe -->
   <v-dialog v-model="dialogLogsPje" max-width="1150px" scrollable>
@@ -687,6 +690,7 @@
   import { DRAWER_WIDTH, useDrawer } from '@/composables/useDrawer'
   import { useSnackbar } from '@/composables/useSnackbar'
   import { useAuthStore } from '@/stores/auth'
+  import { useUnidadeAtivaStore } from '@/stores/unidadeAtiva'
   import { exportProcessesPDF } from '@/utils/pdfExport'
   import { formatarPrazo, getCorPrazo, getPrazoRestanteNum } from '@/utils/prazo'
   import { clearCache, getCache, setCache } from '@/utils/sessionCache'
@@ -797,26 +801,24 @@
   const pjeAuthDialog = ref(null) // ref do componente PjeAuthDialog
   const unidadesDialog = ref(null) // ref do componente UnidadesDialog
 
-  // Multi-unidade (super global): lista de unidades e a unidade "ativa" usada
-  // para importar/CSV/PJe e para filtrar a visão. null = todas as unidades.
-  const unidadesList = ref([])
-  const selectedUnidadeId = ref(null)
+  // Multi-unidade (super global): a "unidade ativa" agora vive num store
+  // compartilhado (o seletor está na barra superior, em layouts/default.vue).
+  const unidadeAtiva = useUnidadeAtivaStore()
+  const selectedUnidadeId = computed(() => unidadeAtiva.selectedId)
   const selectedUnidadeNome = computed(() => {
-    const u = unidadesList.value.find(x => x.id === selectedUnidadeId.value)
+    const u = unidadeAtiva.unidades.find(x => x.id === unidadeAtiva.selectedId)
     return u ? u.nome : null
   })
   // Unidade repassada ao upload de CSV (só relevante para o super).
-  const uploadUnidadeId = computed(() => (authStore.isSuper ? selectedUnidadeId.value : null))
+  const uploadUnidadeId = computed(() => (authStore.isSuper ? unidadeAtiva.selectedId : null))
 
-  async function carregarUnidades () {
-    if (!authStore.isSuper) return
-    try {
-      const { data } = await apiClient.get('/admin/unidades')
-      unidadesList.value = data || []
-    } catch {
-      // silencioso — o seletor fica vazio
-    }
-  }
+  // Chip de papel exibido no cabeçalho do drawer.
+  const papelChip = computed(() => {
+    if (authStore.isSuper) return { label: 'Admin global', color: 'deep-purple' }
+    if (authStore.role === 'admin_unidade') return { label: 'Admin unidade', color: 'primary' }
+    return { label: 'Usuário', color: 'blue-grey' }
+  })
+
   const menuInicio = ref(false)
   const menuFim = ref(false)
 
@@ -1531,7 +1533,9 @@
     fetchAllUsers()
     fetchFilterOptions() // Busca opções cumulativas para os filtros
     checkUnassignedProcesses()
-    carregarUnidades() // super: popula o seletor de unidade ativa
+    // A unidade ativa é carregada pela barra superior (layouts/default.vue);
+    // garante o carregamento caso o dashboard monte antes.
+    if (authStore.isSuper && !unidadeAtiva.carregada) unidadeAtiva.carregar()
   })
 
 </script>
@@ -1558,5 +1562,40 @@
 .app-drawer :deep(.v-list-item-title) {
   white-space: normal;
   line-height: 1.2;
+}
+
+/* ===== Visual moderno do drawer ===== */
+
+/* Cabeçalho com avatar + nome + papel */
+.drawer-header {
+  padding: 16px 14px 12px;
+}
+
+/* Espaçamento maior ENTRE os menus gerais (grupos de nível 1) */
+.admin-nav :deep(.menu-top) {
+  margin-top: 10px;
+}
+.admin-nav :deep(.menu-top:first-of-type) {
+  margin-top: 4px;
+}
+
+/* Itens de navegação arredondados com destaque no ativo/hover */
+.admin-nav :deep(.v-list-item) {
+  border-radius: 12px;
+  min-height: 44px;
+}
+.admin-nav :deep(.v-list-group__items .v-list-item) {
+  min-height: 40px;
+}
+.admin-nav :deep(.v-list-item--active) {
+  font-weight: 600;
+}
+
+/* Subheader "Administrador" mais discreto e espaçado */
+.admin-nav :deep(.v-list-subheader) {
+  font-size: 0.7rem;
+  letter-spacing: 0.8px;
+  opacity: 0.7;
+  min-height: 28px;
 }
 </style>
