@@ -3,10 +3,10 @@
 
     <v-app-bar
       app
-      class="container-estreito rounded"
+      class="container-estreito app-bar-modern rounded-lg"
       color="surface"
-      density="compact"
-      elevation="2"
+      density="comfortable"
+      flat
       :style="{ '--drawer-shift': appBarShift + 'px' }"
     >
       <v-btn
@@ -18,14 +18,39 @@
         <v-icon>mdi-menu</v-icon>
       </v-btn>
 
+      <v-icon class="ms-1 me-2 text-primary" size="22">mdi-scale-balance</v-icon>
+      <span class="text-subtitle-1 font-weight-bold app-bar-title d-none d-sm-inline">Distribuidor</span>
+
       <v-spacer />
-      <div
+
+      <!-- Seletor de unidade ativa (somente admin global) -->
+      <v-select
+        v-if="authStore.isSuper"
+        v-model="unidadeAtiva.selectedId"
+        class="unidade-select me-2"
+        clearable
+        density="compact"
+        hide-details
+        item-title="nome"
+        item-value="id"
+        :items="unidadeAtiva.unidades"
+        label="Unidade ativa"
+        placeholder="Todas as unidades"
+        prepend-inner-icon="mdi-office-building-marker-outline"
+        rounded="lg"
+        variant="solo-filled"
+      />
+
+      <v-chip
         v-if="user"
         v-show="isWide || !drawerOpen"
-        class="text-subtitle-1 font-weight-medium mr-3"
+        class="me-2 font-weight-medium"
+        color="primary"
+        prepend-icon="mdi-account-circle"
+        variant="tonal"
       >
-        Bem-vindo, {{ user?.nome }}!
-      </div>
+        {{ user?.nome }}
+      </v-chip>
     </v-app-bar>
 
     <!-- Conteúdo Principal da Página -->
@@ -40,10 +65,11 @@
 
 <script setup>
   import { storeToRefs } from 'pinia'
-  import { computed } from 'vue'
+  import { computed, onMounted, watch } from 'vue'
   import { useDisplay, useTheme } from 'vuetify'
   import { DRAWER_WIDTH, useDrawer } from '@/composables/useDrawer'
   import { useAuthStore } from '@/stores/auth'
+  import { useUnidadeAtivaStore } from '@/stores/unidadeAtiva'
 
   const theme = useTheme()
   const { width } = useDisplay()
@@ -51,8 +77,17 @@
 
   const authStore = useAuthStore()
   const { user } = storeToRefs(authStore)
+  const unidadeAtiva = useUnidadeAtivaStore()
 
   const { drawerOpen } = useDrawer()
+
+  // Carrega a lista de unidades para o seletor da barra (só admin global).
+  function carregarUnidadesSeSuper () {
+    if (authStore.isSuper && !unidadeAtiva.carregada) unidadeAtiva.carregar()
+  }
+  onMounted(carregarUnidadesSeSuper)
+  // Se o usuário logar depois (troca de sessão), recarrega quando virar super.
+  watch(() => authStore.isSuper, carregarUnidadesSeSuper)
 
   // Em telas largas, o drawer empurra o conteúdo (não sobrepõe) — desloca o
   // centro do app-bar (fixed) na mesma medida para acompanhar o v-main, que
@@ -102,6 +137,21 @@
 
   padding-left: 0px;
   padding-right: 0px;
+}
+
+/* Barra superior moderna: leve, com sombra sutil. */
+.app-bar-modern {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14) !important;
+  backdrop-filter: saturate(1.2);
+}
+.app-bar-title {
+  letter-spacing: 0.3px;
+}
+
+/* Seletor de unidade ativa na barra — compacto e responsivo. */
+.unidade-select {
+  max-width: 300px;
+  min-width: 170px;
 }
 
 /* CORREÇÃO PARA TABELA EM MODO CLARO:

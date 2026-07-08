@@ -81,6 +81,65 @@
     </v-card>
   </v-dialog>
 
+  <!-- Modal: Editar Usuário (papel / unidade) -->
+  <v-dialog v-model="dialogEditar" max-width="600px" persistent>
+    <v-card>
+      <v-form ref="formEditarRef" @submit.prevent="handleSalvarEdicao">
+        <v-card-title>
+          <span class="text-h5">Editar Usuário</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12">
+                <v-autocomplete
+                  v-model="edicao.userId"
+                  density="compact"
+                  item-title="title"
+                  item-value="value"
+                  :items="editUsersOptions"
+                  label="Selecionar Usuário"
+                  placeholder="Digite o nome ou matrícula..."
+                  :rules="[requiredRule]"
+                  variant="outlined"
+                  @update:model-value="onSelecionarUsuarioEdicao"
+                />
+              </v-col>
+              <v-col cols="12">
+                <label class="text-body-2">Papel</label>
+                <v-radio-group v-model="edicao.role" inline>
+                  <v-radio
+                    v-for="opt in tipoCadastroOptions"
+                    :key="opt.value"
+                    :label="opt.title"
+                    :value="opt.value"
+                  />
+                </v-radio-group>
+              </v-col>
+              <v-col v-if="authStore.isSuper && edicao.role !== 'super'" cols="12">
+                <v-autocomplete
+                  v-model="edicao.unidadeId"
+                  density="compact"
+                  item-title="nome"
+                  item-value="id"
+                  :items="unidades"
+                  label="Unidade (delegacia)"
+                  :rules="[requiredRule]"
+                  variant="outlined"
+                />
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="fecharModalEditar">Cancelar</v-btn>
+          <v-btn color="primary" :loading="loadingEditar" type="submit">Salvar</v-btn>
+        </v-card-actions>
+      </v-form>
+    </v-card>
+  </v-dialog>
+
   <!-- Modal: Resetar Senha -->
   <v-dialog v-model="dialogReset" max-width="500px" persistent>
     <v-card>
@@ -303,6 +362,62 @@
     }
   }
 
+  // --- Modal Editar Usuário (papel / unidade) ---
+  const dialogEditar = ref(false)
+  const formEditarRef = ref(null)
+  const loadingEditar = ref(false)
+  const editUsersList = ref([])
+  const edicao = ref({ userId: null, role: 'servidor', unidadeId: null })
+
+  const editUsersOptions = computed(() =>
+    editUsersList.value.map(u => ({
+      title: `${u.nome} (${u.matricula})`,
+      value: u.id,
+    })),
+  )
+
+  function onSelecionarUsuarioEdicao (id) {
+    const u = editUsersList.value.find(x => x.id === id)
+    if (u) {
+      edicao.value.role = u.role || 'servidor'
+      edicao.value.unidadeId = u.unidade_id || null
+    }
+  }
+
+  async function abrirModalEditar () {
+    edicao.value = { userId: null, role: 'servidor', unidadeId: null }
+    formEditarRef.value?.resetValidation()
+    try {
+      const { data } = await apiClient.get('/admin/users')
+      editUsersList.value = data || []
+    } catch {
+      emit('notify', 'Erro ao carregar usuários.', 'error')
+    }
+    carregarUnidades()
+    dialogEditar.value = true
+  }
+  function fecharModalEditar () {
+    dialogEditar.value = false
+  }
+  async function handleSalvarEdicao () {
+    const { valid } = await formEditarRef.value.validate()
+    if (!valid) return
+    loadingEditar.value = true
+    try {
+      const payload = { role: edicao.value.role }
+      if (edicao.value.role !== 'super') payload.unidadeId = edicao.value.unidadeId
+      await apiClient.put(`/admin/users/${edicao.value.userId}`, payload)
+      emit('notify', 'Usuário atualizado com sucesso!', 'success')
+      fecharModalEditar()
+      emit('users-changed')
+      emit('data-changed')
+    } catch (error) {
+      emit('notify', error.response?.data?.error || 'Erro ao editar usuário.', 'error')
+    } finally {
+      loadingEditar.value = false
+    }
+  }
+
   // --- Modal Resetar Senha ---
   const dialogReset = ref(false)
   const formResetRef = ref(null)
@@ -425,6 +540,7 @@
 
   defineExpose({
     abrirModalCadastro,
+    abrirModalEditar,
     abrirModalReset,
     abrirModalDelete,
     abrirModalUpload,
