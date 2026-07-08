@@ -31,11 +31,11 @@ export const useAuthStore = defineStore('auth', {
     /**
      * Ação de Login principal
      */
-    async login (matricula, senha, loginType) {
+    async login (matricula, senha, modo) {
       const { data } = await apiClient.post('/auth/login', {
         matricula,
         senha,
-        loginType,
+        modo,
       })
 
       // Cenário 1: É o primeiro login do usuário

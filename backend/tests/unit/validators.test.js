@@ -40,21 +40,18 @@ describe('Validadores - Conceitos gerais', () => {
   });
 });
 
-describe('Validadores - Tipos de login', () => {
-  test('deve aceitar loginType admin_super', () => {
-    const loginTypes = ['admin_super', 'admin_padrao'];
-    expect(loginTypes).toContain('admin_super');
+describe('Papéis de usuário (cadastro)', () => {
+  // O login não escolhe mais "tipo de acesso": o privilégio é derivado do
+  // papel (role) do usuário. Os papéis válidos para cadastro são:
+  const roles = ['servidor', 'admin_unidade', 'super'];
+
+  test('aceita os três papéis previstos', () => {
+    expect(roles).toEqual(expect.arrayContaining(['servidor', 'admin_unidade', 'super']));
   });
 
-  test('deve aceitar loginType admin_padrao', () => {
-    const loginTypes = ['admin_super', 'admin_padrao'];
-    expect(loginTypes).toContain('admin_padrao');
-  });
-
-  test('deve rejeitar loginType inválido', () => {
-    const loginTypes = ['admin_super', 'admin_padrao'];
-    expect(loginTypes).not.toContain('usuario');
-    expect(loginTypes).not.toContain('admin');
+  test('rejeita valores fora da lista', () => {
+    expect(roles).not.toContain('admin_padrao');
+    expect(roles).not.toContain('admin');
   });
 });
 

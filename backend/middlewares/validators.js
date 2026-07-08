@@ -27,9 +27,13 @@ const validateLogin = [
     .notEmpty().withMessage('Senha é obrigatória')
     .isLength({ min: 1, max: 100 }).withMessage('Senha inválida'),
 
-  body('loginType')
-    .notEmpty().withMessage('Tipo de login é obrigatório')
-    .isIn(['admin_super', 'admin_padrao']).withMessage('Tipo de login inválido'),
+  // Modo de acesso escolhido no login (opcional; default 'usuario'):
+  //   'usuario' → vê só os próprios processos
+  //   'unidade' → opera na plenitude do papel (admin da unidade / admin global)
+  // O privilégio efetivo é sempre limitado ao papel (role) do usuário no banco.
+  body('modo')
+    .optional()
+    .isIn(['usuario', 'unidade']).withMessage('Modo de acesso inválido'),
 
   handleValidationErrors
 ];

@@ -64,6 +64,26 @@ const autenticarAdmin = async (req, res, next) => {
       return res.status(403).json({ error: 'Acesso proibido. Requer privilégios de administrador.' });
     }
 
+    // Papel EFETIVO da sessão (escolhido no login: um gestor pode ter entrado
+    // em modo usuário). Token legado sem role recai no papel do banco.
+    const ROLE_AUTHORITY = { servidor: 0, admin_unidade: 1, super: 2 };
+    const effectiveRole = decoded.role || user.role;
+
+    // O papel efetivo NUNCA pode exceder o papel real do banco. Protege contra
+    // token antigo de quem foi rebaixado: se o token reivindica mais autoridade
+    // que a atual, encerra a sessão.
+    if (!PAPEIS_VALIDOS.includes(effectiveRole) ||
+        ROLE_AUTHORITY[effectiveRole] > ROLE_AUTHORITY[user.role]) {
+      logger.logSecurityEvent('Token com papel efetivo acima do papel real', {
+        userId: user.id,
+        matricula: user.matricula,
+        effectiveRole,
+        role: user.role,
+        ip: getRealIP(req)
+      });
+      return res.status(401).json({ error: 'Sessão inválida. Faça login novamente.' });
+    }
+
     // Coerência de sessão: um super que rebaixou de papel (ou vice-versa) não
     // deve continuar operando como super com um token antigo. Se o token diz
     // 'admin_super' mas o papel atual no banco não é 'super', encerra a sessão.
@@ -78,12 +98,11 @@ const autenticarAdmin = async (req, res, next) => {
     }
 
     // 4. Se passou, anexa os dados na requisição para os controllers usarem.
-    // role e unidade_id vêm do BANCO (autoritativo), nunca do cliente.
+    // O papel efetivo vem do token (limitado ao banco acima); unidade vem do banco.
     req.user = user;
     req.userId = user.id;
-    req.role = user.role;
+    req.role = effectiveRole;
     req.unidadeId = user.unidade_id;
-    // Anexa o tipo de login que foi usado (super ou padrao)
     req.loginType = decoded.loginType || 'admin_padrao';
 
     next(); // Permite o acesso à rota de admin

@@ -251,11 +251,11 @@
   //   admin_unid. → só servidor e admin da própria unidade
   const tipoCadastroOptions = computed(() => {
     const base = [
-      { title: 'Servidor', value: 'servidor' },
-      { title: 'Admin da Unidade', value: 'admin_unidade' },
+      { title: 'Usuário', value: 'servidor' },
+      { title: 'Admin unidade', value: 'admin_unidade' },
     ]
     if (authStore.isSuper) {
-      base.push({ title: 'Super Global', value: 'super' })
+      base.push({ title: 'Admin global', value: 'super' })
     }
     return base
   })
