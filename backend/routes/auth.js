@@ -5,24 +5,39 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { validateLogin, validateFirstLogin } = require('../middlewares/validators');
 
-// Rate Limiter para Login - Proteção contra Força Bruta
+// Rate Limiter POR IP contra flood/força-bruta distribuída (muitas matrículas
+// a partir do mesmo IP). É uma rede de segurança grosseira; a proteção fina,
+// por conta, é o lockout por (IP + matrícula) no authController.
+//
+// IMPORTANTE:
+// - `skipSuccessfulRequests: true` → só conta tentativas que FALHARAM (status
+//   >= 400). Logins corretos NUNCA contam, então usar o sistema normalmente
+//   (vários logins/logouts) jamais bloqueia.
+// - o teto é alto e por IP: numa rede compartilhada (lanhouse/NAT) vários
+//   servidores dividem o mesmo IP, então precisa tolerar erros ocasionais de
+//   todos sem travar a rede inteira. Ajustável por LOGIN_IP_MAX_FAILURES.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // Máximo 5 tentativas por IP
+  max: parseInt(process.env.LOGIN_IP_MAX_FAILURES, 10) || 50,
+  skipSuccessfulRequests: true,
   message: {
-    error: 'Muitas tentativas de login. Tente novamente em 15 minutos.'
+    error: 'Muitas tentativas de login malsucedidas a partir deste endereço. Tente novamente em alguns minutos.'
   },
   standardHeaders: true, // Retorna informações de rate limit nos headers
   legacyHeaders: false, // Desabilita headers X-RateLimit-*
 });
 
-// Rate Limiter para Primeiro Login (menos restritivo)
+// Rate Limiter para Primeiro Login. Também só conta falhas — concluir a troca
+// de senha (sucesso) não penaliza.
 const firstLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 3, // Máximo 3 tentativas
+  max: parseInt(process.env.FIRST_LOGIN_IP_MAX_FAILURES, 10) || 10,
+  skipSuccessfulRequests: true,
   message: {
-    error: 'Muitas tentativas de troca de senha. Tente novamente em 15 minutos.'
+    error: 'Muitas tentativas de troca de senha malsucedidas. Tente novamente em alguns minutos.'
   },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 /**
