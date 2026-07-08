@@ -9,6 +9,18 @@
       </v-card-title>
 
       <v-card-text>
+        <!-- Unidade-alvo (mostrada ao super, que gerencia várias) -->
+        <v-alert
+          v-if="unidadeNome"
+          border="start"
+          class="mb-4"
+          density="compact"
+          type="info"
+          variant="tonal"
+        >
+          Unidade: <strong>{{ unidadeNome }}</strong>
+        </v-alert>
+
         <!-- Status atual -->
         <v-alert
           v-if="status.configured"
@@ -155,6 +167,16 @@ const removendo = ref(false)
 const mostrarSenha = ref(false)
 const status = reactive({ configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null })
 const form = reactive({ cpf: '', senha: '' })
+// Unidade-alvo da credencial. Para o super global é definida ao abrir o
+// diálogo (a partir da unidade selecionada no painel); para o admin da unidade
+// fica nula e o backend usa a própria unidade.
+const unidadeId = ref(null)
+const unidadeNome = ref(null)
+
+// Acrescenta unidadeId aos parâmetros quando definido (fluxo do super).
+function comUnidade (extra = {}) {
+  return unidadeId.value ? { ...extra, unidadeId: unidadeId.value } : extra
+}
 
 const cpfRule = v => {
   const digits = String(v || '').replace(/\D/g, '')
@@ -185,14 +207,18 @@ function formatarData (iso) {
 
 async function carregarStatus () {
   try {
-    const { data } = await apiClient.get('/admin/pje-auth/status')
+    const { data } = await apiClient.get('/admin/pje-auth/status', { params: comUnidade() })
     Object.assign(status, { configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null }, data)
   } catch {
     // status permanece com defaults
   }
 }
 
-async function abrir () {
+// abrir({ unidadeId, unidadeNome }) — o painel passa a unidade selecionada
+// quando o usuário é super global.
+async function abrir (opts = {}) {
+  unidadeId.value = opts.unidadeId || null
+  unidadeNome.value = opts.unidadeNome || null
   form.cpf = ''
   form.senha = ''
   mostrarSenha.value = false
@@ -211,7 +237,7 @@ async function salvar () {
   salvando.value = true
   try {
     const cpfDigits = form.cpf.replace(/\D/g, '')
-    const { data } = await apiClient.post('/admin/pje-auth/salvar', { cpf: cpfDigits, senha: form.senha })
+    const { data } = await apiClient.post('/admin/pje-auth/salvar', comUnidade({ cpf: cpfDigits, senha: form.senha }))
     Object.assign(status, data)
     form.cpf = ''
     form.senha = ''
@@ -225,15 +251,15 @@ async function salvar () {
 }
 
 async function remover () {
-  if (!window.confirm('Remover as credenciais salvas? O sistema voltará a usar as variáveis de ambiente PJE_CPF/PJE_SENHA.')) return
+  if (!window.confirm('Remover as credenciais salvas desta unidade?')) return
   removendo.value = true
   try {
-    await apiClient.delete('/admin/pje-auth')
+    await apiClient.delete('/admin/pje-auth', { params: comUnidade() })
     Object.assign(status, { configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null })
     form.cpf = ''
     form.senha = ''
     formRef.value?.resetValidation()
-    emit('notify', 'Credenciais removidas. O sistema usará as variáveis de ambiente.', 'success')
+    emit('notify', 'Credenciais removidas.', 'success')
   } catch (err) {
     emit('notify', err.response?.data?.error || 'Erro ao remover credenciais.', 'error')
   } finally {

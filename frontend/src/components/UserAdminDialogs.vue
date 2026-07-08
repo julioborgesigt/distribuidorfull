@@ -49,6 +49,20 @@
                   />
                 </v-radio-group>
               </v-col>
+              <!-- Unidade: o super escolhe; o admin da unidade cria sempre na
+                   própria unidade (campo oculto). Não se aplica ao super global. -->
+              <v-col v-if="authStore.isSuper && novoUsuario.tipoCadastro !== 'super'" cols="12">
+                <v-autocomplete
+                  v-model="novoUsuario.unidadeId"
+                  density="compact"
+                  item-title="nome"
+                  item-value="id"
+                  :items="unidades"
+                  label="Unidade (delegacia)"
+                  :rules="[requiredRule]"
+                  variant="outlined"
+                />
+              </v-col>
             </v-row>
           </v-container>
         </v-card-text>
@@ -208,36 +222,66 @@
 // Modais de administração de usuários (cadastro, reset de senha, exclusão)
 // e importação de CSV. A página pai abre os modais via ref (defineExpose) e
 // reage aos eventos para recarregar listas/dados e exibir notificações.
-  import { ref } from 'vue'
+  import { computed, ref } from 'vue'
   import apiClient from '@/api/axios'
+  import { useAuthStore } from '@/stores/auth'
 
-  defineProps({
+  const props = defineProps({
     // Opções formatadas [{ title, value }] para os autocompletes de usuário
     allUsersOptions: {
       type: Array,
       default: () => [],
     },
+    // Unidade de destino do upload de CSV (só relevante para o super global;
+    // null para admin da unidade, que usa a própria).
+    uploadUnidadeId: {
+      type: [Number, String],
+      default: null,
+    },
   })
 
   const emit = defineEmits(['notify', 'users-changed', 'data-changed'])
+  const authStore = useAuthStore()
 
   const requiredRule = v => !!v || 'Campo obrigatório'
   const senhaRule = v => (v && v.length >= 8) || 'Senha deve ter no mínimo 8 caracteres'
 
-  const tipoCadastroOptions = [
-    { title: 'Admin Padrão', value: 'admin_padrao' },
-    { title: 'Admin Super', value: 'admin_super' },
-  ]
+  // Papéis disponíveis conforme quem está cadastrando:
+  //   super       → pode criar servidor, admin de unidade e outro super
+  //   admin_unid. → só servidor e admin da própria unidade
+  const tipoCadastroOptions = computed(() => {
+    const base = [
+      { title: 'Servidor', value: 'servidor' },
+      { title: 'Admin da Unidade', value: 'admin_unidade' },
+    ]
+    if (authStore.isSuper) {
+      base.push({ title: 'Super Global', value: 'super' })
+    }
+    return base
+  })
+
+  // Lista de unidades (para o super escolher a unidade do novo usuário).
+  const unidades = ref([])
+  async function carregarUnidades () {
+    if (!authStore.isSuper) return
+    try {
+      const { data } = await apiClient.get('/admin/unidades')
+      unidades.value = data || []
+    } catch {
+      // silencioso — sem unidades o super não consegue selecionar
+    }
+  }
 
   // --- Modal Cadastrar ---
   const dialogCadastro = ref(false)
   const formCadastroRef = ref(null)
   const loadingCadastro = ref(false)
-  const novoUsuario = ref({ matricula: '', nome: '', senha: '', tipoCadastro: 'admin_padrao' })
+  const novoUsuario = ref({ matricula: '', nome: '', senha: '', tipoCadastro: 'servidor', unidadeId: null })
 
   function abrirModalCadastro () {
-    novoUsuario.value = { matricula: '', nome: '', senha: '', tipoCadastro: 'admin_padrao' }
+    novoUsuario.value = { matricula: '', nome: '', senha: '', tipoCadastro: 'servidor', unidadeId: null }
     formCadastroRef.value?.resetValidation()
+    carregarUnidades()
     dialogCadastro.value = true
   }
   function fecharModalCadastro () {
@@ -351,13 +395,20 @@
       uploadError.value = 'Nenhum arquivo selecionado.'
       return
     }
+    // Super precisa ter uma unidade ativa selecionada para saber onde importar.
+    if (authStore.isSuper && !props.uploadUnidadeId) {
+      uploadError.value = 'Selecione uma unidade ativa no menu antes de importar o CSV.'
+      return
+    }
     loadingUpload.value = true
     uploadError.value = null
     const formData = new FormData()
     formData.append('csvFile', csvFile.value)
     try {
+      const params = authStore.isSuper && props.uploadUnidadeId ? { unidadeId: props.uploadUnidadeId } : {}
       const response = await apiClient.post('/admin/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        params,
       })
       loadingUpload.value = false
       fecharModalUpload()

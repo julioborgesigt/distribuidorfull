@@ -148,7 +148,10 @@
 
 <script setup>
   import { format, parseISO } from 'date-fns'
-  import { ref } from 'vue'
+  import { computed, ref } from 'vue'
+  import { useAuthStore } from '@/stores/auth'
+
+  const authStore = useAuthStore()
 
   // --- 1. PROPS (ATUALIZADO) ---
   const props = defineProps({
@@ -175,18 +178,26 @@
   // --- 4. HEADERS (Sem alteração, mas 'sortable: false' foi removido) ---
   // Precisamos habilitar 'sortable' para a ordenação do servidor funcionar.
   // O 'prazoRestanteNum' vai precisar de atenção especial.
-  const headers = ref([
-    { title: 'Nº Processo', key: 'numero_processo', width: '180px' },
-    { title: 'Fonte', key: 'fonte', width: '90px', align: 'center' },
-    { title: 'Atribuído', key: 'user', width: '100px' },
-    { title: 'Classe', key: 'classe_principal', width: '120px' },
-    { title: 'Assunto', key: 'assunto_principal', width: '140px' },
-    { title: 'Tarjas', key: 'tarjas', width: '120px' },
-    { title: 'Prazo', key: 'prazoRestanteNum', width: '120px' },
-    { title: 'Reit.', key: 'reiteracoes', width: '70px', align: 'center' },
-    { title: 'Observações', key: 'observacoes', width: '165px', sortable: false },
-    { title: 'Cumprir', key: 'acaoCumprido', width: '70px', align: 'center', sortable: false },
-  ])
+  // Coluna "Unidade" só aparece para o super global (que enxerga várias
+  // unidades). Usa a associação Unidade incluída na resposta da listagem.
+  const headers = computed(() => {
+    const base = [
+      { title: 'Nº Processo', key: 'numero_processo', width: '180px' },
+      { title: 'Fonte', key: 'fonte', width: '90px', align: 'center' },
+      { title: 'Atribuído', key: 'user', width: '100px' },
+      { title: 'Classe', key: 'classe_principal', width: '120px' },
+      { title: 'Assunto', key: 'assunto_principal', width: '140px' },
+      { title: 'Tarjas', key: 'tarjas', width: '120px' },
+      { title: 'Prazo', key: 'prazoRestanteNum', width: '120px' },
+      { title: 'Reit.', key: 'reiteracoes', width: '70px', align: 'center' },
+      { title: 'Observações', key: 'observacoes', width: '165px', sortable: false },
+      { title: 'Cumprir', key: 'acaoCumprido', width: '70px', align: 'center', sortable: false },
+    ]
+    if (authStore.isSuper) {
+      base.splice(3, 0, { title: 'Unidade', key: 'Unidade.nome', width: '160px', sortable: false })
+    }
+    return base
+  })
 
   // --- 5. FUNÇÕES AUXILIARES (Sem alteração) ---
   function formatarDataHora (dataISO) {

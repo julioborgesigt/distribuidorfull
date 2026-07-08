@@ -17,6 +17,13 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isLoggedIn: state => !!state.user,
     isAdminSuper: state => state.user?.admin_super,
+    // Super global (papel real do usuário, cross-unidade).
+    isSuper: state => state.user?.role === 'super' && !!state.user?.admin_super,
+    // Gestor: super OU admin da unidade (enxergam além dos próprios processos e
+    // acessam o menu de administração).
+    isGestor: state => !!state.user?.admin_super || state.user?.role === 'admin_unidade',
+    unidadeNome: state => state.user?.unidade_nome || null,
+    role: state => state.user?.role || null,
   },
 
   // ACTIONS

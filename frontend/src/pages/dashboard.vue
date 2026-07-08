@@ -61,9 +61,34 @@
           </template>
         </v-list-item>
 
-        <template v-if="user?.admin_super">
+        <template v-if="authStore.isGestor">
           <v-divider class="mt-2" />
           <v-list-subheader>Administrador</v-list-subheader>
+
+          <!-- Unidade ativa (só super global): define a unidade usada para
+               importar/CSV/PJe e para filtrar a visão. -->
+          <v-list-item v-if="authStore.isSuper">
+            <v-select
+              v-model="selectedUnidadeId"
+              clearable
+              density="compact"
+              hide-details
+              item-title="nome"
+              item-value="id"
+              :items="unidadesList"
+              label="Unidade ativa (todas)"
+              variant="outlined"
+            />
+          </v-list-item>
+
+          <!-- Gestão de unidades (só super global) -->
+          <v-list-item
+            v-if="authStore.isSuper"
+            base-color="deep-purple"
+            prepend-icon="mdi-office-building-cog-outline"
+            title="Gerenciar Unidades"
+            @click="() => { drawerOpen = false; unidadesDialog?.abrir(); }"
+          />
 
           <v-list-group value="usuarios">
             <template #activator="{ props }">
@@ -120,7 +145,7 @@
               base-color="indigo"
               prepend-icon="mdi-shield-key-outline"
               title="Autenticação PJe"
-              @click="() => { drawerOpen = false; pjeAuthDialog?.abrir(); }"
+              @click="() => { drawerOpen = false; abrirPjeAuth(); }"
             />
             <v-list-item
               base-color="green"
@@ -271,7 +296,7 @@
               chips
               clearable
               density="compact"
-              :disabled="!user?.admin_super"
+              :disabled="!authStore.isGestor"
               item-title="title"
               item-value="value"
               :items="uniqueUsers"
@@ -284,7 +309,7 @@
             <v-select
               v-model="filters.cumprido"
               density="compact"
-              :disabled="!user?.admin_super"
+              :disabled="!authStore.isGestor"
               item-title="title"
               item-value="value"
               :items="statusCumpridoOptions"
@@ -446,13 +471,17 @@
   <user-admin-dialogs
     ref="userDialogs"
     :all-users-options="allUsersOptions"
+    :upload-unidade-id="uploadUnidadeId"
     @data-changed="reloadAllData"
     @notify="notify"
     @users-changed="handleUsersChanged"
   />
 
-  <!-- Modal: Credenciais PJe (admin_super) -->
+  <!-- Modal: Credenciais PJe (gestor) -->
   <pje-auth-dialog ref="pjeAuthDialog" @notify="notify" />
+
+  <!-- Modal: Gerenciar Unidades (super global) -->
+  <unidades-dialog ref="unidadesDialog" @changed="carregarUnidades" @notify="notify" />
 
   <!-- Histórico de importações do PJe -->
   <v-dialog v-model="dialogLogsPje" max-width="1150px" scrollable>
@@ -661,6 +690,7 @@
   import TabelaProcessos from '../components/TabelaProcessos.vue'
   import UserAdminDialogs from '../components/UserAdminDialogs.vue'
   import PjeAuthDialog from '../components/PjeAuthDialog.vue'
+  import UnidadesDialog from '../components/UnidadesDialog.vue'
   const { mdAndUp, width } = useDisplay()
   const isWide = computed(() => width.value >= 1660)
   const { drawerOpen } = useDrawer()
@@ -760,6 +790,28 @@
 
   const userDialogs = ref(null) // ref do componente UserAdminDialogs
   const pjeAuthDialog = ref(null) // ref do componente PjeAuthDialog
+  const unidadesDialog = ref(null) // ref do componente UnidadesDialog
+
+  // Multi-unidade (super global): lista de unidades e a unidade "ativa" usada
+  // para importar/CSV/PJe e para filtrar a visão. null = todas as unidades.
+  const unidadesList = ref([])
+  const selectedUnidadeId = ref(null)
+  const selectedUnidadeNome = computed(() => {
+    const u = unidadesList.value.find(x => x.id === selectedUnidadeId.value)
+    return u ? u.nome : null
+  })
+  // Unidade repassada ao upload de CSV (só relevante para o super).
+  const uploadUnidadeId = computed(() => (authStore.isSuper ? selectedUnidadeId.value : null))
+
+  async function carregarUnidades () {
+    if (!authStore.isSuper) return
+    try {
+      const { data } = await apiClient.get('/admin/unidades')
+      unidadesList.value = data || []
+    } catch {
+      // silencioso — o seletor fica vazio
+    }
+  }
   const menuInicio = ref(false)
   const menuFim = ref(false)
 
@@ -919,6 +971,11 @@
     const includesNaoAtribuido = userIdFilterValues.includes('NA')
     for (const id of realUserIds) params.append('userId', id)
     if (includesNaoAtribuido) params.append('includeNA', 'true')
+
+    // Super global: restringe a visão à unidade ativa selecionada (se houver).
+    if (authStore.isSuper && selectedUnidadeId.value) {
+      params.append('unidadeId', selectedUnidadeId.value)
+    }
 
     return params
   }
@@ -1088,12 +1145,31 @@
   const dialogImportPje = ref(false)
   const pjeAuthStatusImport = reactive({ checking: true, configured: false, cpfDisplay: null })
 
+  // Abre o diálogo de credenciais PJe. Para o super, exige uma unidade ativa
+  // selecionada (a credencial é por unidade).
+  function abrirPjeAuth () {
+    if (authStore.isSuper && !selectedUnidadeId.value) {
+      notify('Selecione uma unidade ativa no menu para gerenciar as credenciais PJe.', 'warning')
+      return
+    }
+    pjeAuthDialog.value?.abrir(
+      authStore.isSuper
+        ? { unidadeId: selectedUnidadeId.value, unidadeNome: selectedUnidadeNome.value }
+        : {},
+    )
+  }
+
   async function abrirConfirmImportPje () {
     if (importandoPje.value) return
+    if (authStore.isSuper && !selectedUnidadeId.value) {
+      notify('Selecione uma unidade ativa no menu para importar do PJe.', 'warning')
+      return
+    }
     pjeAuthStatusImport.checking = true
     dialogImportPje.value = true
     try {
-      const { data } = await apiClient.get('/admin/pje-auth/status')
+      const params = authStore.isSuper ? { unidadeId: selectedUnidadeId.value } : {}
+      const { data } = await apiClient.get('/admin/pje-auth/status', { params })
       Object.assign(pjeAuthStatusImport, { checking: false, configured: false, cpfDisplay: null }, data)
     } catch {
       Object.assign(pjeAuthStatusImport, { checking: false, configured: false, cpfDisplay: null })
@@ -1113,7 +1189,8 @@
     // minutos abrindo os teores); acompanhamos pelo endpoint de status.
     notify('Importação do PJe iniciada. Aguardando conclusão...', 'info', 0, { persistent: true })
     try {
-      await apiClient.post('/admin/import-pje')
+      const params = authStore.isSuper && selectedUnidadeId.value ? { unidadeId: selectedUnidadeId.value } : {}
+      await apiClient.post('/admin/import-pje', null, { params })
       await aguardarImportPje()
     } catch (error) {
       if (error.response?.status === 409) {
@@ -1418,6 +1495,11 @@
   // Dispara quando 'options' (página, itensPorPagina, sortBy) muda
   watch(options, fetchTableData, { deep: true })
 
+  // Super global: ao trocar a unidade ativa, recarrega tudo com o novo escopo.
+  watch(selectedUnidadeId, () => {
+    reloadAllData()
+  })
+
   // Dispara quando 'filters' ou 'search' mudam (com debounce de 400ms)
   let filterDebounceTimer = null
   watch(
@@ -1444,6 +1526,7 @@
     fetchAllUsers()
     fetchFilterOptions() // Busca opções cumulativas para os filtros
     checkUnassignedProcesses()
+    carregarUnidades() // super: popula o seletor de unidade ativa
   })
 
 </script>
