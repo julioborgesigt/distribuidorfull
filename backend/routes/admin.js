@@ -17,7 +17,8 @@ const {
   validateBulkOperation,
   validateBulkAssign,
   validateDeleteMatricula,
-  validateUpdateIntim
+  validateUpdateIntim,
+  validateUpdateUser
 } = require('../middlewares/validators');
 
 // Configuração Segura de Upload de Arquivos
@@ -345,6 +346,28 @@ router.post('/manual-assign', validateManualAssign, adminController.manualAssign
  *         description: Usuário criado com sucesso
  */
 router.post('/pre-cadastro', requireGestor, validatePreCadastro, adminController.preCadastro);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}:
+ *   put:
+ *     summary: Edita papel/unidade/nome de um usuário
+ *     description: >
+ *       Admin global edita qualquer usuário (inclusive papel e unidade);
+ *       admin da unidade edita apenas usuários da própria unidade e não pode
+ *       definir admin global. Não altera a senha.
+ *     tags: [Administração - Usuários]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Usuário atualizado com sucesso
+ */
+router.put('/users/:id', requireGestor, validateUpdateUser, adminController.updateUser);
 
 /**
  * @swagger

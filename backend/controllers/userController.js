@@ -152,6 +152,81 @@ function canManageTarget(req, target) {
   return target.unidade_id === req.unidadeId && target.role !== 'super';
 }
 
+// Edita papel/unidade/nome de um usuário existente (sem mexer na senha).
+// Permite ao admin global corrigir papéis (ex.: rebaixar um super para admin
+// da unidade) direto pela interface. O admin da unidade edita apenas usuários
+// da própria unidade e não pode criar/def­inir admin global.
+exports.updateUser = async (req, res) => {
+  const { id } = req.params;
+  const { nome, role, unidadeId } = req.body;
+
+  try {
+    const target = await User.findByPk(id);
+    if (!target) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+    if (!canManageTarget(req, target)) {
+      return res.status(403).json({ error: 'Você não pode editar este usuário.' });
+    }
+
+    const newRole = role || target.role;
+    if (!['servidor', 'admin_unidade', 'super'].includes(newRole)) {
+      return res.status(400).json({ error: 'Papel inválido.' });
+    }
+
+    // Trava de segurança: não permite rebaixar o ÚLTIMO admin global (evita
+    // ficar sem ninguém capaz de gerir o sistema inteiro).
+    if (target.role === 'super' && newRole !== 'super') {
+      const totalSupers = await User.count({ where: { role: 'super' } });
+      if (totalSupers <= 1) {
+        return res.status(409).json({ error: 'Não é possível rebaixar o último admin global.' });
+      }
+    }
+
+    // Define a unidade conforme o papel e quem está editando.
+    let newUnidadeId = target.unidade_id;
+    if (isSuper(req)) {
+      if (newRole === 'super') {
+        newUnidadeId = null; // admin global não pertence a unidade
+      } else {
+        newUnidadeId = unidadeId != null ? (parseInt(unidadeId, 10) || null) : target.unidade_id;
+        if (!newUnidadeId) {
+          return res.status(400).json({ error: 'Selecione a unidade do usuário.' });
+        }
+        const unidade = await Unidade.findByPk(newUnidadeId);
+        if (!unidade) {
+          return res.status(404).json({ error: 'Unidade não encontrada.' });
+        }
+      }
+    } else {
+      // admin_unidade: não pode promover a global nem mover para outra unidade.
+      if (newRole === 'super') {
+        return res.status(403).json({ error: 'Você não pode definir um admin global.' });
+      }
+      newUnidadeId = req.unidadeId;
+    }
+
+    if (nome != null && String(nome).trim()) target.nome = String(nome).trim();
+    target.role = newRole;
+    target.unidade_id = newUnidadeId;
+    const bools = boolsFromRole(newRole);
+    target.admin_super = bools.admin_super;
+    target.admin_padrao = bools.admin_padrao;
+    await target.save();
+
+    logger.info('Usuário editado (papel/unidade)', {
+      targetId: target.id, matricula: target.matricula, newRole, newUnidadeId,
+      editedBy: req.userId, ip: getRealIP(req),
+    });
+    res.json({ message: 'Usuário atualizado com sucesso.' });
+  } catch (error) {
+    logger.error('Erro ao editar usuário', {
+      error: error.message, stack: error.stack, targetId: id, userId: req.userId, ip: getRealIP(req),
+    });
+    res.status(500).json({ error: 'Erro ao editar usuário.' });
+  }
+};
+
 // Reset de senha
 exports.resetPassword = async (req, res) => {
   const { matricula } = req.body;

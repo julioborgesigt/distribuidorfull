@@ -104,6 +104,11 @@
               @click="() => { drawerOpen = false; userDialogs?.abrirModalCadastro(); }"
             />
             <v-list-item
+              prepend-icon="mdi-account-edit-outline"
+              title="Editar Usuário"
+              @click="() => { drawerOpen = false; userDialogs?.abrirModalEditar(); }"
+            />
+            <v-list-item
               base-color="orange"
               prepend-icon="mdi-lock-reset"
               title="Resetar Senha"

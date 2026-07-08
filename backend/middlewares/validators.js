@@ -85,6 +85,28 @@ const validatePreCadastro = [
   handleValidationErrors
 ];
 
+// Validadores para Edição de Usuário (papel/unidade/nome)
+const validateUpdateUser = [
+  param('id')
+    .isInt({ min: 1 }).withMessage('ID de usuário inválido'),
+
+  body('role')
+    .optional()
+    .isIn(['servidor', 'admin_unidade', 'super']).withMessage('Papel inválido'),
+
+  body('unidadeId')
+    .optional({ nullable: true })
+    .isInt({ min: 1 }).withMessage('Unidade inválida'),
+
+  body('nome')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 }).withMessage('Nome deve ter entre 1 e 100 caracteres')
+    .matches(/^[a-zA-ZÀ-ÿ\s'-]+$/).withMessage('Nome contém caracteres inválidos'),
+
+  handleValidationErrors
+];
+
 // Validadores para Reset de Senha
 const validateResetPassword = [
   body('matricula')
@@ -184,6 +206,7 @@ module.exports = {
   validateLogin,
   validateFirstLogin,
   validatePreCadastro,
+  validateUpdateUser,
   validateResetPassword,
   validateManualAssign,
   validateUpdateObservacoes,

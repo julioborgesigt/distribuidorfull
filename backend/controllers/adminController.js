@@ -31,6 +31,7 @@ module.exports = {
   // Usuários
   listUsers: userController.listUsers,
   preCadastro: userController.preCadastro,
+  updateUser: userController.updateUser,
   resetPassword: userController.resetPassword,
   deleteMatricula: userController.deleteMatricula,
 
