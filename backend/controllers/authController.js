@@ -13,10 +13,35 @@ const JWT_EXPIRATION = getJwtExpiration();
 // de usuários válidos pelo formulário de login
 const INVALID_CREDENTIALS_MSG = 'Matrícula ou senha incorretos.';
 
+// Hierarquia de autoridade dos papéis (para limitar o modo escolhido no login
+// ao teto do papel real e para validar tokens em autenticarAdmin).
+const ROLE_AUTHORITY = { servidor: 0, admin_unidade: 1, super: 2 };
+
+// Resolve o "modo de acesso" pedido no login (personal x gestão) ao PAPEL REAL
+// do usuário, devolvendo o papel/privilégio EFETIVO da sessão:
+//   - modo 'usuario'  → sempre opera como usuário comum (só os próprios processos).
+//   - modo 'unidade'  → opera na plenitude do papel: admin_unidade vê a unidade;
+//                       super (admin global) vê TODAS as unidades.
+//   - servidor sempre opera como usuário, independentemente do modo pedido.
+function resolveSession(realRole, modo) {
+  const querGestao = modo === 'unidade';
+  if (realRole === 'super') {
+    return querGestao
+      ? { role: 'super', loginType: 'admin_super' }        // admin global
+      : { role: 'servidor', loginType: 'admin_padrao' };   // modo pessoal
+  }
+  if (realRole === 'admin_unidade') {
+    return querGestao
+      ? { role: 'admin_unidade', loginType: 'admin_padrao' }
+      : { role: 'servidor', loginType: 'admin_padrao' };
+  }
+  // servidor: sem autoridade de gestão — sempre pessoal.
+  return { role: 'servidor', loginType: 'admin_padrao' };
+}
+
 // Monta o objeto de usuário devolvido ao frontend após o login.
-// Inclui papel e unidade. admin_super reflete o privilégio EFETIVO da sessão
-// (um super logado como admin_padrao opera sem privilégios de super).
-async function buildLoginUser(user, effectiveLoginType) {
+// `session` é o resultado de resolveSession (papel/privilégio EFETIVO).
+async function buildLoginUser(user, session) {
   let unidadeNome = null;
   if (user.unidade_id) {
     try {
@@ -24,14 +49,14 @@ async function buildLoginUser(user, effectiveLoginType) {
       unidadeNome = u ? u.nome : null;
     } catch { /* não-crítico */ }
   }
-  const isSuperSession = effectiveLoginType === 'admin_super' && user.role === 'super';
   return {
     id: user.id,
     matricula: user.matricula,
     nome: user.nome,
-    role: user.role,
-    // Privilégio efetivo desta sessão (não necessariamente o papel do banco).
-    admin_super: isSuperSession,
+    // Papel/privilégio EFETIVO desta sessão (não necessariamente o do banco:
+    // um gestor pode ter entrado em modo usuário).
+    role: session.role,
+    admin_super: session.loginType === 'admin_super',
     admin_padrao: true,
     unidade_id: user.unidade_id,
     unidade_nome: unidadeNome,
@@ -43,9 +68,23 @@ async function buildLoginUser(user, effectiveLoginType) {
 const DUMMY_HASH = bcryptjs.hashSync('timing-equalizer', 10);
 
 // --- Account Lockout em memória ---
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutos
-const loginAttempts = new Map(); // chave: "ip:matricula", valor: { count, lockedUntil }
+//
+// O bloqueio é por (IP + matrícula), NÃO por IP puro: travar uma matrícula
+// numa máquina nunca impede outras matrículas de logarem na MESMA máquina — o
+// que importa numa rede compartilhada (lanhouse/NAT), onde vários servidores
+// dividem o mesmo IP público. Também não é possível um terceiro travar a conta
+// de uma vítima globalmente: o bloqueio fica preso ao par IP+matrícula.
+//
+// A contagem usa uma JANELA DESLIZANTE: erros espaçados de um usuário legítimo
+// não se acumulam indefinidamente até o bloqueio — se não houver falha dentro
+// da janela, a contagem recomeça do zero.
+//
+// Parâmetros ajustáveis por variável de ambiente (com defaults seguros).
+const MAX_LOGIN_ATTEMPTS = parseInt(process.env.LOGIN_MAX_ATTEMPTS, 10) || 10;
+const LOCKOUT_DURATION_MS = (parseInt(process.env.LOGIN_LOCKOUT_MINUTES, 10) || 15) * 60 * 1000;
+const ATTEMPT_WINDOW_MS = (parseInt(process.env.LOGIN_ATTEMPT_WINDOW_MINUTES, 10) || 15) * 60 * 1000;
+const LOCKOUT_MINUTES = Math.round(LOCKOUT_DURATION_MS / 60000);
+const loginAttempts = new Map(); // chave "ip:matricula" -> { count, firstAt, lastAt, lockedUntil }
 
 function getAttemptKey(ip, matricula) {
   return `${ip}:${matricula}`;
@@ -68,10 +107,17 @@ function checkLockout(ip, matricula) {
 
 function recordFailedAttempt(ip, matricula) {
   const key = getAttemptKey(ip, matricula);
-  const record = loginAttempts.get(key) || { count: 0, lockedUntil: null };
+  const now = Date.now();
+  let record = loginAttempts.get(key);
+  // Janela deslizante: se a última falha foi há mais que a janela, recomeça a
+  // contagem — assim erros ocasionais ao longo do tempo não travam a conta.
+  if (!record || (record.lastAt && now - record.lastAt > ATTEMPT_WINDOW_MS)) {
+    record = { count: 0, firstAt: now, lastAt: now, lockedUntil: null };
+  }
   record.count += 1;
+  record.lastAt = now;
   if (record.count >= MAX_LOGIN_ATTEMPTS) {
-    record.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+    record.lockedUntil = now + LOCKOUT_DURATION_MS;
     logger.logSecurityEvent('Conta bloqueada por tentativas excessivas', { ip, matricula, attempts: record.count });
   }
   loginAttempts.set(key, record);
@@ -82,21 +128,26 @@ function clearAttempts(ip, matricula) {
   loginAttempts.delete(getAttemptKey(ip, matricula));
 }
 
-// Limpeza periódica de registros expirados (a cada 10 min)
-setInterval(() => {
+// Limpeza periódica (a cada 10 min): remove locks expirados E registros
+// antigos fora da janela (evita crescimento indefinido do Map).
+const _cleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const [key, record] of loginAttempts.entries()) {
-    if (record.lockedUntil && now >= record.lockedUntil) {
+    const lockExpirou = record.lockedUntil && now >= record.lockedUntil;
+    const janelaExpirou = !record.lockedUntil && record.lastAt && now - record.lastAt > ATTEMPT_WINDOW_MS;
+    if (lockExpirou || janelaExpirou) {
       loginAttempts.delete(key);
     }
   }
 }, 10 * 60 * 1000);
+// Não impede o processo de encerrar (ex.: fim da suíte de testes).
+if (_cleanupInterval.unref) _cleanupInterval.unref();
 
 exports.login = async (req, res) => {
-  const { matricula, senha, loginType } = req.body;
+  const { matricula, senha } = req.body;
   const clientIP = getRealIP(req);
 
-  logger.info('Tentativa de login', { matricula, loginType, ip: clientIP });
+  logger.info('Tentativa de login', { matricula, ip: clientIP });
 
   // --- 0. VERIFICAÇÃO DE LOCKOUT ---
   const lockStatus = checkLockout(clientIP, matricula);
@@ -105,12 +156,6 @@ exports.login = async (req, res) => {
     return res.status(429).json({
       error: `Conta temporariamente bloqueada por tentativas excessivas. Tente novamente em ${lockStatus.remainingMinutes} minuto(s).`
     });
-  }
-
-  // --- 1. VALIDAÇÃO DO TIPO DE LOGIN (NOVO) ---
-  // Exige que o loginType seja especificado como admin
-  if (!loginType || (loginType !== 'admin_super' && loginType !== 'admin_padrao')) {
-    return res.status(400).json({ error: 'Tipo de login (loginType) é obrigatório e deve ser admin_super ou admin_padrao.' });
   }
 
   try {
@@ -126,57 +171,48 @@ exports.login = async (req, res) => {
       logger.logAuthAttempt(false, matricula, clientIP, user ? 'Senha incorreta' : 'Usuário não encontrado');
       if (attempt.lockedUntil) {
         return res.status(429).json({
-          error: `Conta bloqueada por ${MAX_LOGIN_ATTEMPTS} tentativas incorretas. Tente novamente em 15 minutos.`
+          error: `Conta bloqueada por ${MAX_LOGIN_ATTEMPTS} tentativas incorretas. Tente novamente em ${LOCKOUT_MINUTES} minutos.`
         });
       }
       return res.status(401).json({ error: INVALID_CREDENTIALS_MSG });
     }
 
-    // --- 3. VALIDAÇÃO DE PERMISSÃO (só após provar a senha) ---
-    // O papel (role) é a fonte de verdade. loginType é o privilégio SOLICITADO:
-    //   - 'admin_super' exige role 'super' (acesso cross-unidade + rotas de super).
-    //   - 'admin_padrao' vale para qualquer papel (super opera com privilégio
-    //     reduzido; admin_unidade e servidor operam no escopo da sua unidade).
-    let effectiveLoginType = null;
-
-    if (loginType === 'admin_super' && user.role === 'super') {
-        effectiveLoginType = 'admin_super';
-    } else if (loginType === 'admin_padrao') {
-        effectiveLoginType = 'admin_padrao';
-    }
-
-    // Se, após as verificações, ele não for um admin válido, rejeita.
-    if (!effectiveLoginType) {
-        logger.logAuthAttempt(false, matricula, clientIP, 'Permissão insuficiente');
-        logger.logSecurityEvent('Tentativa de acesso sem permissão', { matricula, loginType, ip: clientIP });
-        return res.status(403).json({ error: 'Acesso negado. O usuário não possui as permissões de administrador solicitadas.' });
-    }
-    // --- Fim da validação de permissão ---
-
-    // Login bem-sucedido: limpa tentativas falhas
+    // Senha correta: zera as tentativas AGORA, antes mesmo da checagem de
+    // permissão. Quem digitou a senha certa não é força-bruta — não deve ser
+    // penalizado por erros anteriores nem por escolher o tipo de login errado.
     clearAttempts(clientIP, matricula);
+
+    // --- 3. PRIVILÉGIO DA SESSÃO (papel efetivo = modo escolhido ∩ papel real) ---
+    // `modo` vem do login: 'usuario' (ver só os próprios) ou 'unidade' (operar
+    // na plenitude do papel). resolveSession limita o modo ao teto do papel
+    // real: servidor sempre entra como usuário; admin_unidade em modo 'unidade'
+    // vê a sua unidade; super (admin global) em modo 'unidade' vê TODAS.
+    // (as tentativas já foram zeradas ao validar a senha)
+    const modo = req.body.modo === 'unidade' ? 'unidade' : 'usuario';
+    const session = resolveSession(user.role, modo);
 
     // Lógica de primeiro login
     if (user.senha_padrao) {
       // Gera um token JWT de curta duração (5 min) vinculado ao userId
       // para garantir que apenas quem fez o login pode trocar a senha
       const firstLoginToken = jwt.sign(
-        { id: user.id, loginType: effectiveLoginType, purpose: 'first_login' },
+        { id: user.id, loginType: session.loginType, role: session.role, purpose: 'first_login' },
         JWT_SECRET,
         { expiresIn: '5m' }
       );
       logger.info('Primeiro login detectado', { userId: user.id, matricula });
-      return res.json({ firstLogin: true, firstLoginToken, loginType: effectiveLoginType });
+      return res.json({ firstLogin: true, firstLoginToken, loginType: session.loginType });
     } else {
       logger.logAuthAttempt(true, matricula, clientIP);
       // pwv: versão da senha — invalida o token se a senha mudar (ver autenticarAdmin)
+      // role no token = papel EFETIVO da sessão (pode ser menor que o do banco).
       const token = jwt.sign(
-        { id: user.id, loginType: effectiveLoginType, role: user.role, pwv: passwordVersion(user.senha) },
+        { id: user.id, loginType: session.loginType, role: session.role, pwv: passwordVersion(user.senha) },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRATION }
       );
 
-      const loginUser = await buildLoginUser(user, effectiveLoginType);
+      const loginUser = await buildLoginUser(user, session);
 
       // Define o token como cookie httpOnly (protegido contra XSS)
       setTokenCookie(res, token);
@@ -229,7 +265,11 @@ exports.firstLogin = async (req, res) => {
     }
 
     const userId = decoded.id;
-    const loginType = decoded.loginType;
+    // Papel/privilégio EFETIVO escolhido no login (limitado ao papel real).
+    const session = {
+      loginType: decoded.loginType || 'admin_padrao',
+      role: decoded.role || 'servidor',
+    };
 
     const user = await User.findByPk(userId);
     if (!user) {
@@ -254,12 +294,12 @@ exports.firstLogin = async (req, res) => {
 
     // pwv calculado APÓS a troca de senha — tokens antigos ficam inválidos
     const token = jwt.sign(
-      { id: user.id, loginType: loginType, role: user.role, pwv: passwordVersion(user.senha) },
+      { id: user.id, loginType: session.loginType, role: session.role, pwv: passwordVersion(user.senha) },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRATION }
     );
 
-    const loginUser = await buildLoginUser(user, loginType);
+    const loginUser = await buildLoginUser(user, session);
 
     // Define o token como cookie httpOnly (protegido contra XSS)
     setTokenCookie(res, token);
@@ -274,3 +314,16 @@ exports.firstLogin = async (req, res) => {
     return res.status(500).json({ error: 'Erro interno' });
   }
 };
+// Exposto apenas para testes unitários do mecanismo de lockout (não usar em
+// código de produção). Permite exercitar a janela deslizante e o limite.
+exports.__lockout = {
+  checkLockout,
+  recordFailedAttempt,
+  clearAttempts,
+  MAX_LOGIN_ATTEMPTS,
+  ATTEMPT_WINDOW_MS,
+  LOCKOUT_DURATION_MS,
+};
+
+// Exposto para testes: mapeamento do modo de acesso × papel real.
+exports.__resolveSession = resolveSession;

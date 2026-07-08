@@ -37,10 +37,15 @@ meta:
         variant="outlined"
       />
 
-      <v-radio-group v-model="loginType" inline label="Tipo de Acesso">
-        <v-radio label="Admin Padrão" value="admin_padrao" />
-        <v-radio label="Admin Super" value="admin_super" />
+      <v-radio-group v-model="modo" inline label="Modo de acesso">
+        <v-radio label="Usuário" value="usuario" />
+        <v-radio label="Adm Unidade" value="unidade" />
       </v-radio-group>
+      <div class="text-caption text-medium-emphasis mb-2">
+        <strong>Usuário</strong>: vê apenas os processos atribuídos a você.
+        <strong>Adm Unidade</strong>: para administradores — abre a gestão da sua
+        unidade (o administrador global acessa todas as unidades por aqui).
+      </div>
 
       <v-btn
         block
@@ -62,20 +67,20 @@ meta:
 
   const matricula = ref('')
   const senha = ref('')
-  const loginType = ref('admin_padrao')
+  const modo = ref('usuario')
   const loading = ref(false)
   const error = ref(null)
   const authStore = useAuthStore()
 
   async function handleLogin () {
-    if (!matricula.value || !senha.value || !loginType.value) {
+    if (!matricula.value || !senha.value) {
       error.value = 'Preencha todos os campos.'
       return
     }
     loading.value = true
     error.value = null
     try {
-      await authStore.login(matricula.value, senha.value, loginType.value)
+      await authStore.login(matricula.value, senha.value, modo.value)
     } catch (error_) {
       loading.value = false
       error.value = error_.response && error_.response.data ? error_.response.data.error || 'Erro desconhecido' : 'Não foi possível conectar ao servidor.'
