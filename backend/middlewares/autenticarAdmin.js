@@ -48,23 +48,43 @@ const autenticarAdmin = async (req, res, next) => {
       return res.status(401).json({ error: 'Sessão expirada por troca de senha. Faça login novamente.' });
     }
 
-    // 3. VERIFICAÇÃO DE PERMISSÃO (A PARTE CRÍTICA QUE FALTAVA)
-    // Se o usuário não for 'admin_padrao' E nem 'admin_super', ele é barrado.
-    if (!user.admin_padrao && !user.admin_super) {
-      logger.logSecurityEvent('Tentativa de acesso admin sem permissão', {
+    // 3. VERIFICAÇÃO DE PERMISSÃO
+    // Todo usuário tem um papel válido (super, admin_unidade ou servidor) e
+    // pode acessar o painel; o que ele ENXERGA é limitado pelo escopo de
+    // unidade/usuário nos controllers. Um papel ausente/inválido é barrado.
+    const PAPEIS_VALIDOS = ['super', 'admin_unidade', 'servidor'];
+    if (!PAPEIS_VALIDOS.includes(user.role)) {
+      logger.logSecurityEvent('Tentativa de acesso admin sem papel válido', {
         userId: user.id,
         matricula: user.matricula,
+        role: user.role,
         ip: getRealIP(req),
         attemptedRoute: req.url
       });
       return res.status(403).json({ error: 'Acesso proibido. Requer privilégios de administrador.' });
     }
-    
-    // 4. Se passou, anexa os dados na requisição para os controllers usarem
+
+    // Coerência de sessão: um super que rebaixou de papel (ou vice-versa) não
+    // deve continuar operando como super com um token antigo. Se o token diz
+    // 'admin_super' mas o papel atual no banco não é 'super', encerra a sessão.
+    if ((decoded.loginType || 'admin_padrao') === 'admin_super' && user.role !== 'super') {
+      logger.logSecurityEvent('Token admin_super com papel divergente no banco', {
+        userId: user.id,
+        matricula: user.matricula,
+        role: user.role,
+        ip: getRealIP(req)
+      });
+      return res.status(401).json({ error: 'Sessão inválida. Faça login novamente.' });
+    }
+
+    // 4. Se passou, anexa os dados na requisição para os controllers usarem.
+    // role e unidade_id vêm do BANCO (autoritativo), nunca do cliente.
     req.user = user;
     req.userId = user.id;
+    req.role = user.role;
+    req.unidadeId = user.unidade_id;
     // Anexa o tipo de login que foi usado (super ou padrao)
-    req.loginType = decoded.loginType || 'admin_padrao'; 
+    req.loginType = decoded.loginType || 'admin_padrao';
 
     next(); // Permite o acesso à rota de admin
 

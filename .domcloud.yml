@@ -31,6 +31,12 @@ passenger:
     - DB_NAME=${DB_NAME}
     - FRONTEND_URL=${FRONTEND_URL}
     - PJE_CRED_ENC_KEY=${PJE_CRED_ENC_KEY}
+    # Super admin global (multi-unidade). Definido no painel do DomCloud.
+    # Na 1ª execução cria o usuário; nas seguintes apenas garante o papel.
+    # A senha nunca é registrada em log; troque-a pelo painel após o 1º acesso.
+    - SUPER_ADMIN_MATRICULA=${SUPER_ADMIN_MATRICULA}
+    - SUPER_ADMIN_NOME=${SUPER_ADMIN_NOME}
+    - SUPER_ADMIN_SENHA=${SUPER_ADMIN_SENHA}
     - NODE_ENV=production
 
 commands:
@@ -45,6 +51,9 @@ commands:
     DB_NAME=$DB_NAME
     FRONTEND_URL=$FRONTEND_URL
     PJE_CRED_ENC_KEY=$PJE_CRED_ENC_KEY
+    SUPER_ADMIN_MATRICULA=$SUPER_ADMIN_MATRICULA
+    SUPER_ADMIN_NOME=$SUPER_ADMIN_NOME
+    SUPER_ADMIN_SENHA=$SUPER_ADMIN_SENHA
     NODE_ENV=production
     EOF
   - sed -i 's/^[[:space:]]*//' backend/.env
@@ -55,7 +64,11 @@ commands:
   - npm ci --omit=dev --prefix backend
   # 3. Aplica migrations de schema pendentes (substitui o antigo sequelize.sync)
   - npm run db:migrate --prefix backend
-  # 4. Garante que a pasta de logs existe para o Winston
+  # 4. Semeia/atualiza a lista de unidades (delegacias) — idempotente
+  - npm run db:seed:unidades --prefix backend
+  # 5. Garante o super admin global a partir das variáveis SUPER_ADMIN_* — idempotente
+  - npm run ensure:super --prefix backend
+  # 6. Garante que a pasta de logs existe para o Winston
   - mkdir -p backend/logs
-  # 5. Reinicia o Passenger (restart.txt na raiz do app)
+  # 7. Reinicia o Passenger (restart.txt na raiz do app)
   - mkdir -p tmp && touch tmp/restart.txt

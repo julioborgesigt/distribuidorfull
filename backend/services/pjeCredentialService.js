@@ -1,17 +1,20 @@
 // /services/pjeCredentialService.js
 //
-// CRUD de credenciais PJe: CPF + senha armazenados criptografados no banco.
-// A tabela é singleton (no máximo 1 linha). A chave de criptografia vive apenas
-// em PJE_CRED_ENC_KEY (variável de ambiente), nunca no banco.
+// CRUD de credenciais PJe: CPF + senha armazenados criptografados no banco,
+// UMA credencial POR UNIDADE (delegacia). Cada unidade loga no PJe com o
+// próprio CPF; o webservice MNI devolve os avisos daquela unidade.
+// A chave de criptografia vive apenas em PJE_CRED_ENC_KEY (variável de
+// ambiente), nunca no banco.
 
-const { PjeCredential, User } = require('../models');
+const { PjeCredential, User, Unidade } = require('../models');
 const { encrypt, decrypt } = require('../utils/credenciaisCrypto');
 const logger = require('../utils/logger');
 
-// Retorna { cpf, senha } desencriptados, ou null se não houver credenciais salvas.
-// Se a chave de criptografia faltar ou estiver errada, lança com mensagem clara.
-async function getCredentials() {
-  const row = await PjeCredential.findOne();
+// Retorna { cpf, senha } desencriptados da credencial da unidade, ou null se
+// não houver credencial salva para ela.
+async function getCredentials(unidadeId) {
+  if (unidadeId == null) return null;
+  const row = await PjeCredential.findOne({ where: { unidade_id: unidadeId } });
   if (!row) return null;
   try {
     return {
@@ -19,7 +22,7 @@ async function getCredentials() {
       senha: decrypt(row.senhaCriptografada),
     };
   } catch (err) {
-    logger.error('Falha ao descriptografar credenciais PJe do banco', { error: err.message });
+    logger.error('Falha ao descriptografar credenciais PJe do banco', { error: err.message, unidadeId });
     throw new Error(
       'Não foi possível descriptografar as credenciais PJe armazenadas. ' +
       'Verifique se PJE_CRED_ENC_KEY está correta no ambiente.'
@@ -27,33 +30,38 @@ async function getCredentials() {
   }
 }
 
-// Salva (ou substitui) as credenciais PJe criptografadas.
-// cpfDisplay: últimos 2 dígitos do CPF, exibido no painel sem descriptografar.
-async function saveCredentials(cpf, senha, userId) {
+// Salva (ou substitui) as credenciais PJe criptografadas de uma unidade.
+async function saveCredentials(unidadeId, cpf, senha, userId) {
+  if (unidadeId == null) {
+    throw new Error('unidadeId é obrigatório para salvar credenciais PJe.');
+  }
   const cpfDigits = String(cpf).replace(/\D/g, '');
   const cpfDisplay = `***.***.***-${cpfDigits.slice(-2)}`;
 
   const cpfCriptografado = encrypt(cpfDigits);
   const senhaCriptografada = encrypt(senha);
 
-  await PjeCredential.destroy({ where: {} });
+  await PjeCredential.destroy({ where: { unidade_id: unidadeId } });
   await PjeCredential.create({
     cpfCriptografado,
     senhaCriptografada,
     cpfDisplay,
     atualizadoPorId: userId || null,
+    unidade_id: unidadeId,
   });
 }
 
-// Remove as credenciais salvas (volta a usar env vars PJE_CPF/PJE_SENHA).
-async function clearCredentials() {
-  await PjeCredential.destroy({ where: {} });
+// Remove as credenciais salvas de uma unidade.
+async function clearCredentials(unidadeId) {
+  if (unidadeId == null) return;
+  await PjeCredential.destroy({ where: { unidade_id: unidadeId } });
 }
 
-// Retorna metadados sem descriptografar a senha, para o painel de status.
-async function getStatus() {
-  const row = await PjeCredential.findOne();
-  if (!row) return { configured: false };
+// Metadados (sem descriptografar a senha) da credencial de uma unidade.
+async function getStatus(unidadeId) {
+  if (unidadeId == null) return { configured: false };
+  const row = await PjeCredential.findOne({ where: { unidade_id: unidadeId } });
+  if (!row) return { configured: false, unidadeId };
 
   let atualizadoPorNome = null;
   if (row.atualizadoPorId) {
@@ -65,10 +73,45 @@ async function getStatus() {
 
   return {
     configured: true,
+    unidadeId,
     cpfDisplay: row.cpfDisplay,
     atualizadoEm: row.updatedAt,
     atualizadoPorNome,
   };
 }
 
-module.exports = { getCredentials, saveCredentials, clearCredentials, getStatus };
+// Lista o status das credenciais de TODAS as unidades (para o painel do super).
+async function getStatusAll() {
+  const unidades = await Unidade.findAll({
+    attributes: ['id', 'nome'],
+    order: [['nome', 'ASC']],
+  });
+  const rows = await PjeCredential.findAll();
+  const byUnidade = new Map(rows.map(r => [r.unidade_id, r]));
+  return unidades.map(u => {
+    const row = byUnidade.get(u.id);
+    return {
+      unidadeId: u.id,
+      unidadeNome: u.nome,
+      configured: !!row,
+      cpfDisplay: row ? row.cpfDisplay : null,
+      atualizadoEm: row ? row.updatedAt : null,
+    };
+  });
+}
+
+// Lista os ids das unidades que possuem credencial configurada (usado pelo cron
+// para iterar apenas quem tem credencial).
+async function unidadesComCredencial() {
+  const rows = await PjeCredential.findAll({ attributes: ['unidade_id'] });
+  return rows.map(r => r.unidade_id);
+}
+
+module.exports = {
+  getCredentials,
+  saveCredentials,
+  clearCredentials,
+  getStatus,
+  getStatusAll,
+  unidadesComCredencial,
+};

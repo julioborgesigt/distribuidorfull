@@ -4,11 +4,11 @@
 const fs = require('fs');
 const fsPromises = require('fs').promises;
 const csvParser = require('csv-parser');
-const { sequelize, User, Process, PjeImportLog } = require('../models');
+const { sequelize, User, Process, PjeImportLog, Unidade } = require('../models');
 const { Op, literal } = require('sequelize');
 const iconv = require('iconv-lite');
 const logger = require('../utils/logger');
-const { getRealIP, parseArrayFilter, processScopeWhere, looksLikeBinaryFile } = require('../utils/helpers');
+const { getRealIP, parseArrayFilter, processScopeWhere, unidadeScopeWhere, canSeeBeyondOwn, looksLikeBinaryFile } = require('../utils/helpers');
 const pjeImportService = require('../services/pjeImportService');
 const tpuService = require('../services/tpuService');
 
@@ -24,7 +24,15 @@ const tpuService = require('../services/tpuService');
 // processo existe nas duas origens, a fonte que está importando assume o
 // registro (eSAJ -> PJe), exceto que o eSAJ NÃO sobrescreve um processo que já
 // pertence ao PJe.
-async function upsertProcessos(results) {
+//
+// `unidadeId` (OBRIGATÓRIO): unidade dona dos processos importados. Todo
+// registro novo é carimbado com ela e a busca de existentes é feita POR
+// unidade — o número do processo é único por unidade, então a mesma numeração
+// pode coexistir em delegacias diferentes sem colidir.
+async function upsertProcessos(results, unidadeId) {
+  if (unidadeId == null) {
+    throw new Error('upsertProcessos: unidadeId é obrigatório para isolar os processos por unidade.');
+  }
   const latestProcessesMap = new Map();
 
   for (const currentRow of results) {
@@ -43,10 +51,11 @@ async function upsertProcessos(results) {
     }
   }
 
-  // Otimização: busca todos os processos existentes em uma única query
+  // Otimização: busca todos os processos existentes em uma única query,
+  // restrita à unidade — a unicidade do número é POR unidade.
   const allNumeros = Array.from(latestProcessesMap.keys());
   const existingProcesses = await Process.findAll({
-    where: { numero_processo: { [Op.in]: allNumeros } }
+    where: { numero_processo: { [Op.in]: allNumeros }, unidade_id: unidadeId }
   });
   const existingMap = new Map(existingProcesses.map(p => [p.numero_processo, p]));
 
@@ -98,7 +107,8 @@ async function upsertProcessos(results) {
         updateFns.push((t) => existing.update(updateData, { transaction: t }));
       }
     } else {
-      newRows.push(row);
+      // Carimba a unidade dona no registro novo.
+      newRows.push({ ...row, unidade_id: unidadeId });
     }
   }
 
@@ -123,11 +133,45 @@ async function upsertProcessos(results) {
   };
 }
 
+// Resolve a unidade de destino de uma importação (CSV/PJe manual) a partir do
+// solicitante. Servidores não importam. O super global precisa escolher a
+// unidade (query unidadeId); o admin da unidade usa a própria.
+async function resolveImportUnidadeId(req) {
+  if (req.role === 'servidor') {
+    return { error: 'Servidores não podem importar processos.', status: 403 };
+  }
+  let unidadeId;
+  if (req.loginType === 'admin_super') {
+    unidadeId = parseInt(req.query.unidadeId, 10) || null;
+    if (!unidadeId) {
+      return { error: 'Selecione a unidade de destino da importação (unidadeId).', status: 400 };
+    }
+  } else {
+    unidadeId = req.unidadeId;
+    if (!unidadeId) {
+      return { error: 'Seu usuário não está vinculado a nenhuma unidade.', status: 400 };
+    }
+  }
+  const unidade = await Unidade.findByPk(unidadeId);
+  if (!unidade) {
+    return { error: 'Unidade de destino não encontrada.', status: 404 };
+  }
+  return { unidadeId, unidade };
+}
+
 // Upload e importação de CSV
 exports.uploadCSV = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Nenhum arquivo foi enviado.' });
   }
+
+  // Define a unidade dona dos processos deste CSV antes de processar.
+  const alvo = await resolveImportUnidadeId(req);
+  if (alvo.error) {
+    if (req.file?.path) { await fsPromises.unlink(req.file.path).catch(() => {}); }
+    return res.status(alvo.status).json({ error: alvo.error });
+  }
+  const unidadeId = alvo.unidadeId;
 
   const filePath = req.file.path;
 
@@ -199,7 +243,7 @@ exports.uploadCSV = async (req, res) => {
     })
     .on('end', async () => {
       try {
-        const { total: totalRows } = await upsertProcessos(results);
+        const { total: totalRows } = await upsertProcessos(results, unidadeId);
 
         await fsPromises.unlink(filePath);
         logger.info('CSV importado com sucesso', {
@@ -261,6 +305,14 @@ exports.importPje = async (req, res) => {
       ? parseInt(req.query.cienciaMinDias, 10) || 0
       : undefined;
 
+  // Resolve a unidade de destino (admin da unidade usa a própria; super escolhe
+  // via query unidadeId). A credencial e a trava de importação são desta unidade.
+  const alvo = await resolveImportUnidadeId(req);
+  if (alvo.error) {
+    return res.status(alvo.status).json({ error: alvo.error });
+  }
+  const unidadeAlvo = alvo.unidade;
+
   if (pjeImportStatus.running) {
     return res.status(409).json({
       error: 'Já existe uma importação do PJe em andamento.',
@@ -305,18 +357,23 @@ exports.importPje = async (req, res) => {
       const u = userId ? await User.findByPk(userId, { attributes: ['nome'] }) : null;
       if (u && u.nome) usuario = u.nome;
     } catch { /* mantém o padrão */ }
+    // Identifica a unidade no histórico (os logs são globais e agora podem vir
+    // de várias unidades).
+    usuario = `${usuario} — ${unidadeAlvo.nome}`;
 
     try {
       const { avisos, rows, comPrazo, falhasTeor, adiados } =
-        await pjeImportService.coletarRows({ abrirTeor, cienciaMinDias });
+        await pjeImportService.coletarRows({ abrirTeor, cienciaMinDias, unidade: unidadeAlvo });
       const { total: totalRows, criados, atualizados } =
-        avisos > 0 ? await upsertProcessos(rows) : { total: 0, criados: 0, atualizados: 0 };
+        avisos > 0 ? await upsertProcessos(rows, unidadeAlvo.id) : { total: 0, criados: 0, atualizados: 0 };
 
       pjeImportStatus.result = {
         avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados,
+        unidade: unidadeAlvo.nome,
       };
       logger.info('Importação PJe concluída', {
         avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados, abrirTeor, userId,
+        unidadeId: unidadeAlvo.id,
       });
 
       await pjeImportService.registrarLog({
@@ -445,10 +502,10 @@ exports.listProcesses = async (req, res) => {
 
     let options = {
       where: {},
-      include: [{
-        model: User,
-        attributes: ['id', 'nome']
-      }],
+      include: [
+        { model: User, attributes: ['id', 'nome'] },
+        { model: Unidade, attributes: ['id', 'nome', 'sigla'] }
+      ],
       offset: isAll ? undefined : offset,
       limit: isAll ? undefined : limit,
       order: []
@@ -499,28 +556,32 @@ exports.listProcesses = async (req, res) => {
       options.where.vinculacao = { [Op.in]: vinculacaoFilter };
     }
 
-    const userIdFilter = parseArrayFilter(userId);
-    const shouldIncludeNA = (req.query.includeNA === 'true');
+    // Escopo de isolamento (unidade/usuário) — SEMPRE aplicado, nunca vem do
+    // cliente. Define o que este usuário pode enxergar por padrão.
+    Object.assign(options.where, processScopeWhere(req));
 
-    if (req.loginType !== 'admin_super') {
-      options.where.userId = req.userId;
-    } else {
-      let userWhereClause = null;
-
-      if (userIdFilter && userIdFilter.length > 0) {
-        userWhereClause = { [Op.in]: userIdFilter };
-      }
+    // Filtros opcionais por servidor / não-atribuído só para quem enxerga além
+    // dos próprios processos (super global ou admin da unidade). Para o admin
+    // da unidade, o escopo acima já fixou unidade_id, então filtrar por userId
+    // ou incluir não-atribuídos permanece restrito à sua unidade.
+    if (canSeeBeyondOwn(req)) {
+      const userIdFilter = parseArrayFilter(userId);
+      const shouldIncludeNA = (req.query.includeNA === 'true');
 
       if (shouldIncludeNA) {
-        if (userWhereClause) {
-          options.where.userId = {
-            [Op.or]: [ userWhereClause, null ]
-          };
-        } else {
-          options.where.userId = null;
-        }
-      } else if (userWhereClause) {
-        options.where.userId = userWhereClause;
+        options.where.userId = (userIdFilter && userIdFilter.length > 0)
+          ? { [Op.or]: [{ [Op.in]: userIdFilter }, null] }
+          : null;
+      } else if (userIdFilter && userIdFilter.length > 0) {
+        options.where.userId = { [Op.in]: userIdFilter };
+      }
+    }
+
+    // Super global pode restringir a uma ou mais unidades (seletor do painel).
+    if (req.loginType === 'admin_super') {
+      const unidadeIdFilter = parseArrayFilter(req.query.unidadeId);
+      if (unidadeIdFilter && unidadeIdFilter.length > 0) {
+        options.where.unidade_id = { [Op.in]: unidadeIdFilter };
       }
     }
 
@@ -618,6 +679,20 @@ exports.manualAssignProcess = async (req, res) => {
         userId: req.userId
       });
       return res.status(404).json({ error: 'Processo não encontrado.' });
+    }
+
+    // Invariante multi-unidade: um processo só pode ser atribuído a um usuário
+    // da MESMA unidade. Impede vincular processo de uma delegacia a servidor de
+    // outra (o super global, sem unidade, também não pode ser destinatário).
+    if (user.unidade_id !== process.unidade_id) {
+      logger.warn('Atribuição rejeitada: usuário de outra unidade', {
+        numeroProcesso: numero,
+        assignee: user.id,
+        assigneeUnidade: user.unidade_id,
+        processoUnidade: process.unidade_id,
+        userId: req.userId
+      });
+      return res.status(400).json({ error: 'O usuário destino não pertence à mesma unidade do processo.' });
     }
 
     process.userId = user.id;
@@ -737,8 +812,12 @@ exports.unmarkAsCumprido = async (req, res) => {
 // Contagem de processos não atribuídos
 exports.getUnassignedCount = async (req, res) => {
   try {
+    // Escopo por unidade: um admin da unidade só conta os não atribuídos DA
+    // SUA unidade; o super conta de todas. (Sem o escopo, a contagem vazava
+    // processos de outras unidades.)
     const count = await Process.count({
       where: {
+        ...unidadeScopeWhere(req),
         userId: null,
         cumprido: false
       }
@@ -765,9 +844,22 @@ exports.bulkAssign = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'Usuário destino não encontrado.' });
     }
-    // admin_padrao só pode reatribuir processos que já são dele
+
+    // Invariante multi-unidade: só atribui processos da MESMA unidade do
+    // usuário destino. Se o escopo do solicitante fixa uma unidade diferente da
+    // do destino, não há nada a atribuir.
+    const scope = processScopeWhere(req);
+    if (scope.unidade_id !== undefined && scope.unidade_id !== user.unidade_id) {
+      return res.status(400).json({ error: 'O usuário destino não pertence à sua unidade.' });
+    }
+    if (user.unidade_id == null) {
+      return res.status(400).json({ error: 'O usuário destino não pertence a nenhuma unidade.' });
+    }
+
+    // admin_padrao só pode reatribuir processos que já são dele; a unidade do
+    // destino delimita quais processos podem receber a atribuição.
     const [affected] = await Process.update({ userId: user.id }, {
-      where: { id: processIds, ...processScopeWhere(req) }
+      where: { id: processIds, ...scope, unidade_id: user.unidade_id }
     });
     logger.info('Atribuição em massa realizada', {
       requested: processIds.length,

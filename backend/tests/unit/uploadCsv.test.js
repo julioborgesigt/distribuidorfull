@@ -15,6 +15,7 @@ jest.mock('../../models', () => ({
     bulkCreate: jest.fn().mockResolvedValue([]),
   },
   PjeImportLog: {},
+  Unidade: { findByPk: jest.fn().mockResolvedValue({ id: 1, nome: 'Unidade Teste', nome_pje: 'UNIDADE TESTE' }) },
 }));
 
 const processController = require('../../controllers/processController');
@@ -47,7 +48,7 @@ describe('processController.uploadCSV - checagem de conteúdo real', () => {
     const filePath = writeTempFile('fake.csv', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
     const res = mockRes();
 
-    await callUploadCSV({ file: { path: filePath, originalname: 'fake.csv' }, userId: 1 }, res);
+    await callUploadCSV({ file: { path: filePath, originalname: 'fake.csv' }, userId: 1, role: 'admin_unidade', unidadeId: 1, loginType: 'admin_padrao' }, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(fs.existsSync(filePath)).toBe(false); // arquivo rejeitado é apagado
@@ -60,7 +61,7 @@ describe('processController.uploadCSV - checagem de conteúdo real', () => {
     const filePath = writeTempFile('ok.csv', Buffer.from(csv, 'latin1'));
     const res = mockRes();
 
-    const body = await callUploadCSV({ file: { path: filePath, originalname: 'ok.csv' }, userId: 1 }, res);
+    const body = await callUploadCSV({ file: { path: filePath, originalname: 'ok.csv' }, userId: 1, role: 'admin_unidade', unidadeId: 1, loginType: 'admin_padrao' }, res);
 
     expect(res.status).not.toHaveBeenCalledWith(400);
     expect(body).toEqual(expect.objectContaining({ totalRows: 1 }));
@@ -72,7 +73,7 @@ describe('processController.uploadCSV - checagem de conteúdo real', () => {
     const filePath = writeTempFile('ok-acentos.csv', Buffer.from(csv, 'latin1'));
     const res = mockRes();
 
-    await callUploadCSV({ file: { path: filePath, originalname: 'ok-acentos.csv' }, userId: 1 }, res);
+    await callUploadCSV({ file: { path: filePath, originalname: 'ok-acentos.csv' }, userId: 1, role: 'admin_unidade', unidadeId: 1, loginType: 'admin_padrao' }, res);
 
     expect(res.status).not.toHaveBeenCalledWith(400);
   });

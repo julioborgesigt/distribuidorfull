@@ -48,6 +48,22 @@ module.exports = (sequelize) => {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false
+    },
+    // Papel de acesso (fonte de verdade da autorização multi-unidade):
+    //   super         → cruza todas as unidades (global)
+    //   admin_unidade → gerencia toda a sua unidade
+    //   servidor      → vê apenas os próprios processos, dentro da sua unidade
+    role: {
+      type: DataTypes.ENUM('super', 'admin_unidade', 'servidor'),
+      allowNull: false,
+      defaultValue: 'servidor'
+    },
+    // Unidade (delegacia) do usuário. NULL apenas para o super global, que não
+    // pertence a nenhuma unidade. Obrigatório para admin_unidade e servidor
+    // (validado na aplicação, ver userController).
+    unidade_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
     }
   }, {
     tableName: 'usuarios',

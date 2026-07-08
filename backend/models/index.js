@@ -4,6 +4,7 @@ const UserModel = require('./user');
 const ProcessModel = require('./process');
 const PjeImportLogModel = require('./pjeImportLog');
 const PjeCredentialModel = require('./pjeCredential');
+const UnidadeModel = require('./unidade');
 const logger = require('../utils/logger');
 
 // Ajuste aqui suas credenciais e nome do banco
@@ -34,15 +35,27 @@ const User = UserModel(sequelize);
 const Process = ProcessModel(sequelize);
 const PjeImportLog = PjeImportLogModel(sequelize);
 const PjeCredential = PjeCredentialModel(sequelize);
+const Unidade = UnidadeModel(sequelize);
 
 // Relacionamentos (1-N: 1 usuário pode ter vários processos)
 User.hasMany(Process, { foreignKey: 'userId' });
 Process.belongsTo(User, { foreignKey: 'userId' });
+
+// Multi-unidade: 1 unidade tem vários usuários, processos e (no máx.) 1 credencial PJe.
+Unidade.hasMany(User, { foreignKey: 'unidade_id' });
+User.belongsTo(Unidade, { foreignKey: 'unidade_id' });
+
+Unidade.hasMany(Process, { foreignKey: 'unidade_id' });
+Process.belongsTo(Unidade, { foreignKey: 'unidade_id' });
+
+Unidade.hasMany(PjeCredential, { foreignKey: 'unidade_id' });
+PjeCredential.belongsTo(Unidade, { foreignKey: 'unidade_id' });
 
 module.exports = {
   sequelize,
   User,
   Process,
   PjeImportLog,
-  PjeCredential
+  PjeCredential,
+  Unidade
 };

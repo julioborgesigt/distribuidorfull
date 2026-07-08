@@ -1,23 +1,58 @@
 // /controllers/pjeAuthController.js
 //
-// Gerencia as credenciais PJe armazenadas no banco (criptografadas).
-// Todos os endpoints exigem admin_super (requireSuperAdmin aplicado nas rotas).
+// Gerencia as credenciais PJe armazenadas no banco (criptografadas), UMA por
+// unidade. O admin da unidade gerencia a credencial da PRÓPRIA unidade; o super
+// global gerencia a de qualquer unidade (informando unidadeId).
 //
 // Endpoints:
-//   GET  /pje-auth/status  — status sem revelar a senha
-//   POST /pje-auth/salvar  — valida CPF + testa conexão MNI + salva criptografado
-//   DELETE /pje-auth       — remove as credenciais salvas (volta para env vars)
+//   GET    /pje-auth/status  — status (uma unidade, ou todas p/ o super)
+//   POST   /pje-auth/salvar  — valida CPF + testa MNI + trava de unidade + salva
+//   DELETE /pje-auth         — remove as credenciais da unidade
 
 const pjeCredentialService = require('../services/pjeCredentialService');
 const pjeClient = require('../utils/pjeClient');
-const { vinculacoesDistintas } = require('../utils/pjeParser');
+const { vinculacoesDistintas, mesmaVinculacao } = require('../utils/pjeParser');
+const { Unidade } = require('../models');
 const logger = require('../utils/logger');
 const { getRealIP } = require('../utils/helpers');
 
+// Resolve a unidade-alvo da operação. admin_unidade só opera na própria; super
+// escolhe via `unidadeId` (body ou query). Retorna { unidade } ou { error, status }.
+async function resolveUnidade(req, unidadeIdRaw) {
+  if (req.role === 'servidor') {
+    return { error: 'Acesso negado. Requer administrador de unidade.', status: 403 };
+  }
+  let unidadeId;
+  if (req.loginType === 'admin_super' || req.role === 'super') {
+    unidadeId = parseInt(unidadeIdRaw, 10) || null;
+    if (!unidadeId) {
+      return { error: 'Informe a unidade (unidadeId).', status: 400 };
+    }
+  } else {
+    // admin_unidade
+    unidadeId = req.unidadeId;
+    if (!unidadeId) {
+      return { error: 'Seu usuário não está vinculado a nenhuma unidade.', status: 400 };
+    }
+  }
+  const unidade = await Unidade.findByPk(unidadeId);
+  if (!unidade) {
+    return { error: 'Unidade não encontrada.', status: 404 };
+  }
+  return { unidade };
+}
+
 exports.getStatus = async (req, res) => {
   try {
-    const status = await pjeCredentialService.getStatus();
-    res.json(status);
+    // Super sem unidadeId: devolve o status de todas as unidades.
+    if ((req.loginType === 'admin_super' || req.role === 'super') && !req.query.unidadeId) {
+      const all = await pjeCredentialService.getStatusAll();
+      return res.json({ all });
+    }
+    const r = await resolveUnidade(req, req.query.unidadeId);
+    if (r.error) return res.status(r.status).json({ error: r.error });
+    const status = await pjeCredentialService.getStatus(r.unidade.id);
+    res.json({ ...status, unidadeNome: r.unidade.nome });
   } catch (err) {
     logger.error('Erro ao buscar status das credenciais PJe', { error: err.message });
     res.status(500).json({ error: 'Erro ao verificar credenciais armazenadas.' });
@@ -25,7 +60,7 @@ exports.getStatus = async (req, res) => {
 };
 
 exports.salvar = async (req, res) => {
-  const { cpf, senha } = req.body || {};
+  const { cpf, senha, unidadeId } = req.body || {};
 
   // Validação de formato
   if (!cpf || !senha) {
@@ -39,6 +74,11 @@ exports.salvar = async (req, res) => {
     return res.status(400).json({ error: 'Senha não pode ser vazia.' });
   }
 
+  // Unidade-alvo da credencial.
+  const r = await resolveUnidade(req, unidadeId);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  const unidade = r.unidade;
+
   // Verifica se a chave de criptografia está configurada antes de tentar o teste
   try {
     const { encrypt } = require('../utils/credenciaisCrypto');
@@ -48,18 +88,13 @@ exports.salvar = async (req, res) => {
   }
 
   // Testa as credenciais contra o webservice MNI (não registra ciência).
-  // Qualquer erro (credencial errada, rede, endpoint) impede o salvamento.
   let avisos;
   try {
     avisos = await pjeClient.consultarAvisosPendentes({ cpf: cpfDigits, senha });
   } catch (mniErr) {
     logger.warn('Falha ao validar credenciais PJe', {
-      error: mniErr.message,
-      userId: req.userId,
-      ip: getRealIP(req),
+      error: mniErr.message, userId: req.userId, ip: getRealIP(req),
     });
-    // pjeClient lança "PJe: ..." para erros de negócio do MNI (incluindo auth).
-    // Outros erros são de rede/conexão.
     const isMniError = mniErr.message.startsWith('PJe:');
     const userMsg = isMniError
       ? 'Usuário ou senha errado(s), verifique.'
@@ -67,35 +102,57 @@ exports.salvar = async (req, res) => {
     return res.status(400).json({ error: userMsg });
   }
 
-  // Best-effort: barra credenciais de usuários vinculados a mais de uma
-  // unidade representativa, detectado pelos destinatários distintos entre os
-  // avisos pendentes no momento (vinculacoesDistintas já ignora a vinculação
-  // genérica "Polícia Civil do Ceará", que aparece junto da delegacia/vara
-  // real na maioria dos avisos e não conta como unidade própria). Limitação:
-  // uma unidade sem avisos pendentes agora não aparece aqui — não há operação
-  // no MNI que liste as unidades de um consultante independente de haver
-  // avisos pendentes. A importação (pjeImportService) reforça essa mesma
-  // checagem a cada execução.
-  const unidades = vinculacoesDistintas(avisos);
-  if (unidades.length > 1) {
+  // TRAVA DE UNIDADE (no salvamento):
+  // 1) A credencial não pode abranger mais de uma unidade representativa.
+  const unidadesAviso = vinculacoesDistintas(avisos);
+  if (unidadesAviso.length > 1) {
     logger.warn('Credenciais PJe recusadas: usuário com múltiplas unidades', {
-      vinculacoes: unidades,
-      userId: req.userId,
-      ip: getRealIP(req),
+      vinculacoes: unidadesAviso, userId: req.userId, ip: getRealIP(req),
     });
     return res.status(400).json({
       error: `Este usuário do PJe está vinculado a mais de uma unidade representativa ` +
-        `(${unidades.join(', ')}). Cadastre credenciais de um usuário ` +
+        `(${unidadesAviso.join(', ')}). Cadastre credenciais de um usuário ` +
         `vinculado a apenas uma unidade.`
     });
   }
 
-  // Salva criptografado
+  // 2) Se a unidade já tem um nome_pje definido, a vinculação detectada tem que
+  //    bater — impede cadastrar nesta unidade uma credencial de OUTRA delegacia.
+  //    Se ainda não tem (bootstrap) e detectamos exatamente uma, adotamos ela.
+  let nomePjeDetectado = unidadesAviso.length === 1 ? unidadesAviso[0] : null;
+  if (unidade.nome_pje) {
+    if (nomePjeDetectado && !mesmaVinculacao(nomePjeDetectado, unidade.nome_pje)) {
+      logger.warn('Credenciais PJe recusadas: vinculação diverge da unidade', {
+        detectada: nomePjeDetectado, esperada: unidade.nome_pje,
+        unidadeId: unidade.id, userId: req.userId, ip: getRealIP(req),
+      });
+      return res.status(400).json({
+        error: `Os avisos deste usuário pertencem à unidade "${nomePjeDetectado}", que ` +
+          `não corresponde à unidade "${unidade.nome_pje}". Cadastre a credencial na ` +
+          `unidade correta.`
+      });
+    }
+  } else if (nomePjeDetectado) {
+    // Bootstrap: adota a vinculação detectada como nome_pje da unidade.
+    try {
+      unidade.nome_pje = nomePjeDetectado;
+      await unidade.save();
+      logger.info('nome_pje da unidade definido automaticamente pela credencial', {
+        unidadeId: unidade.id, nome_pje: nomePjeDetectado,
+      });
+    } catch (e) {
+      logger.warn('Falha ao definir nome_pje automaticamente', { error: e.message, unidadeId: unidade.id });
+    }
+  }
+
+  // Salva criptografado, vinculado à unidade.
   try {
-    await pjeCredentialService.saveCredentials(cpfDigits, senha, req.userId);
-    logger.info('Credenciais PJe salvas/atualizadas', { userId: req.userId, ip: getRealIP(req) });
-    const status = await pjeCredentialService.getStatus();
-    res.json({ message: 'Credenciais salvas com sucesso.', ...status });
+    await pjeCredentialService.saveCredentials(unidade.id, cpfDigits, senha, req.userId);
+    logger.info('Credenciais PJe salvas/atualizadas', {
+      userId: req.userId, unidadeId: unidade.id, ip: getRealIP(req),
+    });
+    const status = await pjeCredentialService.getStatus(unidade.id);
+    res.json({ message: 'Credenciais salvas com sucesso.', unidadeNome: unidade.nome, ...status });
   } catch (saveErr) {
     logger.error('Erro ao salvar credenciais PJe', { error: saveErr.message });
     res.status(500).json({ error: saveErr.message });
@@ -104,9 +161,13 @@ exports.salvar = async (req, res) => {
 
 exports.remover = async (req, res) => {
   try {
-    await pjeCredentialService.clearCredentials();
-    logger.info('Credenciais PJe removidas do banco', { userId: req.userId, ip: getRealIP(req) });
-    res.json({ message: 'Credenciais removidas. O sistema voltará a usar as variáveis de ambiente PJE_CPF/PJE_SENHA.' });
+    const r = await resolveUnidade(req, req.query.unidadeId || req.body?.unidadeId);
+    if (r.error) return res.status(r.status).json({ error: r.error });
+    await pjeCredentialService.clearCredentials(r.unidade.id);
+    logger.info('Credenciais PJe removidas do banco', {
+      userId: req.userId, unidadeId: r.unidade.id, ip: getRealIP(req),
+    });
+    res.json({ message: 'Credenciais removidas.' });
   } catch (err) {
     logger.error('Erro ao remover credenciais PJe', { error: err.message });
     res.status(500).json({ error: 'Erro ao remover credenciais.' });

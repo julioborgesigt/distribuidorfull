@@ -15,6 +15,7 @@ const {
   computePrazo,
   deveAbrirTeor,
   vinculacoesDistintas,
+  mesmaVinculacao,
 } = require('../utils/pjeParser');
 const tpu = require('../utils/tpu');
 const logger = require('../utils/logger');
@@ -100,24 +101,51 @@ function avisoToRow(aviso, prazo) {
 async function coletarRows({
   abrirTeor = true,
   cienciaMinDias = Number(process.env.PJE_CIENCIA_MIN_DIAS) || 0,
+  unidade,
 } = {}) {
-  // Credenciais: banco tem prioridade sobre env vars (PJE_CPF/PJE_SENHA).
-  // null = pjeClient usa os env vars diretamente.
-  const creds = await pjeCredentialService.getCredentials().catch(() => null);
+  if (!unidade || unidade.id == null) {
+    throw new Error('coletarRows: a unidade de destino da importação é obrigatória.');
+  }
 
-  const avisos = await pjeClient.consultarAvisosPendentes(creds || undefined);
+  // Credenciais PJe DA UNIDADE (cada delegacia loga com o próprio CPF).
+  const creds = await pjeCredentialService.getCredentials(unidade.id);
+  if (!creds) {
+    throw new Error(
+      `A unidade "${unidade.nome}" não tem credenciais PJe configuradas. ` +
+      `Cadastre em "Autenticação PJe" antes de importar.`
+    );
+  }
 
-  // A credencial deve estar vinculada a uma única unidade representativa (já
-  // checado ao salvar em "Autenticação PJe", mas uma unidade sem avisos
-  // pendentes naquele momento pode não ter sido detectada). Reforça aqui,
-  // antes de processar qualquer aviso, para nunca misturar unidades.
-  const unidades = vinculacoesDistintas(avisos);
-  if (unidades.length > 1) {
+  const avisos = await pjeClient.consultarAvisosPendentes(creds);
+
+  // TRAVA DE IMPORTAÇÃO (isolamento entre unidades):
+  //
+  // 1) A credencial não pode abranger mais de uma unidade representativa. (Já
+  //    checado ao salvar, mas uma unidade sem avisos pendentes na hora pode
+  //    ter escapado — reforça aqui.)
+  const unidadesAviso = vinculacoesDistintas(avisos);
+  if (unidadesAviso.length > 1) {
     throw new Error(
       `A credencial do PJe em uso está vinculada a mais de uma unidade ` +
-      `representativa (${unidades.join(', ')}). A importação foi cancelada — ` +
-      `configure uma credencial de unidade única em "Autenticação PJe".`
+      `representativa (${unidadesAviso.join(', ')}). A importação foi cancelada — ` +
+      `use uma credencial de unidade única.`
     );
+  }
+
+  // 2) A unidade dos avisos precisa BATER com a unidade de destino. Impede que
+  //    um usuário que mudou (ou passou a gerenciar outra) unidade de gestão no
+  //    PJe importe avisos de uma delegacia para a caixa de outra. Se
+  //    unidade.nome_pje ainda não foi definido, cai para a checagem best-effort
+  //    de "unidade única" acima.
+  if (unidadesAviso.length === 1 && unidade.nome_pje) {
+    if (!mesmaVinculacao(unidadesAviso[0], unidade.nome_pje)) {
+      throw new Error(
+        `Os avisos retornados pertencem à unidade "${unidadesAviso[0]}", mas a ` +
+        `credencial está registrada para "${unidade.nome_pje}". A importação foi ` +
+        `cancelada para não misturar processos de unidades diferentes. Verifique ` +
+        `se a unidade de gestão no PJe foi alterada.`
+      );
+    }
   }
 
   const rows = [];

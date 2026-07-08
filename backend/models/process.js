@@ -11,7 +11,7 @@ module.exports = (sequelize) => {
     numero_processo: {
       type: DataTypes.STRING(50),
       allowNull: false,
-      unique: true,
+      // Unicidade é POR UNIDADE (índice composto abaixo), não global.
       validate: {
         notEmpty: true,
         len: [1, 50]
@@ -71,6 +71,12 @@ module.exports = (sequelize) => {
     vinculacao: {
       type: DataTypes.STRING(255),
       allowNull: true
+    },
+    // Unidade (delegacia) dona do processo. Obrigatório: todo processo pertence
+    // a exatamente uma unidade. O número do processo é único POR unidade.
+    unidade_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     }
 
   }, {
@@ -89,6 +95,8 @@ module.exports = (sequelize) => {
       { fields: ['userId', 'cumprido'], name: 'idx_userid_cumprido' },
       { fields: ['fonte'] },
       { fields: ['vinculacao'] },
+      { fields: ['unidade_id', 'numero_processo'], unique: true, name: 'uniq_unidade_numero_processo' },
+      { fields: ['unidade_id', 'cumprido'], name: 'idx_unidade_cumprido' },
     ],
     hooks: {
       beforeCreate: (process) => {

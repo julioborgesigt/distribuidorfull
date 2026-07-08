@@ -45,6 +45,8 @@ describe('Middleware - autenticarAdmin (invalidação por troca de senha)', () =
     id: 1,
     matricula: 'A123',
     senha: '$2a$10$hash-atual',
+    role: 'servidor',
+    unidade_id: 1,
     admin_padrao: true,
     admin_super: false,
   };
@@ -122,8 +124,8 @@ describe('Middleware - autenticarAdmin (invalidação por troca de senha)', () =
     expect(res.status).toHaveBeenCalledWith(401);
   });
 
-  test('rejeita com 403 usuário sem privilégios de admin', async () => {
-    User.findByPk.mockResolvedValue({ ...usuario, admin_padrao: false, admin_super: false });
+  test('rejeita com 403 usuário sem papel válido', async () => {
+    User.findByPk.mockResolvedValue({ ...usuario, role: undefined, admin_padrao: false, admin_super: false });
     const token = jwt.sign(
       { id: 1, loginType: 'admin_padrao', pwv: passwordVersion(usuario.senha) },
       process.env.JWT_SECRET
