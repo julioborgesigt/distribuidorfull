@@ -43,9 +43,23 @@ async function buildLoginUser(user, effectiveLoginType) {
 const DUMMY_HASH = bcryptjs.hashSync('timing-equalizer', 10);
 
 // --- Account Lockout em memória ---
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutos
-const loginAttempts = new Map(); // chave: "ip:matricula", valor: { count, lockedUntil }
+//
+// O bloqueio é por (IP + matrícula), NÃO por IP puro: travar uma matrícula
+// numa máquina nunca impede outras matrículas de logarem na MESMA máquina — o
+// que importa numa rede compartilhada (lanhouse/NAT), onde vários servidores
+// dividem o mesmo IP público. Também não é possível um terceiro travar a conta
+// de uma vítima globalmente: o bloqueio fica preso ao par IP+matrícula.
+//
+// A contagem usa uma JANELA DESLIZANTE: erros espaçados de um usuário legítimo
+// não se acumulam indefinidamente até o bloqueio — se não houver falha dentro
+// da janela, a contagem recomeça do zero.
+//
+// Parâmetros ajustáveis por variável de ambiente (com defaults seguros).
+const MAX_LOGIN_ATTEMPTS = parseInt(process.env.LOGIN_MAX_ATTEMPTS, 10) || 10;
+const LOCKOUT_DURATION_MS = (parseInt(process.env.LOGIN_LOCKOUT_MINUTES, 10) || 15) * 60 * 1000;
+const ATTEMPT_WINDOW_MS = (parseInt(process.env.LOGIN_ATTEMPT_WINDOW_MINUTES, 10) || 15) * 60 * 1000;
+const LOCKOUT_MINUTES = Math.round(LOCKOUT_DURATION_MS / 60000);
+const loginAttempts = new Map(); // chave "ip:matricula" -> { count, firstAt, lastAt, lockedUntil }
 
 function getAttemptKey(ip, matricula) {
   return `${ip}:${matricula}`;
@@ -68,10 +82,17 @@ function checkLockout(ip, matricula) {
 
 function recordFailedAttempt(ip, matricula) {
   const key = getAttemptKey(ip, matricula);
-  const record = loginAttempts.get(key) || { count: 0, lockedUntil: null };
+  const now = Date.now();
+  let record = loginAttempts.get(key);
+  // Janela deslizante: se a última falha foi há mais que a janela, recomeça a
+  // contagem — assim erros ocasionais ao longo do tempo não travam a conta.
+  if (!record || (record.lastAt && now - record.lastAt > ATTEMPT_WINDOW_MS)) {
+    record = { count: 0, firstAt: now, lastAt: now, lockedUntil: null };
+  }
   record.count += 1;
+  record.lastAt = now;
   if (record.count >= MAX_LOGIN_ATTEMPTS) {
-    record.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+    record.lockedUntil = now + LOCKOUT_DURATION_MS;
     logger.logSecurityEvent('Conta bloqueada por tentativas excessivas', { ip, matricula, attempts: record.count });
   }
   loginAttempts.set(key, record);
@@ -82,15 +103,20 @@ function clearAttempts(ip, matricula) {
   loginAttempts.delete(getAttemptKey(ip, matricula));
 }
 
-// Limpeza periódica de registros expirados (a cada 10 min)
-setInterval(() => {
+// Limpeza periódica (a cada 10 min): remove locks expirados E registros
+// antigos fora da janela (evita crescimento indefinido do Map).
+const _cleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const [key, record] of loginAttempts.entries()) {
-    if (record.lockedUntil && now >= record.lockedUntil) {
+    const lockExpirou = record.lockedUntil && now >= record.lockedUntil;
+    const janelaExpirou = !record.lockedUntil && record.lastAt && now - record.lastAt > ATTEMPT_WINDOW_MS;
+    if (lockExpirou || janelaExpirou) {
       loginAttempts.delete(key);
     }
   }
 }, 10 * 60 * 1000);
+// Não impede o processo de encerrar (ex.: fim da suíte de testes).
+if (_cleanupInterval.unref) _cleanupInterval.unref();
 
 exports.login = async (req, res) => {
   const { matricula, senha, loginType } = req.body;
@@ -126,11 +152,16 @@ exports.login = async (req, res) => {
       logger.logAuthAttempt(false, matricula, clientIP, user ? 'Senha incorreta' : 'Usuário não encontrado');
       if (attempt.lockedUntil) {
         return res.status(429).json({
-          error: `Conta bloqueada por ${MAX_LOGIN_ATTEMPTS} tentativas incorretas. Tente novamente em 15 minutos.`
+          error: `Conta bloqueada por ${MAX_LOGIN_ATTEMPTS} tentativas incorretas. Tente novamente em ${LOCKOUT_MINUTES} minutos.`
         });
       }
       return res.status(401).json({ error: INVALID_CREDENTIALS_MSG });
     }
+
+    // Senha correta: zera as tentativas AGORA, antes mesmo da checagem de
+    // permissão. Quem digitou a senha certa não é força-bruta — não deve ser
+    // penalizado por erros anteriores nem por escolher o tipo de login errado.
+    clearAttempts(clientIP, matricula);
 
     // --- 3. VALIDAÇÃO DE PERMISSÃO (só após provar a senha) ---
     // O papel (role) é a fonte de verdade. loginType é o privilégio SOLICITADO:
@@ -152,9 +183,7 @@ exports.login = async (req, res) => {
         return res.status(403).json({ error: 'Acesso negado. O usuário não possui as permissões de administrador solicitadas.' });
     }
     // --- Fim da validação de permissão ---
-
-    // Login bem-sucedido: limpa tentativas falhas
-    clearAttempts(clientIP, matricula);
+    // (as tentativas já foram zeradas assim que a senha foi validada acima)
 
     // Lógica de primeiro login
     if (user.senha_padrao) {
@@ -273,4 +302,14 @@ exports.firstLogin = async (req, res) => {
     });
     return res.status(500).json({ error: 'Erro interno' });
   }
+};
+// Exposto apenas para testes unitários do mecanismo de lockout (não usar em
+// código de produção). Permite exercitar a janela deslizante e o limite.
+exports.__lockout = {
+  checkLockout,
+  recordFailedAttempt,
+  clearAttempts,
+  MAX_LOGIN_ATTEMPTS,
+  ATTEMPT_WINDOW_MS,
+  LOCKOUT_DURATION_MS,
 };
