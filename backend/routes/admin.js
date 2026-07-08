@@ -4,8 +4,10 @@ const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const pjeAuthController = require('../controllers/pjeAuthController');
+const unidadeController = require('../controllers/unidadeController');
 const autenticarAdmin = require('../middlewares/autenticarAdmin');
 const requireSuperAdmin = require('../middlewares/requireSuperAdmin');
+const requireGestor = require('../middlewares/requireGestor');
 const multer = require('multer');
 const {
   validatePreCadastro,
@@ -148,7 +150,7 @@ const handleUploadError = (err, req, res, next) => {
  *       400:
  *         description: Erro no arquivo CSV
  */
-router.post('/upload', upload.single('csvFile'), handleUploadError, adminController.uploadCSV);
+router.post('/upload', requireGestor, upload.single('csvFile'), handleUploadError, adminController.uploadCSV);
 
 // Rate limiter dedicado à importação do PJe: é uma operação pesada (consulta o
 // webservice externo e pode registrar ciência), então limitamos a poucas
@@ -171,10 +173,17 @@ const pjeCredLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// --- Credenciais PJe (admin_super somente) ---
-router.get('/pje-auth/status', requireSuperAdmin, pjeAuthController.getStatus);
-router.post('/pje-auth/salvar', requireSuperAdmin, pjeCredLimiter, pjeAuthController.salvar);
-router.delete('/pje-auth', requireSuperAdmin, pjeAuthController.remover);
+// --- Unidades (delegacias) ---
+// Listagem: qualquer gestor (para seletores). CRUD: só super global.
+router.get('/unidades', requireGestor, unidadeController.listUnidades);
+router.post('/unidades', requireSuperAdmin, unidadeController.createUnidade);
+router.put('/unidades/:id', requireSuperAdmin, unidadeController.updateUnidade);
+router.delete('/unidades/:id', requireSuperAdmin, unidadeController.deleteUnidade);
+
+// --- Credenciais PJe (gestor: super ou admin da unidade) ---
+router.get('/pje-auth/status', requireGestor, pjeAuthController.getStatus);
+router.post('/pje-auth/salvar', requireGestor, pjeCredLimiter, pjeAuthController.salvar);
+router.delete('/pje-auth', requireGestor, pjeAuthController.remover);
 
 /**
  * @swagger
@@ -200,7 +209,7 @@ router.delete('/pje-auth', requireSuperAdmin, pjeAuthController.remover);
  *       502:
  *         description: Erro de comunicação com o PJe
  */
-router.post('/import-pje', pjeImportLimiter, adminController.importPje);
+router.post('/import-pje', requireGestor, pjeImportLimiter, adminController.importPje);
 
 /**
  * @swagger
@@ -335,7 +344,7 @@ router.post('/manual-assign', validateManualAssign, adminController.manualAssign
  *       201:
  *         description: Usuário criado com sucesso
  */
-router.post('/pre-cadastro', requireSuperAdmin, validatePreCadastro, adminController.preCadastro);
+router.post('/pre-cadastro', requireGestor, validatePreCadastro, adminController.preCadastro);
 
 /**
  * @swagger
@@ -357,7 +366,7 @@ router.post('/pre-cadastro', requireSuperAdmin, validatePreCadastro, adminContro
  *       200:
  *         description: Senha resetada com sucesso
  */
-router.post('/reset-password', requireSuperAdmin, validateResetPassword, adminController.resetPassword);
+router.post('/reset-password', requireGestor, validateResetPassword, adminController.resetPassword);
 
 /**
  * @swagger
@@ -466,7 +475,7 @@ router.post('/update-intim', validateUpdateIntim, adminController.updateIntim);
  *       200:
  *         description: Usuário excluído com sucesso
  */
-router.post('/delete-matricula', requireSuperAdmin, validateDeleteMatricula, adminController.deleteMatricula);
+router.post('/delete-matricula', requireGestor, validateDeleteMatricula, adminController.deleteMatricula);
 
 /**
  * @swagger

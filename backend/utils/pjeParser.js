@@ -182,6 +182,14 @@ function vinculacoesDistintas(avisos) {
   return todas.filter(v => !ehVinculacaoGenerica(v));
 }
 
+// Compara dois nomes de vinculação/unidade ignorando caixa e acentos — o MNI
+// não é consistente na acentuação. Usado pela TRAVA DE IMPORTAÇÃO para conferir
+// se os avisos retornados pertencem à unidade esperada (unidade.nome_pje).
+function mesmaVinculacao(a, b) {
+  if (!a || !b) return false;
+  return String(a).trim().localeCompare(String(b).trim(), 'pt', { sensitivity: 'base' }) === 0;
+}
+
 module.exports = {
   attr,
   el,
@@ -195,4 +203,5 @@ module.exports = {
   computePrazo,
   vinculacaoFromDestinatario,
   vinculacoesDistintas,
+  mesmaVinculacao,
 };

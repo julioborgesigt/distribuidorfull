@@ -187,16 +187,50 @@ const looksLikeBinaryFile = (buffer) => {
 };
 
 /**
- * Retorna a cláusula WHERE de escopo de processos para a requisição atual.
- * - admin_super: sem restrição (objeto vazio) → enxerga/opera em todos os processos.
- * - demais admins: restrito aos processos atribuídos ao próprio usuário.
- * Centraliza a regra para que operações em massa e individuais não vazem dados
- * de outros usuários.
+ * Retorna a cláusula WHERE de escopo de PROCESSOS para a requisição atual.
+ * É o ponto único de isolamento multi-unidade — toda query/operação sobre
+ * processos deve mesclar este escopo para não vazar dados entre unidades ou
+ * usuários. O `unidade_id`/`userId` vêm sempre do token (autenticarAdmin),
+ * nunca do cliente.
+ *
+ *   super (login como super) → {}                              (todas as unidades)
+ *   super (login como padrão) → { userId }                     (privilégio reduzido: só os próprios)
+ *   admin_unidade             → { unidade_id }                 (toda a sua unidade)
+ *   servidor                  → { unidade_id, userId }         (só os próprios, na sua unidade)
+ *
  * @param {Object} req - Objeto de requisição Express (após autenticarAdmin)
  * @returns {Object} Cláusula WHERE do Sequelize
  */
 const processScopeWhere = (req) => {
-  return req.loginType === 'admin_super' ? {} : { userId: req.userId };
+  if (req.loginType === 'admin_super') return {};
+  if (req.role === 'super') return { userId: req.userId };
+  if (req.role === 'admin_unidade') return { unidade_id: req.unidadeId };
+  return { unidade_id: req.unidadeId, userId: req.userId };
+};
+
+/**
+ * Escopo APENAS por unidade (ignora o dono do processo). Usado em contagens e
+ * filtros onde admin_unidade deve enxergar toda a sua unidade — inclusive
+ * processos não atribuídos.
+ *   super         → {}                (todas as unidades)
+ *   demais papéis → { unidade_id }    (apenas a própria unidade)
+ * @param {Object} req - Objeto de requisição Express (após autenticarAdmin)
+ * @returns {Object} Cláusula WHERE do Sequelize
+ */
+const unidadeScopeWhere = (req) => {
+  if (req.loginType === 'admin_super') return {};
+  if (req.role === 'super') return {};
+  return { unidade_id: req.unidadeId };
+};
+
+/**
+ * Indica se o usuário atual enxerga além dos próprios processos (pode filtrar
+ * por outro servidor e ver não atribuídos): super ou admin da unidade.
+ * @param {Object} req - Objeto de requisição Express (após autenticarAdmin)
+ * @returns {boolean}
+ */
+const canSeeBeyondOwn = (req) => {
+  return req.loginType === 'admin_super' || req.role === 'admin_unidade';
 };
 
 module.exports = {
@@ -207,6 +241,8 @@ module.exports = {
   formatCPF,
   generateRandomPassword,
   processScopeWhere,
+  unidadeScopeWhere,
+  canSeeBeyondOwn,
   passwordVersion,
   looksLikeBinaryFile,
   getJwtExpiration,

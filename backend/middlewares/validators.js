@@ -68,7 +68,11 @@ const validatePreCadastro = [
 
   body('tipoCadastro')
     .notEmpty().withMessage('Tipo de cadastro é obrigatório')
-    .isIn(['admin_padrao', 'admin_super']).withMessage('Tipo de cadastro inválido'),
+    .isIn(['servidor', 'admin_unidade', 'super']).withMessage('Tipo de cadastro inválido'),
+
+  body('unidadeId')
+    .optional({ nullable: true })
+    .isInt({ min: 1 }).withMessage('Unidade inválida'),
 
   body('updateIfExists')
     .optional()

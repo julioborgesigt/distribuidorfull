@@ -4,12 +4,11 @@
 const { sequelize, User, Process } = require('../models');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
-const { getRealIP, parseArrayFilter, processScopeWhere } = require('../utils/helpers');
+const { getRealIP, parseArrayFilter, processScopeWhere, canSeeBeyondOwn } = require('../utils/helpers');
 
 // Helper: Constrói a cláusula WHERE para os stats (ignora 'cumprido')
 const buildStatsWhereClause = (req) => {
   const { search, classe, assunto, tarjas, userId, prazo } = req.query;
-  const { loginType, userId: reqUserId } = req;
 
   const where = {};
 
@@ -29,20 +28,28 @@ const buildStatsWhereClause = (req) => {
     where.tarjas = { [Op.in]: tarjasFilter };
   }
 
-  const userIdFilter = parseArrayFilter(userId);
-  const shouldIncludeNA = (req.query.includeNA === 'true');
+  // Escopo de isolamento (unidade/usuário) — sempre aplicado.
+  Object.assign(where, processScopeWhere(req));
 
-  if (loginType !== 'admin_super') {
-    where.userId = reqUserId;
-  } else {
-    let userWhereClause = null;
-    if (userIdFilter && userIdFilter.length > 0) {
-      userWhereClause = { [Op.in]: userIdFilter };
-    }
+  // Filtros opcionais de servidor/não-atribuído só para quem enxerga além dos
+  // próprios processos (super global ou admin da unidade).
+  if (canSeeBeyondOwn(req)) {
+    const userIdFilter = parseArrayFilter(userId);
+    const shouldIncludeNA = (req.query.includeNA === 'true');
     if (shouldIncludeNA) {
-      where.userId = userWhereClause ? { [Op.or]: [userWhereClause, null] } : null;
-    } else if (userWhereClause) {
-      where.userId = userWhereClause;
+      where.userId = (userIdFilter && userIdFilter.length > 0)
+        ? { [Op.or]: [{ [Op.in]: userIdFilter }, null] }
+        : null;
+    } else if (userIdFilter && userIdFilter.length > 0) {
+      where.userId = { [Op.in]: userIdFilter };
+    }
+  }
+
+  // Super global pode restringir a uma ou mais unidades (seletor do painel).
+  if (req.loginType === 'admin_super') {
+    const unidadeIdFilter = parseArrayFilter(req.query.unidadeId);
+    if (unidadeIdFilter && unidadeIdFilter.length > 0) {
+      where.unidade_id = { [Op.in]: unidadeIdFilter };
     }
   }
 

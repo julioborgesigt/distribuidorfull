@@ -1,5 +1,5 @@
 // /controllers/authController.js (Apenas Admin)
-const { User } = require('../models');
+const { User, Unidade } = require('../models');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
@@ -12,6 +12,31 @@ const JWT_EXPIRATION = getJwtExpiration();
 // Mensagem única para matrícula inexistente e senha errada — evita enumeração
 // de usuários válidos pelo formulário de login
 const INVALID_CREDENTIALS_MSG = 'Matrícula ou senha incorretos.';
+
+// Monta o objeto de usuário devolvido ao frontend após o login.
+// Inclui papel e unidade. admin_super reflete o privilégio EFETIVO da sessão
+// (um super logado como admin_padrao opera sem privilégios de super).
+async function buildLoginUser(user, effectiveLoginType) {
+  let unidadeNome = null;
+  if (user.unidade_id) {
+    try {
+      const u = await Unidade.findByPk(user.unidade_id, { attributes: ['nome'] });
+      unidadeNome = u ? u.nome : null;
+    } catch { /* não-crítico */ }
+  }
+  const isSuperSession = effectiveLoginType === 'admin_super' && user.role === 'super';
+  return {
+    id: user.id,
+    matricula: user.matricula,
+    nome: user.nome,
+    role: user.role,
+    // Privilégio efetivo desta sessão (não necessariamente o papel do banco).
+    admin_super: isSuperSession,
+    admin_padrao: true,
+    unidade_id: user.unidade_id,
+    unidade_nome: unidadeNome,
+  };
+}
 
 // Hash usado para equalizar o tempo de resposta quando a matrícula não existe
 // (sem ele, a ausência do bcrypt.compare denunciaria matrículas inexistentes)
@@ -108,13 +133,15 @@ exports.login = async (req, res) => {
     }
 
     // --- 3. VALIDAÇÃO DE PERMISSÃO (só após provar a senha) ---
-    // Verifica se o usuário TEM a permissão que ele ESTÁ PEDINDO
+    // O papel (role) é a fonte de verdade. loginType é o privilégio SOLICITADO:
+    //   - 'admin_super' exige role 'super' (acesso cross-unidade + rotas de super).
+    //   - 'admin_padrao' vale para qualquer papel (super opera com privilégio
+    //     reduzido; admin_unidade e servidor operam no escopo da sua unidade).
     let effectiveLoginType = null;
 
-    if (loginType === 'admin_super' && user.admin_super) {
+    if (loginType === 'admin_super' && user.role === 'super') {
         effectiveLoginType = 'admin_super';
-    } else if (loginType === 'admin_padrao' && (user.admin_padrao || user.admin_super)) {
-        // Um admin_super pode logar como admin_padrao
+    } else if (loginType === 'admin_padrao') {
         effectiveLoginType = 'admin_padrao';
     }
 
@@ -144,22 +171,12 @@ exports.login = async (req, res) => {
       logger.logAuthAttempt(true, matricula, clientIP);
       // pwv: versão da senha — invalida o token se a senha mudar (ver autenticarAdmin)
       const token = jwt.sign(
-        { id: user.id, loginType: effectiveLoginType, pwv: passwordVersion(user.senha) },
+        { id: user.id, loginType: effectiveLoginType, role: user.role, pwv: passwordVersion(user.senha) },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRATION }
       );
 
-      let loginUser = {
-        id: user.id,
-        matricula: user.matricula,
-        nome: user.nome,
-        admin_padrao: user.admin_padrao,
-        admin_super: user.admin_super
-      };
-
-      if (effectiveLoginType === 'admin_padrao') {
-        loginUser.admin_super = false;
-      }
+      const loginUser = await buildLoginUser(user, effectiveLoginType);
 
       // Define o token como cookie httpOnly (protegido contra XSS)
       setTokenCookie(res, token);
@@ -237,22 +254,12 @@ exports.firstLogin = async (req, res) => {
 
     // pwv calculado APÓS a troca de senha — tokens antigos ficam inválidos
     const token = jwt.sign(
-      { id: user.id, loginType: loginType, pwv: passwordVersion(user.senha) },
+      { id: user.id, loginType: loginType, role: user.role, pwv: passwordVersion(user.senha) },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRATION }
     );
 
-    let loginUser = {
-      id: user.id,
-      matricula: user.matricula,
-      nome: user.nome,
-      admin_padrao: user.admin_padrao,
-      admin_super: user.admin_super
-    };
-
-    if (loginType === 'admin_padrao') {
-      loginUser.admin_super = false;
-    }
+    const loginUser = await buildLoginUser(user, loginType);
 
     // Define o token como cookie httpOnly (protegido contra XSS)
     setTokenCookie(res, token);

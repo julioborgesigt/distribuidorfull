@@ -1,5 +1,5 @@
 // /models/pjeCredential.js
-// Singleton: no máximo 1 linha na tabela pje_credentials (garantido pelo serviço).
+// Uma credencial PJe por unidade (no máximo 1 linha por unidade_id).
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
@@ -32,6 +32,11 @@ module.exports = (sequelize) => {
       type: DataTypes.INTEGER,
       allowNull: true,
       field: 'atualizado_por_id'
+    },
+    // Unidade dona desta credencial. No máximo 1 credencial por unidade.
+    unidade_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     }
   }, {
     tableName: 'pje_credentials',
