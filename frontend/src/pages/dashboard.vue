@@ -525,6 +525,9 @@
           <template #item.importados="{ item }">
             {{ Math.max(0, (item.avisos ?? 0) - (item.adiados ?? 0)) }}
           </template>
+          <template #item.duracaoMs="{ item }">
+            {{ ((item.duracaoMs ?? 0) / 1000).toFixed(1) }}s
+          </template>
           <template #item.status="{ item }">
             <v-tooltip v-if="item.erro" location="top">
               <template #activator="{ props: tip }">
@@ -800,7 +803,7 @@
   const dialogLogsPje = ref(false)
   const logsPje = ref([])
   const loadingLogsPje = ref(false)
-  // Mesmo padrão do modal de resultado da importação.
+  // Mesmo padrão do modal de resultado da importação (+ data, falhas, duração, status).
   const logsHeaders = [
     { title: 'Data', key: 'created_at' },
     { title: 'Por', key: 'usuario' },
@@ -808,6 +811,8 @@
     { title: 'Importados', key: 'importados', align: 'center', sortable: false },
     { title: 'Novos', key: 'criados', align: 'center' },
     { title: 'Atualizados', key: 'atualizados', align: 'center' },
+    { title: 'Falhas', key: 'falhasTeor', align: 'center' },
+    { title: 'Duração', key: 'duracaoMs', align: 'center' },
     { title: 'Status', key: 'status', align: 'center', sortable: false },
   ]
 
