@@ -154,33 +154,34 @@ async function coletarRows({
   let adiados = 0;
 
   for (const aviso of avisos) {
-    let prazo = { prazo_processual: '', prazo_vencimento: null };
-
     const abrirEste =
       abrirTeor && deveAbrirTeor(aviso.dataDisponibilizacao, cienciaMinDias);
 
-    if (abrirTeor && !abrirEste) {
-      adiados += 1; // ainda jovem: importa sem ciência, prazo virá depois
+    // Avisos ainda pendentes de ciência (mais novos que o limiar) NÃO são
+    // importados — apenas contados (informativo). Eles entram numa importação
+    // futura, quando amadurecerem e a ciência for tomada.
+    if (!abrirEste) {
+      if (abrirTeor) adiados += 1;
+      continue;
     }
 
-    if (abrirEste) {
-      try {
-        // Registra ciência e inicia o prazo do aviso.
-        const teor = await pjeClient.consultarTeorComunicacao(aviso.idAviso, creds || undefined);
-        prazo = computePrazo({
-          dataIntimacaoISO: mniDateToISO(aviso.dataDisponibilizacao),
-          tipoPrazo: teor.tipoPrazo,
-          dataReferencia: teor.dataReferencia,
-          prazoDias: teor.prazoDias,
-        });
-        if (prazo.prazo_processual) comPrazo += 1;
-      } catch (err) {
-        falhasTeor += 1;
-        logger.warn('Falha ao obter teor de aviso PJe', {
-          idAviso: aviso.idAviso,
-          error: err.message,
-        });
-      }
+    let prazo = { prazo_processual: '', prazo_vencimento: null };
+    try {
+      // Registra ciência e inicia o prazo do aviso.
+      const teor = await pjeClient.consultarTeorComunicacao(aviso.idAviso, creds || undefined);
+      prazo = computePrazo({
+        dataIntimacaoISO: mniDateToISO(aviso.dataDisponibilizacao),
+        tipoPrazo: teor.tipoPrazo,
+        dataReferencia: teor.dataReferencia,
+        prazoDias: teor.prazoDias,
+      });
+      if (prazo.prazo_processual) comPrazo += 1;
+    } catch (err) {
+      falhasTeor += 1;
+      logger.warn('Falha ao obter teor de aviso PJe', {
+        idAviso: aviso.idAviso,
+        error: err.message,
+      });
     }
 
     rows.push(avisoToRow(aviso, prazo));

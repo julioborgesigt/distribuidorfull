@@ -369,6 +369,8 @@ exports.importPje = async (req, res) => {
 
       pjeImportStatus.result = {
         avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados,
+        // avisos que já tinham 5+ dias: tomamos ciência e importamos.
+        importados: Math.max(0, avisos - adiados),
         unidade: unidadeAlvo.nome,
       };
       logger.info('Importação PJe concluída', {
