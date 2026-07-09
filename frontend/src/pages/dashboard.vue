@@ -519,8 +519,11 @@
           <template #item.created_at="{ item }">
             {{ formatarDataHoraLog(item.created_at) }}
           </template>
-          <template #item.duracaoMs="{ item }">
-            {{ (item.duracaoMs / 1000).toFixed(1) }}s
+          <template #item.adiados="{ item }">
+            {{ item.adiados ?? 0 }}
+          </template>
+          <template #item.importados="{ item }">
+            {{ Math.max(0, (item.avisos ?? 0) - (item.adiados ?? 0)) }}
           </template>
           <template #item.status="{ item }">
             <v-tooltip v-if="item.erro" location="top">
@@ -797,16 +800,14 @@
   const dialogLogsPje = ref(false)
   const logsPje = ref([])
   const loadingLogsPje = ref(false)
+  // Mesmo padrão do modal de resultado da importação.
   const logsHeaders = [
     { title: 'Data', key: 'created_at' },
     { title: 'Por', key: 'usuario' },
-    { title: 'Avisos', key: 'avisos', align: 'center' },
-    { title: 'Criados', key: 'criados', align: 'center' },
+    { title: 'Pendentes de ciência', key: 'adiados', align: 'center' },
+    { title: 'Importados', key: 'importados', align: 'center', sortable: false },
+    { title: 'Novos', key: 'criados', align: 'center' },
     { title: 'Atualizados', key: 'atualizados', align: 'center' },
-    { title: 'Com prazo', key: 'comPrazo', align: 'center' },
-    { title: 'Sem prazo', key: 'semPrazo', align: 'center' },
-    { title: 'Falhas', key: 'falhasTeor', align: 'center' },
-    { title: 'Duração', key: 'duracaoMs', align: 'center' },
     { title: 'Status', key: 'status', align: 'center', sortable: false },
   ]
 

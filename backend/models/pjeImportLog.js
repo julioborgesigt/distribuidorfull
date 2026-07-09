@@ -45,6 +45,13 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 0
     },
+    // Pendentes de ciência não importados (mais novos que o limiar). O nº de
+    // importados (tomados ciência) é avisos - adiados.
+    adiados: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
     // Falhas ao abrir o teor de avisos individuais.
     falhasTeor: {
       type: DataTypes.INTEGER,
