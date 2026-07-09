@@ -593,6 +593,58 @@
     </v-card>
   </v-dialog>
 
+  <!-- Resultado da importação do PJe -->
+  <v-dialog v-model="dialogResultadoPje" max-width="560px">
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon color="success" start>mdi-check-circle-outline</v-icon>
+        Importação do PJe concluída
+      </v-card-title>
+      <v-divider />
+      <v-card-text>
+        <v-list class="py-0" density="comfortable" lines="two">
+          <v-list-item>
+            <v-list-item-title class="text-wrap">Pendentes de ciência e não importados (chegaram há menos de 5 dias)</v-list-item-title>
+            <template #append>
+              <span class="text-h6">{{ resultadoImportPje.adiados ?? 0 }}</span>
+            </template>
+          </v-list-item>
+          <v-divider />
+          <v-list-item>
+            <v-list-item-title class="text-wrap">Tomados ciência e importados (chegaram há mais de 5 dias)</v-list-item-title>
+            <template #append>
+              <span class="text-h6">{{ resultadoImportPje.importados ?? 0 }}</span>
+            </template>
+          </v-list-item>
+          <v-divider />
+          <v-list-item>
+            <v-list-item-title class="text-wrap">Novos processos (criados na importação)</v-list-item-title>
+            <template #append>
+              <span class="text-h6">{{ resultadoImportPje.criados ?? 0 }}</span>
+            </template>
+          </v-list-item>
+          <v-divider />
+          <v-list-item>
+            <v-list-item-title class="text-wrap">Processos atualizados (já existentes de outras importações)</v-list-item-title>
+            <template #append>
+              <span class="text-h6">{{ resultadoImportPje.atualizados ?? 0 }}</span>
+            </template>
+          </v-list-item>
+        </v-list>
+        <p
+          v-if="resultadoImportPje.falhasTeor"
+          class="text-caption text-medium-emphasis mt-3 mb-0"
+        >
+          {{ resultadoImportPje.falhasTeor }} aviso(s) falharam ao abrir o teor e não foram importados.
+        </p>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="primary" variant="flat" @click="dialogResultadoPje = false">Fechar</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <v-dialog v-model="dialogBulkAssign" max-width="500px" persistent>
     <v-card>
       <v-form ref="formBulkAssignRef" @submit.prevent="handleBulkAssign">
@@ -1151,6 +1203,9 @@
   // diálogo confirma explicitamente antes de disparar.
   const dialogImportPje = ref(false)
   const pjeAuthStatusImport = reactive({ checking: true, configured: false, cpfDisplay: null })
+  // Modal com o resultado da importação (substitui o toast de resumo).
+  const dialogResultadoPje = ref(false)
+  const resultadoImportPje = ref({})
 
   // Abre o diálogo de credenciais PJe. Para o super, exige uma unidade ativa
   // selecionada (a credencial é por unidade).
@@ -1225,20 +1280,11 @@
       if (data && !data.running) {
         if (data.error) {
           notify(`Importação do PJe falhou: ${data.error}`, 'error')
-        } else if (data.result) {
-          const r = data.result
-          const partes = [`${r.avisos ?? 0} avisos`]
-          if (r.comPrazo != null) partes.push(`${r.comPrazo} com prazo`)
-          if (r.adiados) partes.push(`${r.adiados} aguardando ciência`)
-          if (r.falhasTeor) partes.push(`${r.falhasTeor} falha(s) ao abrir`)
-          if (r.tpu) {
-            const tc = r.tpu.classes?.resolvidos ?? 0
-            const ta = r.tpu.assuntos?.resolvidos ?? 0
-            if (tc || ta) partes.push(`${tc} classe(s) e ${ta} assunto(s) traduzidos`)
-          }
-          notify(`Importação do PJe concluída: ${partes.join(', ')}.`, 'success', 6000)
         } else {
-          notify('Importação do PJe concluída.', 'success', 6000)
+          // Fecha o toast persistente e mostra o resultado num modal.
+          snackbar.value = false
+          resultadoImportPje.value = data.result || {}
+          dialogResultadoPje.value = true
         }
         clearCache('cache:filterOptions') // novas classes/assuntos podem ter surgido
         await fetchFilterOptions()
