@@ -461,8 +461,11 @@ exports.importPjeHealth = async (req, res) => {
       const idadeHoras = ultimoOk
         ? Math.round(((agora - new Date(ultimoOk.created_at).getTime()) / 3600000) * 10) / 10
         : null;
-      const nunca = !ultimoOk;
-      const stale = nunca || idadeHoras > staleHoras;
+      // Só monitoramos unidades que JÁ importaram com sucesso alguma vez.
+      // Unidades que nunca importaram (não configuradas / fora de uso) não
+      // geram alerta, para não poluir com "nunca importou".
+      const temSucesso = !!ultimoOk;
+      const stale = temSucesso && idadeHoras > staleHoras;
       const ultimoErro = !!(ultimo && ultimo.status === 'erro');
 
       items.push({
@@ -475,7 +478,8 @@ exports.importPjeHealth = async (req, res) => {
         erro: ultimoErro ? ultimo.erro : null,
         stale,
         ultimoErro,
-        problema: stale || ultimoErro,
+        // Alerta só quando um pipeline que já funcionou fica atrasado ou falha.
+        problema: temSucesso && (stale || ultimoErro),
       });
     }
 
