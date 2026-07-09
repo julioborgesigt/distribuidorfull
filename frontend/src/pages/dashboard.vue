@@ -30,6 +30,41 @@
     </div>
   </v-alert>
 
+  <!-- Saúde da importação do PJe: alerta de atraso/falha (falha silenciosa) -->
+  <v-alert
+    v-if="importHealthProblemas.length > 0"
+    border="start"
+    class="mb-6"
+    prominent
+    :type="importHealthTemErroGrave ? 'error' : 'warning'"
+    variant="tonal"
+  >
+    <div class="font-weight-medium mb-1">
+      Atenção: a importação do PJe pode ter falhado
+    </div>
+    <ul class="ma-0 pl-4">
+      <li v-for="h in importHealthProblemas" :key="h.unidadeId">
+        <strong>{{ h.unidade }}</strong>:
+        <template v-if="h.ultimoStatus === 'nunca'">nunca importou.</template>
+        <template v-else-if="h.ultimoErro">
+          última tentativa falhou<template v-if="h.erro"> — {{ h.erro }}</template>.
+        </template>
+        <template v-else>
+          última importação há {{ formatarHoras(h.idadeHoras) }} (acima do esperado).
+        </template>
+      </li>
+    </ul>
+  </v-alert>
+  <v-alert
+    v-else-if="importHealthEmDia"
+    class="mb-4"
+    density="compact"
+    type="success"
+    variant="tonal"
+  >
+    Importação do PJe em dia — mais recente há {{ formatarHoras(importHealthMaisRecenteHoras) }}.
+  </v-alert>
+
   <!-- Barra lateral: teleportada ao body para sobrepor o app bar inteiro -->
   <Teleport to="body">
     <v-navigation-drawer
@@ -803,6 +838,38 @@
   const dialogLogsPje = ref(false)
   const logsPje = ref([])
   const loadingLogsPje = ref(false)
+
+  // Saúde da importação do PJe (visibilidade + alerta de falha silenciosa).
+  const importHealth = ref([])
+  const importHealthProblemas = computed(() => importHealth.value.filter(h => h.problema))
+  const importHealthTemErroGrave = computed(() =>
+    importHealthProblemas.value.some(h => h.ultimoStatus === 'nunca' || h.ultimoErro)
+  )
+  const importHealthEmDia = computed(() =>
+    importHealth.value.length > 0 && importHealthProblemas.value.length === 0
+  )
+  const importHealthMaisRecenteHoras = computed(() => {
+    const idades = importHealth.value
+      .map(h => h.idadeHoras)
+      .filter(v => v != null)
+    return idades.length ? Math.min(...idades) : null
+  })
+
+  function formatarHoras (h) {
+    if (h == null) return '—'
+    if (h < 1) return 'menos de 1h'
+    if (h < 24) return `${Math.round(h)}h`
+    return `${Math.floor(h / 24)}d`
+  }
+
+  async function fetchImportHealth () {
+    try {
+      const { data } = await apiClient.get('/admin/import-pje/health')
+      importHealth.value = data.items || []
+    } catch {
+      // silencioso: a saúde é informativa; não interrompe o painel
+    }
+  }
   // Mesmo padrão do modal de resultado da importação (+ data, falhas, duração, status).
   const logsHeaders = [
     { title: 'Data', key: 'created_at' },
@@ -1295,6 +1362,7 @@
         clearCache('cache:filterOptions') // novas classes/assuntos podem ter surgido
         await fetchFilterOptions()
         await reloadAllData()
+        fetchImportHealth() // atualiza o indicador de saúde da importação
         return
       }
     }
@@ -1585,6 +1653,7 @@
     fetchAllUsers()
     fetchFilterOptions() // Busca opções cumulativas para os filtros
     checkUnassignedProcesses()
+    fetchImportHealth() // saúde da importação do PJe (alerta de falha)
     // A unidade ativa é carregada pela barra superior (layouts/default.vue);
     // garante o carregamento caso o dashboard monte antes.
     if (authStore.isSuper && !unidadeAtiva.carregada) unidadeAtiva.carregar()

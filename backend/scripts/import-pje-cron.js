@@ -74,6 +74,7 @@ const logger = require('../utils/logger');
         });
         await registrarLog({
           usuario: `Cron automático — ${unidade.nome}`,
+          unidade_id: unidade.id,
           avisos, criados, atualizados, comPrazo,
           semPrazo: Math.max(0, avisos - comPrazo),
           adiados,
@@ -94,6 +95,7 @@ const logger = require('../utils/logger');
         });
         await registrarLog({
           usuario: `Cron automático — ${unidade.nome}`,
+          unidade_id: unidade.id,
           duracaoMs: Date.now() - inicio,
           status: 'erro',
           erro: (err.message || 'Erro na importação da unidade.').slice(0, 500),

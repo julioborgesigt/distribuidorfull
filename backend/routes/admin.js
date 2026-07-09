@@ -244,6 +244,18 @@ router.get('/import-pje/logs', adminController.importPjeLogs);
 
 /**
  * @swagger
+ * /api/admin/import-pje/health:
+ *   get:
+ *     summary: Saúde da importação do PJe (última importação por unidade)
+ *     tags: [Administração - Processos]
+ *     responses:
+ *       200:
+ *         description: Estado por unidade (última importação, atraso, erro)
+ */
+router.get('/import-pje/health', adminController.importPjeHealth);
+
+/**
+ * @swagger
  * /api/admin/atualizar-tpu:
  *   post:
  *     summary: Atualiza a tradução de classes/assuntos (TPU) via SGT/CNJ
