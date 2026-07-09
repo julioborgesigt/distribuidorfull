@@ -32,12 +32,14 @@
 
   <!-- Saúde da importação do PJe: alerta de atraso/falha (falha silenciosa) -->
   <v-alert
-    v-if="importHealthProblemas.length > 0"
+    v-if="importHealthProblemas.length > 0 && showImportHealthAlert"
     border="start"
     class="mb-6"
+    closable
     prominent
     :type="importHealthTemErroGrave ? 'error' : 'warning'"
     variant="tonal"
+    @click:close="showImportHealthAlert = false"
   >
     <div class="font-weight-medium mb-1">
       Atenção: a importação do PJe pode ter falhado
@@ -841,6 +843,7 @@
 
   // Saúde da importação do PJe (visibilidade + alerta de falha silenciosa).
   const importHealth = ref([])
+  const showImportHealthAlert = ref(true)
   const importHealthProblemas = computed(() => importHealth.value.filter(h => h.problema))
   const importHealthTemErroGrave = computed(() =>
     importHealthProblemas.value.some(h => h.ultimoStatus === 'nunca' || h.ultimoErro),
@@ -866,6 +869,11 @@
     try {
       const { data } = await apiClient.get('/admin/import-pje/health')
       importHealth.value = data.items || []
+      // Ao reavaliar a saúde (ex.: após uma importação), reexibe o alerta caso
+      // tenha sido fechado antes — assim um novo problema volta a ser visível.
+      if (importHealth.value.some(h => h.problema)) {
+        showImportHealthAlert.value = true
+      }
     } catch {
       // silencioso: a saúde é informativa; não interrompe o painel
     }
