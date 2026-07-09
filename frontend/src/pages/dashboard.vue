@@ -128,81 +128,81 @@
         />
 
         <v-list-group class="menu-top" value="usuarios">
-            <template #activator="{ props }">
-              <v-list-item
-                prepend-icon="mdi-account-cog-outline"
-                title="Gerenc. Usuários"
-                v-bind="props"
-              />
-            </template>
+          <template #activator="{ props }">
             <v-list-item
-              prepend-icon="mdi-account-plus-outline"
-              title="Cadastrar Usuário"
-              @click="() => { drawerOpen = false; userDialogs?.abrirModalCadastro(); }"
+              prepend-icon="mdi-account-cog-outline"
+              title="Gerenc. Usuários"
+              v-bind="props"
             />
-            <v-list-item
-              prepend-icon="mdi-account-edit-outline"
-              title="Editar Usuário"
-              @click="() => { drawerOpen = false; userDialogs?.abrirModalEditar(); }"
-            />
-            <v-list-item
-              base-color="orange"
-              prepend-icon="mdi-lock-reset"
-              title="Resetar Senha"
-              @click="() => { drawerOpen = false; userDialogs?.abrirModalReset(); }"
-            />
-            <v-list-item
-              base-color="red"
-              prepend-icon="mdi-account-remove-outline"
-              title="Apagar Usuário"
-              @click="() => { drawerOpen = false; userDialogs?.abrirModalDelete(); }"
-            />
-          </v-list-group>
+          </template>
+          <v-list-item
+            prepend-icon="mdi-account-plus-outline"
+            title="Cadastrar Usuário"
+            @click="() => { drawerOpen = false; userDialogs?.abrirModalCadastro(); }"
+          />
+          <v-list-item
+            prepend-icon="mdi-account-edit-outline"
+            title="Editar Usuário"
+            @click="() => { drawerOpen = false; userDialogs?.abrirModalEditar(); }"
+          />
+          <v-list-item
+            base-color="orange"
+            prepend-icon="mdi-lock-reset"
+            title="Resetar Senha"
+            @click="() => { drawerOpen = false; userDialogs?.abrirModalReset(); }"
+          />
+          <v-list-item
+            base-color="red"
+            prepend-icon="mdi-account-remove-outline"
+            title="Apagar Usuário"
+            @click="() => { drawerOpen = false; userDialogs?.abrirModalDelete(); }"
+          />
+        </v-list-group>
 
-          <v-list-group class="menu-top" value="esaj">
-            <template #activator="{ props }">
-              <v-list-item
-                prepend-icon="mdi-file-table-outline"
-                title="Gerenciar eSAJ"
-                v-bind="props"
-              />
-            </template>
+        <v-list-group class="menu-top" value="esaj">
+          <template #activator="{ props }">
             <v-list-item
-              base-color="teal"
-              prepend-icon="mdi-file-upload-outline"
-              title="Importar CSV"
-              @click="() => { drawerOpen = false; userDialogs?.abrirModalUpload(); }"
+              prepend-icon="mdi-file-table-outline"
+              title="Gerenciar eSAJ"
+              v-bind="props"
             />
-          </v-list-group>
+          </template>
+          <v-list-item
+            base-color="teal"
+            prepend-icon="mdi-file-upload-outline"
+            title="Importar CSV"
+            @click="() => { drawerOpen = false; userDialogs?.abrirModalUpload(); }"
+          />
+        </v-list-group>
 
-          <v-list-group class="menu-top" value="pje">
-            <template #activator="{ props }">
-              <v-list-item
-                prepend-icon="mdi-gavel"
-                title="Gerenciar PJe"
-                v-bind="props"
-              />
-            </template>
+        <v-list-group class="menu-top" value="pje">
+          <template #activator="{ props }">
             <v-list-item
-              base-color="indigo"
-              prepend-icon="mdi-shield-key-outline"
-              title="Autenticação PJe"
-              @click="() => { drawerOpen = false; abrirPjeAuth(); }"
+              prepend-icon="mdi-gavel"
+              title="Gerenciar PJe"
+              v-bind="props"
             />
-            <v-list-item
-              base-color="green"
-              :disabled="importandoPje"
-              prepend-icon="mdi-download-network-outline"
-              title="Importar do PJe"
-              @click="() => { drawerOpen = false; abrirConfirmImportPje(); }"
-            />
-            <v-list-item
-              base-color="green"
-              prepend-icon="mdi-history"
-              title="Logs do PJe"
-              @click="() => { drawerOpen = false; abrirLogsPje(); }"
-            />
-          </v-list-group>
+          </template>
+          <v-list-item
+            base-color="indigo"
+            prepend-icon="mdi-shield-key-outline"
+            title="Autenticação PJe"
+            @click="() => { drawerOpen = false; abrirPjeAuth(); }"
+          />
+          <v-list-item
+            base-color="green"
+            :disabled="importandoPje"
+            prepend-icon="mdi-download-network-outline"
+            title="Importar do PJe"
+            @click="() => { drawerOpen = false; abrirConfirmImportPje(); }"
+          />
+          <v-list-item
+            base-color="green"
+            prepend-icon="mdi-history"
+            title="Logs do PJe"
+            @click="() => { drawerOpen = false; abrirLogsPje(); }"
+          />
+        </v-list-group>
       </v-list>
 
       <!-- Rodapé fixo: tema e sair -->
@@ -788,11 +788,11 @@
   import { formatarPrazo, getCorPrazo, getPrazoRestanteNum } from '@/utils/prazo'
   import { clearCache, getCache, setCache } from '@/utils/sessionCache'
   import CumpridosChart from '../components/CumpridosChart.vue'
+  import PjeAuthDialog from '../components/PjeAuthDialog.vue'
   import StatsGrid from '../components/StatsGrid.vue'
   import TabelaProcessos from '../components/TabelaProcessos.vue'
-  import UserAdminDialogs from '../components/UserAdminDialogs.vue'
-  import PjeAuthDialog from '../components/PjeAuthDialog.vue'
   import UnidadesDialog from '../components/UnidadesDialog.vue'
+  import UserAdminDialogs from '../components/UserAdminDialogs.vue'
   const { mdAndUp, width } = useDisplay()
   const isWide = computed(() => width.value >= 1660)
   const { drawerOpen } = useDrawer()
@@ -843,16 +843,16 @@
   const importHealth = ref([])
   const importHealthProblemas = computed(() => importHealth.value.filter(h => h.problema))
   const importHealthTemErroGrave = computed(() =>
-    importHealthProblemas.value.some(h => h.ultimoStatus === 'nunca' || h.ultimoErro)
+    importHealthProblemas.value.some(h => h.ultimoStatus === 'nunca' || h.ultimoErro),
   )
   const importHealthEmDia = computed(() =>
-    importHealth.value.length > 0 && importHealthProblemas.value.length === 0
+    importHealth.value.length > 0 && importHealthProblemas.value.length === 0,
   )
   const importHealthMaisRecenteHoras = computed(() => {
     const idades = importHealth.value
       .map(h => h.idadeHoras)
       .filter(v => v != null)
-    return idades.length ? Math.min(...idades) : null
+    return idades.length > 0 ? Math.min(...idades) : null
   })
 
   function formatarHoras (h) {
@@ -915,7 +915,6 @@
     snackbar,
     snackbarText,
     snackbarColor,
-    snackbarTimeout,
     snackbarProgress,
     snackbarIndeterminate,
     notify,

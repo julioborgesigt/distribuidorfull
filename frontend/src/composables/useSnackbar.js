@@ -24,8 +24,14 @@ export function useSnackbar () {
   let closeTimer = null
 
   function clearTimers () {
-    if (progressTimer) { clearInterval(progressTimer); progressTimer = null }
-    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null }
+    if (progressTimer) {
+      clearInterval(progressTimer)
+      progressTimer = null
+    }
+    if (closeTimer) {
+      clearTimeout(closeTimer)
+      closeTimer = null
+    }
   }
 
   /**
@@ -68,7 +74,9 @@ export function useSnackbar () {
         progressTimer = null
       }
     }, interval)
-    closeTimer = setTimeout(() => { snackbar.value = false }, timeout)
+    closeTimer = setTimeout(() => {
+      snackbar.value = false
+    }, timeout)
   }
 
   // Restaura os defaults e limpa timers quando o snackbar fecha.

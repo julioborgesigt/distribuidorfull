@@ -60,9 +60,9 @@ jobs:
       - name: Instala dependências
         run: npm ci
 
-      # O build (Vite) é o que pega erro real de template/script antes do merge.
-      # O lint (eslint) não é enforçado aqui porque o script do projeto usa
-      # `--fix` e o código tem estilo pendente de auto-correção; para ligar o
-      # lint no CI, rode `npm run lint` uma vez para zerar o estilo e commite.
+      # Sem --fix: falha se houver erro de lint (warnings são tolerados).
+      - name: ESLint
+        run: npx eslint .
+
       - name: Build (Vite)
         run: npm run build

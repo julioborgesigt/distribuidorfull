@@ -154,118 +154,118 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import apiClient from '@/api/axios'
-import { format, parseISO } from 'date-fns'
+  import { format, parseISO } from 'date-fns'
+  import { reactive, ref } from 'vue'
+  import apiClient from '@/api/axios'
 
-const emit = defineEmits(['notify'])
+  const emit = defineEmits(['notify'])
 
-const dialog = ref(false)
-const formRef = ref(null)
-const salvando = ref(false)
-const removendo = ref(false)
-const mostrarSenha = ref(false)
-const status = reactive({ configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null })
-const form = reactive({ cpf: '', senha: '' })
-// Unidade-alvo da credencial. Para o super global é definida ao abrir o
-// diálogo (a partir da unidade selecionada no painel); para o admin da unidade
-// fica nula e o backend usa a própria unidade.
-const unidadeId = ref(null)
-const unidadeNome = ref(null)
+  const dialog = ref(false)
+  const formRef = ref(null)
+  const salvando = ref(false)
+  const removendo = ref(false)
+  const mostrarSenha = ref(false)
+  const status = reactive({ configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null })
+  const form = reactive({ cpf: '', senha: '' })
+  // Unidade-alvo da credencial. Para o super global é definida ao abrir o
+  // diálogo (a partir da unidade selecionada no painel); para o admin da unidade
+  // fica nula e o backend usa a própria unidade.
+  const unidadeId = ref(null)
+  const unidadeNome = ref(null)
 
-// Acrescenta unidadeId aos parâmetros quando definido (fluxo do super).
-function comUnidade (extra = {}) {
-  return unidadeId.value ? { ...extra, unidadeId: unidadeId.value } : extra
-}
-
-const cpfRule = v => {
-  const digits = String(v || '').replace(/\D/g, '')
-  return digits.length === 11 || 'CPF deve ter 11 dígitos'
-}
-const senhaRule = v => (v && String(v).trim().length > 0) || 'Senha obrigatória'
-
-function mascararCpf () {
-  const digits = form.cpf.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 3) {
-    form.cpf = digits
-  } else if (digits.length <= 6) {
-    form.cpf = `${digits.slice(0, 3)}.${digits.slice(3)}`
-  } else if (digits.length <= 9) {
-    form.cpf = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
-  } else {
-    form.cpf = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`
+  // Acrescenta unidadeId aos parâmetros quando definido (fluxo do super).
+  function comUnidade (extra = {}) {
+    return unidadeId.value ? { ...extra, unidadeId: unidadeId.value } : extra
   }
-}
 
-function formatarData (iso) {
-  try {
-    return format(parseISO(iso), 'dd/MM/yyyy HH:mm')
-  } catch {
-    return iso
+  function cpfRule (v) {
+    const digits = String(v || '').replace(/\D/g, '')
+    return digits.length === 11 || 'CPF deve ter 11 dígitos'
   }
-}
+  const senhaRule = v => (v && String(v).trim().length > 0) || 'Senha obrigatória'
 
-async function carregarStatus () {
-  try {
-    const { data } = await apiClient.get('/admin/pje-auth/status', { params: comUnidade() })
-    Object.assign(status, { configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null }, data)
-  } catch {
+  function mascararCpf () {
+    const digits = form.cpf.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 3) {
+      form.cpf = digits
+    } else if (digits.length <= 6) {
+      form.cpf = `${digits.slice(0, 3)}.${digits.slice(3)}`
+    } else if (digits.length <= 9) {
+      form.cpf = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+    } else {
+      form.cpf = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`
+    }
+  }
+
+  function formatarData (iso) {
+    try {
+      return format(parseISO(iso), 'dd/MM/yyyy HH:mm')
+    } catch {
+      return iso
+    }
+  }
+
+  async function carregarStatus () {
+    try {
+      const { data } = await apiClient.get('/admin/pje-auth/status', { params: comUnidade() })
+      Object.assign(status, { configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null }, data)
+    } catch {
     // status permanece com defaults
+    }
   }
-}
 
-// abrir({ unidadeId, unidadeNome }) — o painel passa a unidade selecionada
-// quando o usuário é super global.
-async function abrir (opts = {}) {
-  unidadeId.value = opts.unidadeId || null
-  unidadeNome.value = opts.unidadeNome || null
-  form.cpf = ''
-  form.senha = ''
-  mostrarSenha.value = false
-  formRef.value?.resetValidation()
-  await carregarStatus()
-  dialog.value = true
-}
-
-function fechar () {
-  dialog.value = false
-}
-
-async function salvar () {
-  const { valid } = await formRef.value.validate()
-  if (!valid) return
-  salvando.value = true
-  try {
-    const cpfDigits = form.cpf.replace(/\D/g, '')
-    const { data } = await apiClient.post('/admin/pje-auth/salvar', comUnidade({ cpf: cpfDigits, senha: form.senha }))
-    Object.assign(status, data)
+  // abrir({ unidadeId, unidadeNome }) — o painel passa a unidade selecionada
+  // quando o usuário é super global.
+  async function abrir (opts = {}) {
+    unidadeId.value = opts.unidadeId || null
+    unidadeNome.value = opts.unidadeNome || null
     form.cpf = ''
     form.senha = ''
+    mostrarSenha.value = false
     formRef.value?.resetValidation()
-    emit('notify', 'Credenciais do PJe salvas e testadas com sucesso!', 'success')
-  } catch (err) {
-    emit('notify', err.response?.data?.error || 'Erro ao salvar credenciais.', 'error')
-  } finally {
-    salvando.value = false
+    await carregarStatus()
+    dialog.value = true
   }
-}
 
-async function remover () {
-  if (!window.confirm('Remover as credenciais salvas desta unidade?')) return
-  removendo.value = true
-  try {
-    await apiClient.delete('/admin/pje-auth', { params: comUnidade() })
-    Object.assign(status, { configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null })
-    form.cpf = ''
-    form.senha = ''
-    formRef.value?.resetValidation()
-    emit('notify', 'Credenciais removidas.', 'success')
-  } catch (err) {
-    emit('notify', err.response?.data?.error || 'Erro ao remover credenciais.', 'error')
-  } finally {
-    removendo.value = false
+  function fechar () {
+    dialog.value = false
   }
-}
 
-defineExpose({ abrir })
+  async function salvar () {
+    const { valid } = await formRef.value.validate()
+    if (!valid) return
+    salvando.value = true
+    try {
+      const cpfDigits = form.cpf.replace(/\D/g, '')
+      const { data } = await apiClient.post('/admin/pje-auth/salvar', comUnidade({ cpf: cpfDigits, senha: form.senha }))
+      Object.assign(status, data)
+      form.cpf = ''
+      form.senha = ''
+      formRef.value?.resetValidation()
+      emit('notify', 'Credenciais do PJe salvas e testadas com sucesso!', 'success')
+    } catch (error) {
+      emit('notify', error.response?.data?.error || 'Erro ao salvar credenciais.', 'error')
+    } finally {
+      salvando.value = false
+    }
+  }
+
+  async function remover () {
+    if (!window.confirm('Remover as credenciais salvas desta unidade?')) return
+    removendo.value = true
+    try {
+      await apiClient.delete('/admin/pje-auth', { params: comUnidade() })
+      Object.assign(status, { configured: false, cpfDisplay: null, atualizadoEm: null, atualizadoPorNome: null })
+      form.cpf = ''
+      form.senha = ''
+      formRef.value?.resetValidation()
+      emit('notify', 'Credenciais removidas.', 'success')
+    } catch (error) {
+      emit('notify', error.response?.data?.error || 'Erro ao remover credenciais.', 'error')
+    } finally {
+      removendo.value = false
+    }
+  }
+
+  defineExpose({ abrir })
 </script>
