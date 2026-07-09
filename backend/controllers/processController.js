@@ -385,6 +385,7 @@ exports.importPje = async (req, res) => {
         atualizados,
         comPrazo,
         semPrazo: Math.max(0, avisos - comPrazo),
+        adiados,
         falhasTeor,
         duracaoMs: Date.now() - inicio,
         status: 'ok',

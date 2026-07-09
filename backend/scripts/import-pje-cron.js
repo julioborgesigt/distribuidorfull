@@ -60,7 +60,7 @@ const logger = require('../utils/logger');
     for (const unidade of unidades) {
       const inicio = Date.now();
       try {
-        const { avisos, rows, comPrazo, falhasTeor } = await coletarRows({ abrirTeor, unidade });
+        const { avisos, rows, comPrazo, falhasTeor, adiados } = await coletarRows({ abrirTeor, unidade });
         const { total: totalRows, criados, atualizados } =
           avisos > 0 ? await upsertProcessos(rows, unidade.id) : { total: 0, criados: 0, atualizados: 0 };
 
@@ -69,13 +69,14 @@ const logger = require('../utils/logger');
 
         logger.info('Cron de importação PJe (unidade) concluído', {
           unidadeId: unidade.id, unidade: unidade.nome,
-          avisos, totalRows, criados, atualizados, comPrazo, falhasTeor,
+          avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados,
           ms: Date.now() - inicio,
         });
         await registrarLog({
           usuario: `Cron automático — ${unidade.nome}`,
           avisos, criados, atualizados, comPrazo,
           semPrazo: Math.max(0, avisos - comPrazo),
+          adiados,
           falhasTeor,
           duracaoMs: Date.now() - inicio,
           status: 'ok',
