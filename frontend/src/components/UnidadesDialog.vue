@@ -80,7 +80,13 @@
           </template>
           <template #item.acoes="{ item }">
             <v-btn icon="mdi-pencil" size="small" variant="text" @click="editar(item)" />
-            <v-btn color="red" icon="mdi-delete-outline" size="small" variant="text" @click="excluir(item)" />
+            <v-btn
+              color="red"
+              icon="mdi-delete-outline"
+              size="small"
+              variant="text"
+              @click="excluir(item)"
+            />
           </template>
         </v-data-table>
       </v-card-text>
@@ -145,17 +151,13 @@
     salvando.value = true
     try {
       const payload = { nome: form.nome, sigla: form.sigla || null, nome_pje: form.nome_pje || null, ativo: form.ativo }
-      if (form.id) {
-        await apiClient.put(`/admin/unidades/${form.id}`, payload)
-      } else {
-        await apiClient.post('/admin/unidades', payload)
-      }
+      await (form.id ? apiClient.put(`/admin/unidades/${form.id}`, payload) : apiClient.post('/admin/unidades', payload))
       emit('notify', 'Unidade salva com sucesso!', 'success')
       editando.value = false
       await carregar()
       emit('changed')
-    } catch (err) {
-      emit('notify', err.response?.data?.error || 'Erro ao salvar unidade.', 'error')
+    } catch (error) {
+      emit('notify', error.response?.data?.error || 'Erro ao salvar unidade.', 'error')
     } finally {
       salvando.value = false
     }
@@ -168,8 +170,8 @@
       emit('notify', 'Unidade excluída.', 'success')
       await carregar()
       emit('changed')
-    } catch (err) {
-      emit('notify', err.response?.data?.error || 'Erro ao excluir unidade.', 'error')
+    } catch (error) {
+      emit('notify', error.response?.data?.error || 'Erro ao excluir unidade.', 'error')
     }
   }
 
