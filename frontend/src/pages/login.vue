@@ -42,9 +42,8 @@ meta:
         <v-radio label="Adm Unidade" value="unidade" />
       </v-radio-group>
       <div class="text-caption text-medium-emphasis mb-2">
-        <strong>Usuário</strong>: vê apenas os processos atribuídos a você.
-        <strong>Adm Unidade</strong>: para administradores — abre a gestão da sua
-        unidade (o administrador global acessa todas as unidades por aqui).
+        <div><strong>Usuário</strong>: vê apenas os processos atribuídos a você.</div>
+        <div><strong>Adm Unidade</strong>: consegue ver e distribuir todos os processos da sua unidade.</div>
       </div>
 
       <v-btn
