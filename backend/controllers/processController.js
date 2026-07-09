@@ -380,6 +380,7 @@ exports.importPje = async (req, res) => {
 
       await pjeImportService.registrarLog({
         usuario,
+        unidade_id: unidadeAlvo.id,
         avisos,
         criados,
         atualizados,
@@ -405,6 +406,7 @@ exports.importPje = async (req, res) => {
       });
       await pjeImportService.registrarLog({
         usuario,
+        unidade_id: unidadeAlvo.id,
         duracaoMs: Date.now() - inicio,
         status: 'erro',
         erro: (error.message || 'Erro ao importar do PJe.').slice(0, 500),
@@ -429,6 +431,58 @@ exports.importPjeLogs = async (req, res) => {
   } catch (error) {
     logger.error('Erro ao listar logs de importação PJe', { error: error.message });
     res.status(500).json({ error: 'Erro ao listar logs de importação.' });
+  }
+};
+
+// Saúde da importação: última importação bem-sucedida por unidade + sinal de
+// atraso (stale) ou erro na última tentativa. Escopo: super vê todas as
+// unidades; demais veem a sua. Alimenta o alerta de "falha silenciosa".
+exports.importPjeHealth = async (req, res) => {
+  try {
+    const staleHoras = Number(process.env.PJE_IMPORT_STALE_HORAS) || 26;
+
+    let unidades;
+    if (req.loginType === 'admin_super') {
+      unidades = await Unidade.findAll({ attributes: ['id', 'nome'], order: [['nome', 'ASC']] });
+    } else if (req.unidadeId != null) {
+      unidades = await Unidade.findAll({ where: { id: req.unidadeId }, attributes: ['id', 'nome'] });
+    } else {
+      unidades = [];
+    }
+
+    const agora = Date.now();
+    const items = [];
+    for (const u of unidades) {
+      const [ultimo, ultimoOk] = await Promise.all([
+        PjeImportLog.findOne({ where: { unidade_id: u.id }, order: [['created_at', 'DESC']] }),
+        PjeImportLog.findOne({ where: { unidade_id: u.id, status: 'ok' }, order: [['created_at', 'DESC']] }),
+      ]);
+
+      const idadeHoras = ultimoOk
+        ? Math.round(((agora - new Date(ultimoOk.created_at).getTime()) / 3600000) * 10) / 10
+        : null;
+      const nunca = !ultimoOk;
+      const stale = nunca || idadeHoras > staleHoras;
+      const ultimoErro = !!(ultimo && ultimo.status === 'erro');
+
+      items.push({
+        unidadeId: u.id,
+        unidade: u.nome,
+        ultimaImportacao: ultimoOk ? ultimoOk.created_at : null,
+        ultimaTentativa: ultimo ? ultimo.created_at : null,
+        idadeHoras,
+        ultimoStatus: ultimo ? ultimo.status : 'nunca',
+        erro: ultimoErro ? ultimo.erro : null,
+        stale,
+        ultimoErro,
+        problema: stale || ultimoErro,
+      });
+    }
+
+    res.json({ staleHoras, items });
+  } catch (error) {
+    logger.error('Erro ao consultar saúde da importação PJe', { error: error.message });
+    res.status(500).json({ error: 'Erro ao consultar a saúde da importação.' });
   }
 };
 

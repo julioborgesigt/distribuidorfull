@@ -15,6 +15,12 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 'Desconhecido'
     },
+    // Unidade cuja importação gerou este log (para "última importação por
+    // unidade"). Null em logs antigos anteriores a esta coluna.
+    unidade_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
     // Total de avisos pendentes encontrados no PJe.
     avisos: {
       type: DataTypes.INTEGER,
