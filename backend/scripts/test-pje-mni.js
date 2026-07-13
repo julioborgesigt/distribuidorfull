@@ -223,6 +223,96 @@ async function main() {
     pessoas.forEach((p) => console.log('  ', p));
   }
 
+  // 3.4) PROBE DE MANIFESTAÇÃO — ⚠️ PROTOCOLA UMA PETIÇÃO REAL NO PROCESSO. ⚠️
+  //      Testa entregarManifestacaoProcessual com um documento HTML simples
+  //      ("Ciente. Nada a manifestar."). Use APENAS em um processo em que essa
+  //      manifestação seja juridicamente inofensiva/desejada.
+  //      Ative com:
+  //        PJE_MANIF_NUMERO=<numero do processo, 20 dígitos sem máscara>
+  //        PJE_MANIF_CONFIRMO=SIM              (trava de segurança; obrigatório)
+  //      Opcionais:
+  //        PJE_MANIF_TEXTO='Ciente. Nada a manifestar.'
+  //        PJE_MANIF_TIPO_DOC=<código do tipo documental no TJCE>  (default: 57)
+  //        PJE_MANIF_MIME=text/html            (ou application/pdf)
+  //      Dica p/ descobrir o tipo documental: rode antes o probe de
+  //      consultarProcesso (PJE_PROC_NUMERO=...) e procure os atributos
+  //      tipoDocumento/descricao das petições já juntadas no processo.
+  const manifNumero = process.env.PJE_MANIF_NUMERO;
+  if (manifNumero) {
+    if (process.env.PJE_MANIF_CONFIRMO !== 'SIM') {
+      console.error(
+        '\n[BLOQUEADO] PJE_MANIF_NUMERO definido sem PJE_MANIF_CONFIRMO=SIM.\n' +
+        'Este probe PROTOCOLA UMA PETIÇÃO REAL. Defina PJE_MANIF_CONFIRMO=SIM ' +
+        'apenas se tiver certeza do processo escolhido.'
+      );
+      return;
+    }
+    const texto = process.env.PJE_MANIF_TEXTO || 'Ciente. Nada a manifestar.';
+    const tipoDoc = process.env.PJE_MANIF_TIPO_DOC || '57';
+    const mime = process.env.PJE_MANIF_MIME || 'text/html';
+    const agora = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const dataEnvio =
+      `${agora.getFullYear()}${pad(agora.getMonth() + 1)}${pad(agora.getDate())}` +
+      `${pad(agora.getHours())}${pad(agora.getMinutes())}${pad(agora.getSeconds())}`;
+    const html =
+      `<html><body><p>${esc(texto)}</p>` +
+      `<p>Manifestação registrada eletronicamente via MNI em ${agora.toLocaleString('pt-BR')}.</p>` +
+      `</body></html>`;
+    const conteudoB64 = Buffer.from(html, 'utf8').toString('base64');
+
+    console.log(`\n=== entregarManifestacaoProcessual em ${manifNumero} ===`);
+    console.log(`tipoDocumento=${tipoDoc} mimetype=${mime}`);
+    console.log(`texto: ${texto}`);
+
+    const INT_NS = 'http://www.cnj.jus.br/intercomunicacao-2.2.2';
+    const manifEnvelope =
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"` +
+      ` xmlns:ser="${SERVICE_NS}" xmlns:tip="${TIPOS_NS}" xmlns:int="${INT_NS}">` +
+      `<soapenv:Header/>` +
+      `<soapenv:Body>` +
+      `<ser:entregarManifestacaoProcessual>` +
+      `<tip:idManifestante>${esc(CPF)}</tip:idManifestante>` +
+      `<tip:senhaManifestante>${esc(SENHA)}</tip:senhaManifestante>` +
+      `<tip:numeroProcesso>${esc(manifNumero)}</tip:numeroProcesso>` +
+      `<tip:documento tipoDocumento="${esc(tipoDoc)}" mimetype="${esc(mime)}"` +
+      ` descricao="Manifestação de ciência" nivelSigilo="0">` +
+      `<int:conteudo>${conteudoB64}</int:conteudo>` +
+      `</tip:documento>` +
+      `<tip:dataEnvio>${dataEnvio}</tip:dataEnvio>` +
+      `</ser:entregarManifestacaoProcessual>` +
+      `</soapenv:Body>` +
+      `</soapenv:Envelope>`;
+
+    let manifResp;
+    try {
+      manifResp = await postSoap(endpoint, manifEnvelope);
+    } catch (err) {
+      console.error('\n[FALHA] Erro de rede no POST da manifestação:', err.message);
+      return;
+    }
+    console.log('HTTP status:', manifResp.status);
+    const mbody = (manifResp.body || '').replace(/[A-Za-z0-9+/]{200,}={0,2}/g, '[BASE64_OMITIDO]');
+    console.log('\nResposta (base64 omitido, até 6000 chars):\n');
+    console.log(mbody.slice(0, 6000));
+
+    const mSucesso = (mbody.match(/<(?:\w+:)?sucesso>([^<]*)</i) || [])[1];
+    const mMensagem = (mbody.match(/<(?:\w+:)?mensagem>([^<]*)</i) || [])[1];
+    const mProtocolo = (mbody.match(/<(?:\w+:)?protocoloRecebimento>([^<]*)</i) || [])[1];
+    console.log('\n--- Resumo ---');
+    console.log('sucesso  :', mSucesso);
+    console.log('mensagem :', mMensagem);
+    console.log('protocolo:', mProtocolo);
+    console.log(
+      '\n[PRÓXIMO PASSO] Se sucesso=true: confira no PJe web (1) se a petição\n' +
+      'aparece nos autos e (2) se o expediente saiu de "pendente de resposta".\n' +
+      'Se falhar por tipo documental, ajuste PJE_MANIF_TIPO_DOC (veja os tipos\n' +
+      'das petições já juntadas via PJE_PROC_NUMERO).'
+    );
+    return;
+  }
+
   // 3.5) PROBE OPCIONAL de consultarAlteracao — READ-ONLY, NÃO dá ciência.
   //      Serve para descobrir se dá para enumerar processos JÁ CIENTES (que
   //      saíram da fila de pendentes). Ative com a data de corte:
