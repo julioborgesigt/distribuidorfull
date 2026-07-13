@@ -158,8 +158,10 @@ exports.salvar = async (req, res) => {
     const aviso = avisos.length === 0
       ? 'Atenção: a credencial autenticou, mas o PJe não retornou NENHUM aviso pendente ' +
         'para este usuário. Se o painel do PJe mostra intimações pendentes desta unidade, ' +
-        'o usuário provavelmente não tem o papel de representante processual do órgão — ' +
-        'a importação virá vazia até corrigir o cadastro no PJe.'
+        'verifique no PJe se o usuário tem MAIS DE UM papel na Procuradoria (ex.: ' +
+        '"Assistente de Representante Processual" além de "Procurador/Gestor") — o MNI ' +
+        'consulta no papel de Assistente, que não enxerga os expedientes. Exclua o papel ' +
+        'de Assistente, deixando apenas Procurador/Gestor. A importação virá vazia até corrigir.'
       : null;
     res.json({ message: 'Credenciais salvas com sucesso.', aviso, unidadeNome: unidade.nome, ...status });
   } catch (saveErr) {

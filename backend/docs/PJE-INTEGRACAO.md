@@ -58,6 +58,17 @@ PJE_CRED_ENC_KEY=SUBSTITUA_AQUI
 
 ## Credenciais pelo painel (recomendado)
 
+> ⚠️ **Requisito do usuário no PJe (lição do caso Jaguaribe, jul/2026):** o
+> usuário da credencial deve ter **apenas o papel "Procurador/Gestor"** na
+> Procuradoria da delegacia. Se ele também tiver o papel **"Assistente de
+> Representante Processual"**, o MNI consulta nesse contexto (que não enxerga
+> os expedientes) e retorna **0 avisos** — a credencial autentica, a importação
+> "funciona", mas vem sempre vazia, mesmo com o painel web mostrando dezenas de
+> expedientes no modo Procurador/Gestor. O MNI não tem parâmetro para escolher
+> o papel; a solução é **excluir o papel de Assistente** no cadastro do PJe.
+> Sintoma no sistema: modal de resultado com "Avisos retornados pelo MNI: 0" no
+> diagnóstico, e aviso amarelo ao salvar a credencial.
+
 O botão **"Autenticação PJe"** no menu lateral (visível apenas para admin_super)
 abre um modal que salva CPF + senha **criptografados** no banco, sem precisar
 editar `.env` no servidor após o deploy inicial. Fluxo:
