@@ -187,6 +187,19 @@ async function main() {
   console.log('mensagem:', mensagem);
   console.log('avisos  :', qtdAvisos);
 
+  // Destinatários DISTINTOS dos avisos, com TODOS os atributos crus da tag
+  // <pessoa> (nome, tipoPessoa e — se o tribunal enviar — documento). O
+  // atributo de documento é o candidato a idRepresentado quando uma credencial
+  // autentica mas retorna 0 avisos (usuário sem vinculação MNI ao destinatário).
+  const pessoas = [...new Set(
+    (body.match(/<(?:\w+:)?destinatario\b[\s\S]*?<(?:\w+:)?pessoa\b[^>]*>/g) || [])
+      .map((b) => (b.match(/<(?:\w+:)?pessoa\b[^>]*>/) || [''])[0])
+  )];
+  if (pessoas.length > 0) {
+    console.log('\nDestinatários distintos (tags <pessoa> cruas):');
+    pessoas.forEach((p) => console.log('  ', p));
+  }
+
   // 3.5) PROBE OPCIONAL de consultarAlteracao — READ-ONLY, NÃO dá ciência.
   //      Serve para descobrir se dá para enumerar processos JÁ CIENTES (que
   //      saíram da fila de pendentes). Ative com a data de corte:
