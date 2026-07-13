@@ -242,7 +242,13 @@
       form.cpf = ''
       form.senha = ''
       formRef.value?.resetValidation()
-      emit('notify', 'Credenciais do PJe salvas e testadas com sucesso!', 'success')
+      if (data.aviso) {
+        // Credencial válida, mas o MNI não retornou nenhum aviso pendente —
+        // sintoma de usuário sem papel de representante no PJe. Toast longo.
+        emit('notify', data.aviso, 'warning', 15_000)
+      } else {
+        emit('notify', 'Credenciais do PJe salvas e testadas com sucesso!', 'success')
+      }
     } catch (error) {
       emit('notify', error.response?.data?.error || 'Erro ao salvar credenciais.', 'error')
     } finally {

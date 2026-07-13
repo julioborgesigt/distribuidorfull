@@ -152,7 +152,16 @@ exports.salvar = async (req, res) => {
       userId: req.userId, unidadeId: unidade.id, ip: getRealIP(req),
     });
     const status = await pjeCredentialService.getStatus(unidade.id);
-    res.json({ message: 'Credenciais salvas com sucesso.', unidadeNome: unidade.nome, ...status });
+    // 0 avisos NÃO impede salvar (a fila pode estar legitimamente vazia), mas
+    // também é o sintoma de usuário sem papel de representante no PJe — nesse
+    // caso a importação virá sempre vazia. Avisa para não passar em silêncio.
+    const aviso = avisos.length === 0
+      ? 'Atenção: a credencial autenticou, mas o PJe não retornou NENHUM aviso pendente ' +
+        'para este usuário. Se o painel do PJe mostra intimações pendentes desta unidade, ' +
+        'o usuário provavelmente não tem o papel de representante processual do órgão — ' +
+        'a importação virá vazia até corrigir o cadastro no PJe.'
+      : null;
+    res.json({ message: 'Credenciais salvas com sucesso.', aviso, unidadeNome: unidade.nome, ...status });
   } catch (saveErr) {
     logger.error('Erro ao salvar credenciais PJe', { error: saveErr.message });
     res.status(500).json({ error: saveErr.message });
