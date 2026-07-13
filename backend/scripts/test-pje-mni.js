@@ -103,6 +103,29 @@ async function main() {
     }
   }
 
+  // 2.5) PROBE DE SCHEMA de qualquer operação — NÃO faz chamada alguma, apenas
+  //      imprime a estrutura de entrada declarada no WSDL. Útil para descobrir
+  //      o contrato de entregarManifestacaoProcessual (peticionamento) antes de
+  //      qualquer teste real. Use:
+  //        PJE_OP_SCHEMA=entregarManifestacao node scripts/test-pje-mni.js
+  const opSchema = process.env.PJE_OP_SCHEMA;
+  if (opSchema) {
+    const re = new RegExp(opSchema, 'i');
+    for (const s of Object.keys(description)) {
+      for (const p of Object.keys(description[s])) {
+        for (const op of Object.keys(description[s][p])) {
+          if (re.test(op)) {
+            console.log(`\nSchema de ENTRADA de "${op}":`);
+            console.dir(description[s][p][op].input, { depth: 8 });
+            console.log(`\nSchema de SAÍDA de "${op}":`);
+            console.dir(description[s][p][op].output, { depth: 6 });
+          }
+        }
+      }
+    }
+    return; // só o schema; não segue para chamadas
+  }
+
   // 3) Tenta autenticar e consultar os avisos pendentes.
   if (!CPF || !SENHA) {
     console.log(
