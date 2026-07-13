@@ -250,6 +250,11 @@ async function main() {
     const texto = process.env.PJE_MANIF_TEXTO || 'Ciente. Nada a manifestar.';
     const tipoDoc = process.env.PJE_MANIF_TIPO_DOC || '57';
     const mime = process.env.PJE_MANIF_MIME || 'text/html';
+    // Modo de assinatura do documento (o TJCE recusa documento sem assinatura):
+    //   login (default) -> <assinatura><signatarioLogin identificador=CPF/>,
+    //                      a "assinatura por login" usada pelos procuradores no PJe;
+    //   none            -> omite o bloco (reproduz o erro "sem assinatura").
+    const assinaturaMode = process.env.PJE_MANIF_ASSINATURA || 'login';
     const agora = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     const dataEnvio =
@@ -262,10 +267,15 @@ async function main() {
     const conteudoB64 = Buffer.from(html, 'utf8').toString('base64');
 
     console.log(`\n=== entregarManifestacaoProcessual em ${manifNumero} ===`);
-    console.log(`tipoDocumento=${tipoDoc} mimetype=${mime}`);
+    console.log(`tipoDocumento=${tipoDoc} mimetype=${mime} assinatura=${assinaturaMode}`);
     console.log(`texto: ${texto}`);
 
     const INT_NS = 'http://www.cnj.jus.br/intercomunicacao-2.2.2';
+    const assinaturaXml = assinaturaMode === 'login'
+      ? `<int:assinatura dataAssinatura="${dataEnvio}" algoritmoHash="SHA-256">` +
+        `<int:signatarioLogin identificador="${esc(CPF)}" dataHora="${dataEnvio}"/>` +
+        `</int:assinatura>`
+      : '';
     const manifEnvelope =
       `<?xml version="1.0" encoding="UTF-8"?>` +
       `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"` +
@@ -279,6 +289,7 @@ async function main() {
       `<tip:documento tipoDocumento="${esc(tipoDoc)}" mimetype="${esc(mime)}"` +
       ` descricao="Manifestação de ciência" nivelSigilo="0">` +
       `<int:conteudo>${conteudoB64}</int:conteudo>` +
+      assinaturaXml +
       `</tip:documento>` +
       `<tip:dataEnvio>${dataEnvio}</tip:dataEnvio>` +
       `</ser:entregarManifestacaoProcessual>` +
