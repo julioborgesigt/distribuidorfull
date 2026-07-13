@@ -70,6 +70,11 @@
             <strong>Atenção!!!:</strong> Não é aceito credenciais de usuários com
             cadastro em mais de uma delegacia. Use as credenciais de um usuário
             do PJe vinculado a essa única unidade representativa.
+            <br>
+            O usuário também deve ter <strong>apenas</strong> o papel
+            <strong>"Procurador/Gestor"</strong> na Procuradoria da delegacia — se
+            também for "Assistente de Representante Processual", a consulta
+            automática retorna vazia (exclua o papel de Assistente no PJe).
           </v-alert>
 
           <v-form ref="formRef" @submit.prevent="salvar">
