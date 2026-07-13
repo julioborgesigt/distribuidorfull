@@ -14,6 +14,7 @@ const {
   mniDateToISO,
   computePrazo,
   deveAbrirTeor,
+  diasDesdeDisponibilizacao,
   vinculacoesDistintas,
   mesmaVinculacao,
 } = require('../utils/pjeParser');
@@ -153,15 +154,34 @@ async function coletarRows({
   let falhasTeor = 0;
   let adiados = 0;
 
+  // DIAGNÓSTICO: registra a decisão tomada para cada aviso (importado, adiado
+  // e por quê, falha no teor). Exibido no modal de resultado para depurar
+  // importações que terminam "sem erro, mas sem nada importado".
+  const avisosDetalhe = [];
+
   for (const aviso of avisos) {
+    const idadeDias = diasDesdeDisponibilizacao(aviso.dataDisponibilizacao);
     const abrirEste =
       abrirTeor && deveAbrirTeor(aviso.dataDisponibilizacao, cienciaMinDias);
+    const detalhe = {
+      processo: formatNumeroCNJ(aviso.numeroProcesso),
+      dataDisponibilizacao: aviso.dataDisponibilizacao || null,
+      idadeDias,
+      vinculacao: aviso.vinculacao || null,
+    };
 
     // Avisos ainda pendentes de ciência (mais novos que o limiar) NÃO são
     // importados — apenas contados (informativo). Eles entram numa importação
     // futura, quando amadurecerem e a ciência for tomada.
     if (!abrirEste) {
       if (abrirTeor) adiados += 1;
+      detalhe.decisao = abrirTeor ? 'adiado' : 'não importado (abrirTeor=false)';
+      detalhe.motivo = !abrirTeor
+        ? 'importação configurada para não tomar ciência'
+        : idadeDias == null
+          ? `dataDisponibilizacao ausente/inválida ("${aviso.dataDisponibilizacao}") — o aviso nunca atinge o limiar`
+          : `idade ${idadeDias}d < limiar ${cienciaMinDias}d`;
+      avisosDetalhe.push(detalhe);
       continue;
     }
 
@@ -176,18 +196,37 @@ async function coletarRows({
         prazoDias: teor.prazoDias,
       });
       if (prazo.prazo_processual) comPrazo += 1;
+      detalhe.decisao = 'importado';
+      detalhe.motivo = prazo.prazo_processual
+        ? `com prazo (${prazo.prazo_processual}d)`
+        : 'sem prazo estruturado no teor';
     } catch (err) {
       falhasTeor += 1;
+      detalhe.decisao = 'importado (falha ao abrir teor)';
+      detalhe.motivo = err.message;
       logger.warn('Falha ao obter teor de aviso PJe', {
         idAviso: aviso.idAviso,
         error: err.message,
       });
     }
 
+    avisosDetalhe.push(detalhe);
     rows.push(avisoToRow(aviso, prazo));
   }
 
-  return { avisos: avisos.length, rows, comPrazo, falhasTeor, adiados };
+  const diagnostico = {
+    unidadeDestino: { id: unidade.id, nome: unidade.nome, nome_pje: unidade.nome_pje || null },
+    cienciaMinDias,
+    abrirTeor,
+    avisosRetornadosPeloMni: avisos.length,
+    vinculacoesEncontradas: [...new Set(avisos.map(a => a.vinculacao).filter(Boolean))],
+    vinculacoesConsideradas: unidadesAviso, // após remover a genérica
+    // Limita a lista para não inflar a resposta em unidades com muitos avisos.
+    avisosDetalhe: avisosDetalhe.slice(0, 200),
+  };
+  logger.info('Diagnóstico da importação PJe', diagnostico);
+
+  return { avisos: avisos.length, rows, comPrazo, falhasTeor, adiados, diagnostico };
 }
 
 module.exports = { coletarRows, avisoToRow, registrarLog, acquireImportLock };
