@@ -401,6 +401,10 @@ async function main() {
       `<tip:numeroProcesso>${esc(procNumero)}</tip:numeroProcesso>` +
       `<tip:movimentos>true</tip:movimentos>` +
       `<tip:incluirCabecalho>true</tip:incluirCabecalho>` +
+      // Traz as capas dos documentos juntados — é dos atributos deles que
+      // saem os códigos de tipoDocumento usados pelo tribunal (necessários
+      // para o probe de manifestação).
+      `<tip:incluirDocumentos>true</tip:incluirDocumentos>` +
       `</ser:consultarProcesso>` +
       `</soapenv:Body>` +
       `</soapenv:Envelope>`;
@@ -422,6 +426,30 @@ async function main() {
     const semBin = pbody.replace(/[A-Za-z0-9+/]{200,}={0,2}/g, '[BASE64_OMITIDO]');
     console.log('\n[OK] Resposta de consultarProcesso (base64 omitido, até 9000 chars):\n');
     console.log(semBin.slice(0, 9000));
+
+    // Resumo dos TIPOS DOCUMENTAIS dos documentos juntados (independente da
+    // ordem dos atributos na tag). O código de "Petição" daqui alimenta o
+    // PJE_MANIF_TIPO_DOC do probe de manifestação.
+    const docTags = pbody.match(/<(?:\w+:)?documento\b[^>]*>/g) || [];
+    const tiposDoc = new Map();
+    for (const t of docTags) {
+      const tipo = (t.match(/\btipoDocumento="([^"]*)"/) || [])[1];
+      const descr = (t.match(/\bdescricao="([^"]*)"/) || [])[1] || '';
+      const local = (t.match(/\btipoDocumentoLocal="([^"]*)"/) || [])[1] || '';
+      if (tipo) tiposDoc.set(`${tipo}|${descr}|${local}`, { tipo, descr, local });
+    }
+    if (tiposDoc.size > 0) {
+      console.log(`\nTipos documentais encontrados (${docTags.length} documento(s)):`);
+      for (const { tipo, descr, local } of tiposDoc.values()) {
+        console.log(`   tipoDocumento=${tipo}${local ? ` (local=${local})` : ''}  ${descr}`);
+      }
+    } else {
+      console.log(
+        '\n[AVISO] Nenhuma tag <documento> na resposta — o tribunal pode não ' +
+        'retornar documentos nesta consulta para este perfil.'
+      );
+    }
+
     console.log(
       '\n[DICA] Procure por: dataReferencia, prazo, "Data limite", intimacao,\n' +
         '       Confirmada a comunicação, dataCiencia. Queremos saber se o PRAZO\n' +
