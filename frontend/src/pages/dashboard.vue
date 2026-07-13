@@ -637,7 +637,7 @@
   </v-dialog>
 
   <!-- Resultado da importação do PJe -->
-  <v-dialog v-model="dialogResultadoPje" max-width="560px">
+  <v-dialog v-model="dialogResultadoPje" max-width="760px">
     <v-card>
       <v-card-title class="d-flex align-center">
         <v-icon color="success" start>mdi-check-circle-outline</v-icon>
@@ -680,6 +680,51 @@
         >
           {{ resultadoImportPje.falhasTeor }} aviso(s) falharam ao abrir o teor e não foram importados.
         </p>
+
+        <!-- Diagnóstico detalhado (por aviso): ajuda a entender importações que
+             terminam sem erro mas sem nada importado. -->
+        <v-expansion-panels v-if="resultadoImportPje.diagnostico" class="mt-4" variant="accordion">
+          <v-expansion-panel>
+            <v-expansion-panel-title class="text-body-2">
+              <v-icon size="small" start>mdi-stethoscope</v-icon>
+              Diagnóstico da importação
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <div class="text-caption mb-2">
+                <div><strong>Unidade de destino:</strong> {{ resultadoImportPje.diagnostico.unidadeDestino?.nome }} (id {{ resultadoImportPje.diagnostico.unidadeDestino?.id }})</div>
+                <div><strong>Nome PJe registrado:</strong> {{ resultadoImportPje.diagnostico.unidadeDestino?.nome_pje || '(não definido)' }}</div>
+                <div><strong>Avisos retornados pelo MNI:</strong> {{ resultadoImportPje.diagnostico.avisosRetornadosPeloMni }}</div>
+                <div><strong>Vinculações encontradas:</strong> {{ (resultadoImportPje.diagnostico.vinculacoesEncontradas || []).join(', ') || '(nenhuma)' }}</div>
+                <div><strong>Limiar de ciência:</strong> {{ resultadoImportPje.diagnostico.cienciaMinDias }} dia(s)</div>
+              </div>
+              <v-table v-if="(resultadoImportPje.diagnostico.avisosDetalhe || []).length > 0" class="text-caption" density="compact">
+                <thead>
+                  <tr>
+                    <th>Processo</th>
+                    <th>Disponibilizado</th>
+                    <th>Idade</th>
+                    <th>Decisão</th>
+                    <th>Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(d, i) in resultadoImportPje.diagnostico.avisosDetalhe" :key="i">
+                    <td class="text-no-wrap">{{ d.processo }}</td>
+                    <td class="text-no-wrap">{{ d.dataDisponibilizacao || '—' }}</td>
+                    <td class="text-no-wrap">{{ d.idadeDias != null ? d.idadeDias + 'd' : '—' }}</td>
+                    <td class="text-no-wrap">{{ d.decisao }}</td>
+                    <td>{{ d.motivo }}</td>
+                  </tr>
+                </tbody>
+              </v-table>
+              <p v-else class="text-caption mb-0">
+                O MNI não retornou nenhum aviso pendente para esta credencial. Verifique no
+                PJe se o perfil/vinculação do usuário da credencial corresponde à unidade
+                e se as intimações aparecem no painel do representante.
+              </p>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
       </v-card-text>
       <v-card-actions>
         <v-spacer />

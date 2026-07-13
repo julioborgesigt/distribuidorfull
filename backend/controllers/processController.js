@@ -362,7 +362,7 @@ exports.importPje = async (req, res) => {
     usuario = `${usuario} — ${unidadeAlvo.nome}`;
 
     try {
-      const { avisos, rows, comPrazo, falhasTeor, adiados } =
+      const { avisos, rows, comPrazo, falhasTeor, adiados, diagnostico } =
         await pjeImportService.coletarRows({ abrirTeor, cienciaMinDias, unidade: unidadeAlvo });
       const { total: totalRows, criados, atualizados } =
         avisos > 0 ? await upsertProcessos(rows, unidadeAlvo.id) : { total: 0, criados: 0, atualizados: 0 };
@@ -372,6 +372,9 @@ exports.importPje = async (req, res) => {
         // avisos que já tinham 5+ dias: tomamos ciência e importamos.
         importados: Math.max(0, avisos - adiados),
         unidade: unidadeAlvo.nome,
+        // Diagnóstico por aviso (decisão + motivo) para depurar importações
+        // que terminam sem erro mas sem nada importado.
+        diagnostico,
       };
       logger.info('Importação PJe concluída', {
         avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados, abrirTeor, userId,
