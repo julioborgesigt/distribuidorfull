@@ -1,0 +1,2388 @@
+/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-skeleton-loader {
+  align-items: center;
+  background: rgb(var(--v-theme-surface));
+  border-radius: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  position: relative;
+  vertical-align: top;
+}
+.v-skeleton-loader__actions {
+  justify-content: end;
+}
+.v-skeleton-loader .v-skeleton-loader__ossein {
+  height: 100%;
+}
+.v-skeleton-loader .v-skeleton-loader__avatar,
+.v-skeleton-loader .v-skeleton-loader__button,
+.v-skeleton-loader .v-skeleton-loader__chip,
+.v-skeleton-loader .v-skeleton-loader__divider,
+.v-skeleton-loader .v-skeleton-loader__heading,
+.v-skeleton-loader .v-skeleton-loader__image,
+.v-skeleton-loader .v-skeleton-loader__ossein,
+.v-skeleton-loader .v-skeleton-loader__text {
+  background: rgba(var(--v-theme-on-surface), var(--v-border-opacity));
+}
+@media (forced-colors: active) {
+  .v-skeleton-loader .v-skeleton-loader__avatar,
+  .v-skeleton-loader .v-skeleton-loader__button,
+  .v-skeleton-loader .v-skeleton-loader__chip,
+  .v-skeleton-loader .v-skeleton-loader__divider,
+  .v-skeleton-loader .v-skeleton-loader__heading,
+  .v-skeleton-loader .v-skeleton-loader__image,
+  .v-skeleton-loader .v-skeleton-loader__ossein,
+  .v-skeleton-loader .v-skeleton-loader__text {
+    background: canvastext;
+  }
+}
+.v-skeleton-loader .v-skeleton-loader__list-item,
+.v-skeleton-loader .v-skeleton-loader__list-item-avatar,
+.v-skeleton-loader .v-skeleton-loader__list-item-text,
+.v-skeleton-loader .v-skeleton-loader__list-item-two-line,
+.v-skeleton-loader .v-skeleton-loader__list-item-avatar-two-line,
+.v-skeleton-loader .v-skeleton-loader__list-item-three-line,
+.v-skeleton-loader .v-skeleton-loader__list-item-avatar-three-line {
+  border-radius: 4px;
+}
+.v-skeleton-loader__bone {
+  align-items: center;
+  border-radius: inherit;
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  overflow: hidden;
+  position: relative;
+}
+.v-skeleton-loader__bone::after {
+  animation: loading 1.5s infinite;
+  background: linear-gradient(90deg, rgba(var(--v-theme-surface), 0), rgba(var(--v-theme-surface), 0.3), rgba(var(--v-theme-surface), 0));
+  transform: translateX(-100%);
+  z-index: 1;
+}
+.v-skeleton-loader__bone::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+@media (forced-colors: active) and (pointer: fine) {
+  .v-skeleton-loader__bone {
+    cursor: progress;
+  }
+}
+.v-skeleton-loader__avatar {
+  border-radius: 50%;
+  flex: 0 1 auto;
+  margin: 8px 16px;
+  max-height: 48px;
+  min-height: 48px;
+  height: 48px;
+  max-width: 48px;
+  min-width: 48px;
+  width: 48px;
+}
+.v-skeleton-loader__avatar + .v-skeleton-loader__bone {
+  flex: 1 1 auto;
+  margin-inline-start: 0;
+}
+.v-skeleton-loader__avatar + .v-skeleton-loader__sentences > .v-skeleton-loader__text,
+.v-skeleton-loader__avatar + .v-skeleton-loader__paragraph > .v-skeleton-loader__text {
+  margin-inline-start: 0;
+}
+.v-skeleton-loader__button {
+  border-radius: 4px;
+  height: 36px;
+  margin: 16px;
+  max-width: 64px;
+}
+.v-skeleton-loader__button + .v-skeleton-loader__bone {
+  flex: 1 1 auto;
+  margin-inline-start: 0;
+}
+.v-skeleton-loader__button + .v-skeleton-loader__sentences > .v-skeleton-loader__text,
+.v-skeleton-loader__button + .v-skeleton-loader__paragraph > .v-skeleton-loader__text {
+  margin-inline-start: 0;
+}
+.v-skeleton-loader__chip {
+  border-radius: 16px;
+  margin: 16px;
+  height: 32px;
+  max-width: 96px;
+}
+.v-skeleton-loader__chip + .v-skeleton-loader__bone {
+  flex: 1 1 auto;
+  margin-inline-start: 0;
+}
+.v-skeleton-loader__chip + .v-skeleton-loader__sentences > .v-skeleton-loader__text,
+.v-skeleton-loader__chip + .v-skeleton-loader__paragraph > .v-skeleton-loader__text {
+  margin-inline-start: 0;
+}
+.v-skeleton-loader__date-picker {
+  border-radius: inherit;
+}
+.v-skeleton-loader__date-picker .v-skeleton-loader__list-item:first-child .v-skeleton-loader__text {
+  max-width: 88px;
+  width: 20%;
+}
+.v-skeleton-loader__date-picker .v-skeleton-loader__heading {
+  max-width: 256px;
+  width: 40%;
+}
+.v-skeleton-loader__date-picker-days {
+  flex-wrap: wrap;
+  margin: 16px;
+}
+.v-skeleton-loader__date-picker-days .v-skeleton-loader__avatar {
+  border-radius: 4px;
+  margin: 4px;
+  max-width: 100%;
+}
+.v-skeleton-loader__date-picker-options {
+  flex-wrap: nowrap;
+}
+.v-skeleton-loader__date-picker-options .v-skeleton-loader__text {
+  flex: 1 1 auto;
+}
+.v-skeleton-loader__divider {
+  border-radius: 1px;
+  height: 2px;
+}
+.v-skeleton-loader__heading {
+  border-radius: 12px;
+  margin: 16px;
+  height: 24px;
+}
+.v-skeleton-loader__heading + .v-skeleton-loader__subtitle {
+  margin-top: -16px;
+}
+.v-skeleton-loader__image {
+  height: 150px;
+  border-radius: 0;
+}
+.v-skeleton-loader__card .v-skeleton-loader__image {
+  border-radius: 0;
+}
+.v-skeleton-loader__list-item {
+  margin: 16px;
+}
+.v-skeleton-loader__list-item .v-skeleton-loader__text {
+  margin: 0;
+}
+.v-skeleton-loader__table-thead {
+  justify-content: space-between;
+}
+.v-skeleton-loader__table-thead .v-skeleton-loader__heading {
+  margin-top: 16px;
+  max-width: 16px;
+}
+.v-skeleton-loader__table-tfoot {
+  flex-wrap: nowrap;
+}
+.v-skeleton-loader__table-tfoot > .v-skeleton-loader__text.v-skeleton-loader__bone {
+  margin-top: 16px;
+}
+.v-skeleton-loader__table-row {
+  align-items: baseline;
+  margin: 0 8px;
+  justify-content: space-evenly;
+  flex-wrap: nowrap;
+}
+.v-skeleton-loader__table-row > .v-skeleton-loader__text.v-skeleton-loader__bone {
+  margin-inline: 8px;
+}
+.v-skeleton-loader__table-row + .v-skeleton-loader__divider {
+  margin: 0 16px;
+}
+.v-skeleton-loader__table-cell {
+  align-items: center;
+  display: flex;
+  height: 48px;
+  width: 88px;
+}
+.v-skeleton-loader__table-cell .v-skeleton-loader__text {
+  margin-bottom: 0;
+}
+.v-skeleton-loader__subtitle {
+  max-width: 70%;
+}
+.v-skeleton-loader__subtitle > .v-skeleton-loader__text {
+  height: 16px;
+  border-radius: 8px;
+}
+.v-skeleton-loader__text {
+  border-radius: 6px;
+  margin: 16px;
+  height: 12px;
+}
+.v-skeleton-loader__text + .v-skeleton-loader__text {
+  margin-top: -8px;
+  max-width: 50%;
+}
+.v-skeleton-loader__text + .v-skeleton-loader__text + .v-skeleton-loader__text {
+  max-width: 70%;
+}
+.v-skeleton-loader--boilerplate .v-skeleton-loader__bone:after {
+  display: none;
+}
+.v-skeleton-loader--is-loading {
+  overflow: hidden;
+}
+.v-skeleton-loader--tile {
+  border-radius: 0;
+}
+.v-skeleton-loader--tile .v-skeleton-loader__bone {
+  border-radius: 0;
+}
+
+@keyframes loading {
+  100% {
+    transform: translateX(100%);
+  }
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-card {
+  display: block;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  position: relative;
+  padding: 0;
+  text-decoration: none;
+  transition-duration: 0.28s;
+  transition-property: box-shadow, opacity, background;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+.v-card {
+  border-color: rgba(var(--v-border-color), var(--v-border-opacity));
+  border-style: solid;
+  border-width: 0;
+}
+.v-card--border {
+  border-width: thin;
+  box-shadow: none;
+}
+.v-card--absolute {
+  position: absolute;
+}
+.v-card--fixed {
+  position: fixed;
+}
+.v-card {
+  border-radius: 4px;
+}
+.v-card:hover > .v-card__overlay {
+  opacity: calc(var(--v-hover-opacity) * var(--v-theme-overlay-multiplier));
+}
+.v-card:focus-visible > .v-card__overlay {
+  opacity: calc(var(--v-focus-opacity) * var(--v-theme-overlay-multiplier));
+}
+@supports not selector(:focus-visible) {
+  .v-card:focus > .v-card__overlay {
+    opacity: calc(var(--v-focus-opacity) * var(--v-theme-overlay-multiplier));
+  }
+}
+.v-card--active > .v-card__overlay, .v-card[aria-haspopup=menu][aria-expanded=true] > .v-card__overlay {
+  opacity: calc(var(--v-activated-opacity) * var(--v-theme-overlay-multiplier));
+}
+.v-card--active:hover > .v-card__overlay, .v-card[aria-haspopup=menu][aria-expanded=true]:hover > .v-card__overlay {
+  opacity: calc((var(--v-activated-opacity) + var(--v-hover-opacity)) * var(--v-theme-overlay-multiplier));
+}
+.v-card--active:focus-visible > .v-card__overlay, .v-card[aria-haspopup=menu][aria-expanded=true]:focus-visible > .v-card__overlay {
+  opacity: calc((var(--v-activated-opacity) + var(--v-focus-opacity)) * var(--v-theme-overlay-multiplier));
+}
+@supports not selector(:focus-visible) {
+  .v-card--active:focus > .v-card__overlay, .v-card[aria-haspopup=menu][aria-expanded=true]:focus > .v-card__overlay {
+    opacity: calc((var(--v-activated-opacity) + var(--v-focus-opacity)) * var(--v-theme-overlay-multiplier));
+  }
+}
+.v-card--variant-plain, .v-card--variant-outlined, .v-card--variant-text, .v-card--variant-tonal {
+  background: transparent;
+  color: inherit;
+}
+.v-card--variant-plain {
+  opacity: 0.62;
+}
+.v-card--variant-plain:focus, .v-card--variant-plain:hover {
+  opacity: 1;
+}
+.v-card--variant-plain .v-card__overlay {
+  display: none;
+}
+.v-card--variant-elevated, .v-card--variant-flat {
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+.v-card--variant-elevated {
+  box-shadow: 0px 2px 1px -1px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 1px 1px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 1px 3px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-card--variant-flat {
+  box-shadow: 0px 0px 0px 0px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 0px 0px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 0px 0px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-card--variant-outlined {
+  border: thin solid currentColor;
+}
+.v-card--variant-text .v-card__overlay {
+  background: currentColor;
+}
+.v-card--variant-tonal .v-card__underlay {
+  background: currentColor;
+  opacity: var(--v-activated-opacity);
+  border-radius: inherit;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+.v-card .v-card__underlay {
+  position: absolute;
+}
+.v-card--disabled {
+  pointer-events: none;
+  user-select: none;
+}
+.v-card--disabled > :not(.v-card__loader) {
+  opacity: 0.6;
+}
+.v-card--flat {
+  box-shadow: none;
+}
+.v-card--hover {
+  cursor: pointer;
+}
+.v-card--hover::before, .v-card--hover::after {
+  border-radius: inherit;
+  bottom: 0;
+  content: "";
+  display: block;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transition: inherit;
+}
+.v-card--hover::before {
+  opacity: 1;
+  z-index: -1;
+}
+.v-card--hover::before {
+  box-shadow: 0px 2px 1px -1px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 1px 1px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 1px 3px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-card--hover::after {
+  z-index: 1;
+  opacity: 0;
+}
+.v-card--hover::after {
+  box-shadow: 0px 5px 5px -3px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 8px 10px 1px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 3px 14px 2px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-card--hover:hover::after {
+  opacity: 1;
+}
+.v-card--hover:hover::before {
+  opacity: 0;
+}
+.v-card--hover:hover {
+  box-shadow: 0px 5px 5px -3px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 8px 10px 1px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 3px 14px 2px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-card--link {
+  cursor: pointer;
+}
+
+.v-card-actions {
+  align-items: center;
+  display: flex;
+  flex: none;
+  min-height: 52px;
+  padding: 0.5rem;
+  gap: 0.5rem;
+}
+
+.v-card-item {
+  align-items: center;
+  display: grid;
+  flex: none;
+  grid-template-areas: "prepend content append";
+  grid-template-columns: max-content auto max-content;
+  padding: 0.625rem 1rem;
+}
+.v-card-item + .v-card-text {
+  padding-top: 0;
+}
+.v-card-item__prepend, .v-card-item__append {
+  align-items: center;
+  display: flex;
+}
+.v-card-item__prepend {
+  grid-area: prepend;
+  padding-inline-end: 0.5rem;
+}
+.v-card-item__append {
+  grid-area: append;
+  padding-inline-start: 0.5rem;
+}
+
+.v-card-item__content {
+  align-self: center;
+  grid-area: content;
+  overflow: hidden;
+}
+
+.v-card-title {
+  display: block;
+  flex: none;
+  font-size: 1.25rem;
+  font-weight: 500;
+  hyphens: auto;
+  letter-spacing: 0.0125em;
+  min-width: 0;
+  overflow-wrap: normal;
+  overflow: hidden;
+  padding: 0.5rem 1rem;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+  word-break: normal;
+  word-wrap: break-word;
+}
+.v-card .v-card-title {
+  line-height: 1.6;
+}
+.v-card--density-comfortable .v-card-title {
+  line-height: 1.75rem;
+}
+.v-card--density-compact .v-card-title {
+  line-height: 1.55rem;
+}
+.v-card-item .v-card-title {
+  padding: 0;
+}
+.v-card-title + .v-card-text,
+.v-card-title + .v-card-actions {
+  padding-top: 0;
+}
+
+.v-card-subtitle {
+  display: block;
+  flex: none;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.0178571429em;
+  opacity: var(--v-card-subtitle-opacity, var(--v-medium-emphasis-opacity));
+  overflow: hidden;
+  padding: 0 1rem;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+.v-card .v-card-subtitle {
+  line-height: 1.425;
+}
+.v-card--density-comfortable .v-card-subtitle {
+  line-height: 1.125rem;
+}
+.v-card--density-compact .v-card-subtitle {
+  line-height: 1rem;
+}
+.v-card-item .v-card-subtitle {
+  padding: 0 0 0.25rem;
+}
+
+.v-card-text {
+  flex: 1 1 auto;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.0178571429em;
+  opacity: var(--v-card-text-opacity, 1);
+  padding: 1rem;
+  text-transform: none;
+}
+.v-card .v-card-text {
+  line-height: 1.425;
+}
+.v-card--density-comfortable .v-card-text {
+  line-height: 1.2rem;
+}
+.v-card--density-compact .v-card-text {
+  line-height: 1.15rem;
+}
+
+.v-card__image {
+  display: flex;
+  height: 100%;
+  flex: 1 1 auto;
+  left: 0;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: -1;
+}
+
+.v-card__content {
+  border-radius: inherit;
+  overflow: hidden;
+  position: relative;
+}
+
+.v-card__loader {
+  bottom: auto;
+  top: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  width: 100%;
+  z-index: 1;
+}
+@media (forced-colors: active) {
+  .v-card__loader .v-progress-linear {
+    border: none;
+  }
+}
+
+.v-card__overlay {
+  background-color: currentColor;
+  border-radius: inherit;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+@media (forced-colors: active) {
+  .v-card:not(.v-card--variant-text, .v-card--variant-plain) {
+    border: thin solid;
+  }
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-dialog {
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+}
+.v-dialog > .v-overlay__content {
+  max-height: calc(100% - 48px);
+  width: calc(100% - 48px);
+  max-width: calc(100% - 48px);
+  margin: 24px;
+}
+.v-dialog > .v-overlay__content,
+.v-dialog > .v-overlay__content > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.v-dialog > .v-overlay__content > .v-card,
+.v-dialog > .v-overlay__content > .v-sheet,
+.v-dialog > .v-overlay__content > form > .v-card,
+.v-dialog > .v-overlay__content > form > .v-sheet {
+  --v-scrollbar-offset: 0px;
+  border-radius: 4px;
+  overflow-y: auto;
+  flex: 1 1 100%;
+}
+.v-dialog > .v-overlay__content > .v-card,
+.v-dialog > .v-overlay__content > .v-sheet,
+.v-dialog > .v-overlay__content > form > .v-card,
+.v-dialog > .v-overlay__content > form > .v-sheet {
+  box-shadow: 0px 11px 15px -7px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 24px 38px 3px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 9px 46px 8px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-dialog > .v-overlay__content > .v-card,
+.v-dialog > .v-overlay__content > form > .v-card {
+  display: flex;
+  flex-direction: column;
+}
+.v-dialog > .v-overlay__content > .v-card > .v-card-item,
+.v-dialog > .v-overlay__content > form > .v-card > .v-card-item {
+  padding: 16px 24px;
+}
+.v-dialog > .v-overlay__content > .v-card > .v-card-item + .v-card-text,
+.v-dialog > .v-overlay__content > form > .v-card > .v-card-item + .v-card-text {
+  padding-top: 0;
+}
+.v-dialog > .v-overlay__content > .v-card > .v-card-text,
+.v-dialog > .v-overlay__content > form > .v-card > .v-card-text {
+  font-size: inherit;
+  letter-spacing: 0.03125em;
+  line-height: inherit;
+  padding: 16px 24px 24px;
+}
+.v-dialog > .v-overlay__content > .v-card > .v-card-actions,
+.v-dialog > .v-overlay__content > form > .v-card > .v-card-actions {
+  justify-content: flex-end;
+}
+
+.v-dialog--fullscreen {
+  --v-scrollbar-offset: 0px;
+}
+.v-dialog--fullscreen > .v-overlay__content {
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  top: 0;
+  left: 0;
+}
+.v-dialog--fullscreen > .v-overlay__content > .v-card,
+.v-dialog--fullscreen > .v-overlay__content > .v-sheet,
+.v-dialog--fullscreen > .v-overlay__content > form > .v-card,
+.v-dialog--fullscreen > .v-overlay__content > form > .v-sheet {
+  min-height: 100%;
+  min-width: 100%;
+  border-radius: 0;
+}
+
+.v-dialog--scrollable > .v-overlay__content > form,
+.v-dialog--scrollable > .v-overlay__content > form > .v-card {
+  max-height: 100%;
+  max-width: 100%;
+}
+.v-dialog--scrollable > .v-overlay__content,
+.v-dialog--scrollable > .v-overlay__content > .v-card,
+.v-dialog--scrollable > .v-overlay__content > form,
+.v-dialog--scrollable > .v-overlay__content > form > .v-card {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+}
+.v-dialog--scrollable > .v-overlay__content > .v-card > .v-card-text,
+.v-dialog--scrollable > .v-overlay__content > form > .v-card > .v-card-text {
+  backface-visibility: hidden;
+  overflow-y: auto;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-pagination__list {
+  display: inline-flex;
+  list-style-type: none;
+  justify-content: center;
+  width: 100%;
+}
+.v-pagination__item, .v-pagination__first, .v-pagination__prev, .v-pagination__next, .v-pagination__last {
+  margin: 0.3rem;
+}
+.obs-celula[data-v-bb4b1fec] {
+  cursor: pointer;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* Bordas verticais entre colunas */
+[data-v-bb4b1fec] .v-theme--dark th {
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+[data-v-bb4b1fec] .v-theme--dark td {
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+[data-v-bb4b1fec] .v-theme--light th {
+  border-right: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+[data-v-bb4b1fec] .v-theme--light td {
+  border-right: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Tabela responsiva - cabe no container */
+[data-v-bb4b1fec] table {
+  table-layout: fixed;
+  width: 100% !important;
+}
+[data-v-bb4b1fec] td,[data-v-bb4b1fec] th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Loading overlay customizado */
+[data-v-bb4b1fec] .v-data-table-server .v-data-table-progress {
+  position: sticky;
+  top: 48px;
+  z-index: 2;
+}
+
+/* Altura adaptativa: a tabela cresce com o conteúdo (sem scroll vertical com
+   poucas linhas, ex.: 10 por página) e só rola, com cabeçalho fixo, quando o
+   conteúdo passa de 70vh (ex.: ao exibir "todos"). */
+[data-v-bb4b1fec] .tabela-processos .v-table__wrapper {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-data-table {
+  width: 100%;
+}
+
+.v-data-table__table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.v-data-table__tr--focus {
+  border: 1px dotted black;
+}
+.v-data-table__tr--clickable {
+  cursor: pointer;
+}
+
+.v-data-table .v-table__wrapper > table > thead > tr > td.v-data-table-column--align-end,
+.v-data-table .v-table__wrapper > table > thead > tr th.v-data-table-column--align-end,
+.v-data-table .v-table__wrapper > table tbody > tr > td.v-data-table-column--align-end,
+.v-data-table .v-table__wrapper > table tbody > tr th.v-data-table-column--align-end {
+  text-align: end;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > td.v-data-table-column--align-end .v-data-table-header__content,
+.v-data-table .v-table__wrapper > table > thead > tr th.v-data-table-column--align-end .v-data-table-header__content,
+.v-data-table .v-table__wrapper > table tbody > tr > td.v-data-table-column--align-end .v-data-table-header__content,
+.v-data-table .v-table__wrapper > table tbody > tr th.v-data-table-column--align-end .v-data-table-header__content {
+  flex-direction: row-reverse;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > td.v-data-table-column--align-center,
+.v-data-table .v-table__wrapper > table > thead > tr th.v-data-table-column--align-center,
+.v-data-table .v-table__wrapper > table tbody > tr > td.v-data-table-column--align-center,
+.v-data-table .v-table__wrapper > table tbody > tr th.v-data-table-column--align-center {
+  text-align: center;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > td.v-data-table-column--align-center .v-data-table-header__content,
+.v-data-table .v-table__wrapper > table > thead > tr th.v-data-table-column--align-center .v-data-table-header__content,
+.v-data-table .v-table__wrapper > table tbody > tr > td.v-data-table-column--align-center .v-data-table-header__content,
+.v-data-table .v-table__wrapper > table tbody > tr th.v-data-table-column--align-center .v-data-table-header__content {
+  justify-content: center;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > td.v-data-table-column--no-padding,
+.v-data-table .v-table__wrapper > table > thead > tr th.v-data-table-column--no-padding,
+.v-data-table .v-table__wrapper > table tbody > tr > td.v-data-table-column--no-padding,
+.v-data-table .v-table__wrapper > table tbody > tr th.v-data-table-column--no-padding {
+  padding: 0 8px;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > td.v-data-table-column--empty,
+.v-data-table .v-table__wrapper > table > thead > tr th.v-data-table-column--empty,
+.v-data-table .v-table__wrapper > table tbody > tr > td.v-data-table-column--empty,
+.v-data-table .v-table__wrapper > table tbody > tr th.v-data-table-column--empty {
+  padding: 0;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > td.v-data-table-column--nowrap,
+.v-data-table .v-table__wrapper > table > thead > tr th.v-data-table-column--nowrap,
+.v-data-table .v-table__wrapper > table tbody > tr > td.v-data-table-column--nowrap,
+.v-data-table .v-table__wrapper > table tbody > tr th.v-data-table-column--nowrap {
+  text-overflow: ellipsis;
+  text-wrap: nowrap;
+  overflow: hidden;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > td.v-data-table-column--nowrap .v-data-table-header__content,
+.v-data-table .v-table__wrapper > table > thead > tr th.v-data-table-column--nowrap .v-data-table-header__content,
+.v-data-table .v-table__wrapper > table tbody > tr > td.v-data-table-column--nowrap .v-data-table-header__content,
+.v-data-table .v-table__wrapper > table tbody > tr th.v-data-table-column--nowrap .v-data-table-header__content {
+  display: contents;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > th,
+.v-data-table .v-table__wrapper > table tbody > tr > th {
+  align-items: center;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > th.v-data-table__th--fixed,
+.v-data-table .v-table__wrapper > table tbody > tr > th.v-data-table__th--fixed {
+  position: sticky;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > th.v-data-table__th--sortable:hover,
+.v-data-table .v-table__wrapper > table > thead > tr > th.v-data-table__th--sortable:focus,
+.v-data-table .v-table__wrapper > table tbody > tr > th.v-data-table__th--sortable:hover,
+.v-data-table .v-table__wrapper > table tbody > tr > th.v-data-table__th--sortable:focus {
+  cursor: pointer;
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+.v-data-table .v-table__wrapper > table > thead > tr > th:not(.v-data-table__th--sorted) .v-data-table-header__sort-icon,
+.v-data-table .v-table__wrapper > table tbody > tr > th:not(.v-data-table__th--sorted) .v-data-table-header__sort-icon {
+  opacity: 0;
+}
+.v-data-table .v-table__wrapper > table > thead > tr > th:not(.v-data-table__th--sorted):hover .v-data-table-header__sort-icon, .v-data-table .v-table__wrapper > table > thead > tr > th:not(.v-data-table__th--sorted):focus .v-data-table-header__sort-icon,
+.v-data-table .v-table__wrapper > table tbody > tr > th:not(.v-data-table__th--sorted):hover .v-data-table-header__sort-icon,
+.v-data-table .v-table__wrapper > table tbody > tr > th:not(.v-data-table__th--sorted):focus .v-data-table-header__sort-icon {
+  opacity: 0.5;
+}
+.v-data-table .v-table__wrapper > table > thead > tr.v-data-table__tr--mobile > td,
+.v-data-table .v-table__wrapper > table tbody > tr.v-data-table__tr--mobile > td {
+  height: fit-content;
+}
+
+.v-data-table-column--fixed,
+.v-data-table-column--fixed-end,
+.v-data-table__th--sticky {
+  background-color: rgb(var(--v-theme-surface));
+  background-image: inherit;
+  position: sticky !important;
+  left: 0;
+  z-index: 1;
+}
+
+.v-data-table-column--fixed-end {
+  left: unset;
+  right: 0;
+}
+
+.v-data-table-column--last-fixed {
+  border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.v-data-table-column--first-fixed-end {
+  border-left: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.v-data-table.v-table--fixed-header > .v-table__wrapper > table > thead > tr > th.v-data-table-column--fixed,
+.v-data-table.v-table--fixed-header > .v-table__wrapper > table > thead > tr > th.v-data-table-column--fixed-end {
+  z-index: 2;
+}
+
+.v-data-table-group-header-row td {
+  background: rgba(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface));
+}
+.v-data-table-group-header-row td > span {
+  padding-left: 5px;
+}
+
+.v-data-table--loading .v-data-table__td {
+  opacity: var(--v-disabled-opacity);
+}
+
+.v-data-table-group-header-row__column {
+  padding-inline-start: calc(var(--v-data-table-group-header-row-depth) * 16px) !important;
+}
+
+.v-data-table-header__content {
+  display: flex;
+  align-items: center;
+}
+
+.v-data-table-header__sort-badge {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.875rem;
+  padding: 4px;
+  border-radius: 50%;
+  background: rgba(var(--v-border-color), var(--v-border-opacity));
+  min-width: 20px;
+  min-height: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.v-data-table-progress > th {
+  border: none !important;
+  height: auto !important;
+  padding: 0 !important;
+}
+
+.v-data-table-progress__loader {
+  position: relative;
+}
+
+.v-data-table-rows-loading,
+.v-data-table-rows-no-data {
+  text-align: center;
+}
+
+.v-data-table__tr--mobile > .v-data-table__td--expanded-row {
+  grid-template-columns: auto;
+  justify-content: center;
+}
+.v-data-table__tr--mobile > .v-data-table__td--select-row {
+  grid-template-columns: 0;
+  justify-content: end;
+}
+.v-data-table__tr--mobile > td {
+  align-items: center;
+  column-gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  min-height: var(--v-table-row-height);
+}
+.v-data-table__tr--mobile > td:not(:last-child) {
+  border-bottom: 0 !important;
+}
+
+.v-data-table__td-title {
+  font-weight: 500;
+  text-align: start;
+}
+
+.v-data-table__td-value {
+  text-align: end;
+}
+
+.v-data-table__td-sort-icon {
+  color: rgba(var(--v-theme-on-surface), var(--v-disabled-opacity));
+}
+.v-data-table__td-sort-icon-active {
+  color: rgba(var(--v-theme-on-surface));
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-data-table-footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 8px 4px;
+}
+.v-data-table-footer__items-per-page {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+.v-data-table-footer__items-per-page > span {
+  padding-inline-end: 8px;
+}
+.v-data-table-footer__items-per-page > .v-select {
+  width: 90px;
+}
+.v-data-table-footer__info {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 116px;
+  padding: 0 16px;
+}
+.v-data-table-footer__paginationz {
+  align-items: center;
+  display: flex;
+  margin-inline-start: 16px;
+}
+.v-data-table-footer__page {
+  padding: 0 8px;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-table {
+  font-size: 0.875rem;
+  transition-duration: 0.28s;
+  transition-property: box-shadow, opacity, background, height;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.v-table {
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+.v-table .v-table-divider {
+  border-right: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.v-table .v-table__wrapper > table > thead > tr > th {
+  border-bottom: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.v-table .v-table__wrapper > table > tbody > tr:not(:last-child) > td,
+.v-table .v-table__wrapper > table > tbody > tr:not(:last-child) > th {
+  border-bottom: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.v-table .v-table__wrapper > table > tfoot > tr > td,
+.v-table .v-table__wrapper > table > tfoot > tr > th {
+  border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.v-table.v-table--hover > .v-table__wrapper > table > tbody > tr > td {
+  position: relative;
+}
+.v-table.v-table--hover > .v-table__wrapper > table > tbody > tr:hover > td::after {
+  background: rgba(var(--v-border-color), var(--v-hover-opacity));
+  pointer-events: none;
+}
+.v-table.v-table--hover > .v-table__wrapper > table > tbody > tr:hover > td::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.v-table.v-table--striped-even > .v-table__wrapper > table > tbody > tr:nth-child(even) {
+  background-image: linear-gradient(0deg, rgba(var(--v-border-color), var(--v-hover-opacity)), rgba(var(--v-border-color), var(--v-hover-opacity)));
+}
+.v-table.v-table--striped-odd > .v-table__wrapper > table > tbody > tr:nth-child(odd) {
+  background-image: linear-gradient(0deg, rgba(var(--v-border-color), var(--v-hover-opacity)), rgba(var(--v-border-color), var(--v-hover-opacity)));
+}
+.v-table.v-table--fixed-header > .v-table__wrapper > table > thead > tr > th {
+  background: rgb(var(--v-theme-surface));
+  box-shadow: inset 0 -1px 0 rgba(var(--v-border-color), var(--v-border-opacity));
+  z-index: 1;
+}
+.v-table.v-table--fixed-footer > tfoot > tr > th,
+.v-table.v-table--fixed-footer > tfoot > tr > td {
+  background: rgb(var(--v-theme-surface));
+  box-shadow: inset 0 1px 0 rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.v-table {
+  border-radius: inherit;
+  line-height: 1.5;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.v-table > .v-table__wrapper > table {
+  width: 100%;
+  border-spacing: 0;
+}
+.v-table > .v-table__wrapper > table > tbody > tr > td,
+.v-table > .v-table__wrapper > table > tbody > tr > th,
+.v-table > .v-table__wrapper > table > thead > tr > td,
+.v-table > .v-table__wrapper > table > thead > tr > th,
+.v-table > .v-table__wrapper > table > tfoot > tr > td,
+.v-table > .v-table__wrapper > table > tfoot > tr > th {
+  padding: 0 16px;
+  transition-duration: 0.28s;
+  transition-property: box-shadow, opacity, background, height;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.v-table > .v-table__wrapper > table > tbody > tr > td,
+.v-table > .v-table__wrapper > table > thead > tr > td,
+.v-table > .v-table__wrapper > table > tfoot > tr > td {
+  height: var(--v-table-row-height);
+}
+.v-table > .v-table__wrapper > table > tbody > tr > th,
+.v-table > .v-table__wrapper > table > thead > tr > th,
+.v-table > .v-table__wrapper > table > tfoot > tr > th {
+  height: var(--v-table-header-height);
+  font-weight: 500;
+  user-select: none;
+  text-align: start;
+}
+.v-table--density-default {
+  --v-table-header-height: 56px;
+  --v-table-row-height: 52px;
+}
+
+.v-table--density-comfortable {
+  --v-table-header-height: 48px;
+  --v-table-row-height: 44px;
+}
+
+.v-table--density-compact {
+  --v-table-header-height: 40px;
+  --v-table-row-height: 36px;
+}
+
+.v-table__wrapper {
+  border-radius: inherit;
+  overflow: auto;
+  flex: 1 1 auto;
+}
+
+.v-table--has-top > .v-table__wrapper {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.v-table--has-bottom > .v-table__wrapper {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.v-table--fixed-height > .v-table__wrapper {
+  overflow-y: auto;
+}
+
+.v-table--fixed-header > .v-table__wrapper > table > thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.v-table--fixed-header > .v-table__wrapper > table > thead > tr > th {
+  border-bottom: 0px !important;
+}
+
+.v-table--fixed-footer > .v-table__wrapper > table > tfoot > tr {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+}
+.v-table--fixed-footer > .v-table__wrapper > table > tfoot > tr > td,
+.v-table--fixed-footer > .v-table__wrapper > table > tfoot > tr > th {
+  border-top: 0px !important;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-textarea .v-field {
+  --v-textarea-control-height: var(--v-input-control-height);
+}
+.v-textarea .v-field__field {
+  --v-input-control-height: var(--v-textarea-control-height);
+}
+.v-textarea .v-field__input {
+  flex: 1 1 auto;
+  outline: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, transparent calc(var(--v-field-padding-top, 0) + var(--v-input-padding-top, 0) - 6px), black calc(var(--v-field-padding-top, 0) + var(--v-input-padding-top, 0) + 4px)), linear-gradient(to right, transparent, transparent calc(100% - var(--v-textarea-scroll-bar-width, 16px)), black calc(100% - var(--v-textarea-scroll-bar-width, 16px)));
+  mask-image: linear-gradient(to bottom, transparent, transparent calc(var(--v-field-padding-top, 0) + var(--v-input-padding-top, 0) - 6px), black calc(var(--v-field-padding-top, 0) + var(--v-input-padding-top, 0) + 4px)), linear-gradient(to right, transparent, transparent calc(100% - var(--v-textarea-scroll-bar-width, 16px)), black calc(100% - var(--v-textarea-scroll-bar-width, 16px)));
+}
+.v-textarea .v-field__input.v-textarea__sizer {
+  visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 0 !important;
+  min-height: 0 !important;
+  pointer-events: none;
+}
+.v-textarea--no-resize .v-field__input {
+  resize: none;
+}
+.v-textarea .v-field--no-label textarea,
+.v-textarea .v-field--active textarea {
+  opacity: 1;
+}
+.v-textarea textarea {
+  opacity: 0;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  transition: 0.15s opacity cubic-bezier(0.4, 0, 0.2, 1);
+}
+.v-textarea textarea:focus, .v-textarea textarea:active {
+  outline: none;
+}
+.v-textarea textarea:invalid {
+  box-shadow: none;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-tooltip > .v-overlay__content {
+  background: rgb(var(--v-theme-surface-variant));
+  color: rgb(var(--v-theme-on-surface-variant));
+  border-radius: 4px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  display: inline-block;
+  padding: 5px 16px;
+  text-transform: initial;
+  width: auto;
+  opacity: 1;
+  transition-property: opacity, transform;
+  overflow-wrap: break-word;
+}
+.v-tooltip > .v-overlay__content[class*=enter-active] {
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+.v-tooltip > .v-overlay__content[class*=leave-active] {
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  transition-duration: 75ms;
+}
+.v-tooltip:not(.v-tooltip--interactive) > .v-overlay__content {
+  pointer-events: none;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-switch .v-label {
+  padding-inline-start: 10px;
+}
+
+.v-switch__loader {
+  display: flex;
+}
+.v-switch__loader .v-progress-circular {
+  color: rgb(var(--v-theme-surface));
+}
+
+.v-switch__track,
+.v-switch__thumb {
+  transition: none;
+}
+.v-selection-control--error:not(.v-selection-control--disabled) .v-switch__track,
+.v-selection-control--error:not(.v-selection-control--disabled) .v-switch__thumb {
+  background-color: rgb(var(--v-theme-error));
+  color: rgb(var(--v-theme-on-error));
+}
+
+.v-switch__track-true {
+  margin-inline-end: auto;
+}
+.v-selection-control:not(.v-selection-control--dirty) .v-switch__track-true {
+  opacity: 0;
+}
+
+.v-switch__track-false {
+  margin-inline-start: auto;
+}
+.v-selection-control--dirty .v-switch__track-false {
+  opacity: 0;
+}
+
+.v-switch__track {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.5rem;
+  padding: 0 5px;
+  background-color: rgb(var(--v-theme-surface-variant));
+  border-radius: 9999px;
+  height: 14px;
+  opacity: 0.6;
+  min-width: 36px;
+  cursor: pointer;
+  transition: 0.2s background-color cubic-bezier(0.4, 0, 0.2, 1);
+}
+.v-switch--inset .v-switch__track {
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  height: 32px;
+  min-width: 52px;
+}
+
+.v-switch__thumb {
+  align-items: center;
+  background-color: rgb(var(--v-theme-surface-bright));
+  color: rgb(var(--v-theme-on-surface-bright));
+  border-radius: 50%;
+  display: flex;
+  font-size: 0.75rem;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
+  pointer-events: none;
+  transition: 0.15s 0.05s transform cubic-bezier(0, 0, 0.2, 1), 0.2s color cubic-bezier(0.4, 0, 0.2, 1), 0.2s background-color cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.v-switch:not(.v-switch--inset) .v-switch__thumb {
+  box-shadow: 0px 2px 4px -1px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 4px 5px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 1px 10px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-switch.v-switch--flat:not(.v-switch--inset) .v-switch__thumb {
+  background: rgb(var(--v-theme-surface-variant));
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+.v-switch.v-switch--flat:not(.v-switch--inset) .v-switch__thumb {
+  box-shadow: 0px 0px 0px 0px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 0px 0px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 0px 0px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-switch--inset .v-switch__thumb {
+  height: 24px;
+  width: 24px;
+  transform: scale(0.6666666667);
+}
+.v-switch--inset .v-switch__thumb--filled {
+  transform: none;
+}
+.v-switch--inset .v-selection-control--dirty .v-switch__thumb {
+  transform: none;
+  transition: 0.15s 0.05s transform cubic-bezier(0, 0, 0.2, 1);
+}
+
+.v-switch.v-input {
+  flex: 0 1 auto;
+}
+.v-switch .v-selection-control {
+  min-height: var(--v-input-control-height);
+}
+.v-switch .v-selection-control__input {
+  border-radius: 50%;
+  transition: 0.2s transform cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+}
+.v-locale--is-ltr.v-switch .v-selection-control__input, .v-locale--is-ltr .v-switch .v-selection-control__input {
+  transform: translateX(-10px);
+}
+
+.v-locale--is-rtl.v-switch .v-selection-control__input, .v-locale--is-rtl .v-switch .v-selection-control__input {
+  transform: translateX(10px);
+}
+
+.v-switch .v-selection-control__input .v-icon {
+  position: absolute;
+}
+.v-locale--is-ltr.v-switch .v-selection-control--dirty .v-selection-control__input, .v-locale--is-ltr .v-switch .v-selection-control--dirty .v-selection-control__input {
+  transform: translateX(10px);
+}
+
+.v-locale--is-rtl.v-switch .v-selection-control--dirty .v-selection-control__input, .v-locale--is-rtl .v-switch .v-selection-control--dirty .v-selection-control__input {
+  transform: translateX(-10px);
+}
+
+.v-switch.v-switch--indeterminate .v-selection-control__input {
+  transform: scale(0.8);
+}
+.v-switch.v-switch--indeterminate .v-switch__thumb {
+  transform: scale(0.75);
+  box-shadow: none;
+}
+.v-switch.v-switch--inset .v-selection-control__wrapper {
+  width: auto;
+}
+.v-switch.v-input--vertical .v-label {
+  min-width: max-content;
+}
+.v-switch.v-input--vertical .v-selection-control__wrapper {
+  transform: rotate(-90deg);
+}
+
+@media (forced-colors: active) {
+  .v-switch .v-switch__loader .v-progress-circular {
+    color: currentColor;
+  }
+  .v-switch .v-switch__thumb {
+    background-color: buttontext;
+  }
+  .v-switch .v-switch__track,
+  .v-switch .v-switch__thumb {
+    border: 1px solid;
+    color: buttontext;
+  }
+  .v-switch:not(.v-switch--loading):not(.v-input--disabled) .v-selection-control--dirty .v-switch__thumb {
+    background-color: highlight;
+  }
+  .v-switch:not(.v-input--disabled) .v-selection-control--dirty .v-switch__track {
+    background-color: highlight;
+  }
+  .v-switch:not(.v-input--disabled) .v-selection-control--dirty .v-switch__track,
+  .v-switch:not(.v-input--disabled) .v-selection-control--dirty .v-switch__thumb {
+    color: highlight;
+  }
+  .v-switch.v-switch--inset .v-switch__track {
+    border-width: 2px;
+  }
+  .v-switch.v-switch--inset:not(.v-switch--loading):not(.v-input--disabled) .v-selection-control--dirty .v-switch__thumb {
+    background-color: highlighttext;
+    color: highlighttext;
+  }
+  .v-switch.v-input--disabled .v-switch__thumb {
+    background-color: graytext;
+  }
+  .v-switch.v-input--disabled .v-switch__track,
+  .v-switch.v-input--disabled .v-switch__thumb {
+    color: graytext;
+  }
+  .v-switch.v-switch--loading .v-switch__thumb {
+    background-color: canvas;
+  }
+  .v-switch.v-switch--loading.v-switch--inset .v-switch__thumb, .v-switch.v-switch--loading.v-switch--indeterminate .v-switch__thumb {
+    border-width: 0;
+  }
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-autocomplete--chips.v-input--density-compact .v-field--variant-solo .v-label.v-field-label--floating,
+.v-autocomplete--chips.v-input--density-compact .v-field--variant-solo-inverted .v-label.v-field-label--floating,
+.v-autocomplete--chips.v-input--density-compact .v-field--variant-filled .v-label.v-field-label--floating,
+.v-autocomplete--chips.v-input--density-compact .v-field--variant-solo-filled .v-label.v-field-label--floating {
+  top: 0px;
+}
+.v-autocomplete .v-field .v-text-field__prefix,
+.v-autocomplete .v-field .v-text-field__suffix,
+.v-autocomplete .v-field .v-field__input, .v-autocomplete .v-field.v-field {
+  cursor: text;
+}
+.v-autocomplete .v-field .v-field__input > input {
+  flex: 1 1;
+}
+.v-autocomplete .v-field input {
+  min-width: 64px;
+}
+.v-autocomplete .v-field:not(.v-field--focused) input {
+  min-width: 0;
+}
+.v-autocomplete .v-field--dirty .v-autocomplete__selection {
+  margin-inline-end: 2px;
+}
+.v-autocomplete .v-autocomplete__selection-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-autocomplete__content {
+  overflow: hidden;
+}
+.v-autocomplete__content {
+  box-shadow: 0px 2px 4px -1px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 4px 5px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 1px 10px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-menu > .v-overlay__content.v-autocomplete__content {
+  border-radius: 4px;
+}
+
+.v-autocomplete__mask {
+  background: rgb(var(--v-theme-surface-light));
+}
+.v-autocomplete__selection {
+  display: inline-flex;
+  align-items: center;
+  height: 1.5rem;
+  letter-spacing: inherit;
+  line-height: inherit;
+  max-width: calc(100% - 2px - 2px);
+}
+.v-autocomplete__selection:first-child {
+  margin-inline-start: 0;
+}
+.v-autocomplete--selecting-index .v-autocomplete__selection {
+  opacity: var(--v-medium-emphasis-opacity);
+}
+.v-autocomplete--selecting-index .v-autocomplete__selection--selected {
+  opacity: 1;
+}
+.v-autocomplete--selecting-index .v-field__input > input {
+  caret-color: transparent;
+}
+.v-autocomplete--single:not(.v-autocomplete--selection-slot).v-text-field input {
+  flex: 1 1;
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  padding-inline: inherit;
+}
+.v-autocomplete--single:not(.v-autocomplete--selection-slot) .v-field--active input {
+  transition: none;
+}
+.v-autocomplete--single:not(.v-autocomplete--selection-slot) .v-field--dirty:not(.v-field--focused) input {
+  opacity: 0;
+}
+.v-autocomplete--single:not(.v-autocomplete--selection-slot) .v-field--focused .v-autocomplete__selection {
+  opacity: 0;
+}
+.v-autocomplete__menu-icon {
+  margin-inline-start: 4px;
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.v-autocomplete--active-menu .v-autocomplete__menu-icon {
+  transform: rotate(180deg);
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-file-input--hide.v-input .v-field,
+.v-file-input--hide.v-input .v-input__control,
+.v-file-input--hide.v-input .v-input__details {
+  display: none;
+}
+.v-file-input--hide.v-input .v-input__prepend {
+  grid-area: control;
+  margin: 0 auto;
+}
+.v-file-input--chips.v-input--density-compact .v-field--variant-solo .v-label.v-field-label--floating,
+.v-file-input--chips.v-input--density-compact .v-field--variant-solo-inverted .v-label.v-field-label--floating,
+.v-file-input--chips.v-input--density-compact .v-field--variant-filled .v-label.v-field-label--floating,
+.v-file-input--chips.v-input--density-compact .v-field--variant-solo-filled .v-label.v-field-label--floating {
+  top: 0px;
+}
+.v-file-input .v-field__input {
+  word-break: break-word;
+}
+.v-file-input input[type=file] {
+  height: 100%;
+  left: 0;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 0;
+}
+.v-file-input--dragging input[type=file] {
+  z-index: 1;
+}
+.v-file-input .v-input__details {
+  padding-inline: 16px;
+}
+.v-input--plain-underlined.v-file-input .v-input__details {
+  padding-inline: 0;
+}
+.toast-snackbar[data-v-877f87b8] .v-snackbar__wrapper {
+  opacity: 0.88;
+}
+
+/* Reduz o recuo dos subitens dos submenus (v-list-group) — o padrão do
+   Vuetify soma a largura do prepend-icon do grupo (40px) ao indent-size
+   (16px), deixando os itens filhos recuados demais para um drawer estreito. */
+.app-drawer[data-v-877f87b8] .v-list {
+  --indent-padding: -8px;
+}
+.app-drawer[data-v-877f87b8] .v-list-group {
+  --list-indent-size: 8px;
+}
+.app-drawer[data-v-877f87b8] .v-list-group--prepend {
+  --prepend-width: 24px;
+}
+/* Com o drawer mais estreito, deixa o título quebrar em 2 linhas em vez de
+   truncar com "..." — preserva a legibilidade sem precisar de mais largura. */
+.app-drawer[data-v-877f87b8] .v-list-item-title {
+  white-space: normal;
+  line-height: 1.2;
+}
+
+/* ===== Visual moderno do drawer ===== */
+
+/* Cabeçalho com avatar + nome + papel */
+.drawer-header[data-v-877f87b8] {
+  padding: 16px 14px 12px;
+}
+
+/* Espaçamento maior ENTRE os menus gerais (grupos de nível 1) */
+.admin-nav[data-v-877f87b8] .menu-top {
+  margin-top: 10px;
+}
+.admin-nav[data-v-877f87b8] .menu-top:first-of-type {
+  margin-top: 4px;
+}
+
+/* Itens de navegação arredondados com destaque no ativo/hover */
+.admin-nav[data-v-877f87b8] .v-list-item {
+  border-radius: 12px;
+  min-height: 44px;
+}
+.admin-nav[data-v-877f87b8] .v-list-group__items .v-list-item {
+  min-height: 40px;
+}
+.admin-nav[data-v-877f87b8] .v-list-item--active {
+  font-weight: 600;
+}
+
+/* Subheader "Administrador" mais discreto e espaçado */
+.admin-nav[data-v-877f87b8] .v-list-subheader {
+  font-size: 0.7rem;
+  letter-spacing: 0.8px;
+  opacity: 0.7;
+  min-height: 28px;
+}
+/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-date-picker {
+  overflow: hidden;
+  width: 328px;
+}
+.v-date-picker--show-week {
+  width: 368px;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-date-picker-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  height: var(--v-date-picker-controls-height, 56px);
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-inline-start: 6px;
+  padding-inline-end: 12px;
+  flex: 1;
+}
+.v-date-picker-controls > .v-btn:first-child {
+  text-transform: none;
+  font-weight: 400;
+  line-height: initial;
+  letter-spacing: initial;
+}
+.v-date-picker-controls--variant-classic {
+  padding-inline-start: 12px;
+}
+.v-date-picker-controls--variant-modern .v-date-picker__title:not(:hover) {
+  opacity: 0.7;
+}
+.v-date-picker--month .v-date-picker-controls--variant-modern .v-date-picker__title {
+  cursor: pointer;
+}
+.v-date-picker--year .v-date-picker-controls--variant-modern .v-date-picker__title {
+  opacity: 1;
+}
+.v-date-picker-controls .v-btn:last-child {
+  margin-inline-start: 4px;
+}
+.v-date-picker--year .v-date-picker-controls .v-date-picker-controls__mode-btn {
+  transform: rotate(180deg);
+}
+
+.v-date-picker-controls__date {
+  margin-inline-end: 4px;
+}
+.v-date-picker-controls--variant-classic .v-date-picker-controls__date {
+  margin: auto;
+  text-align: center;
+}
+
+.v-date-picker-controls__month {
+  display: flex;
+}
+.v-locale--is-rtl.v-date-picker-controls__month, .v-locale--is-rtl .v-date-picker-controls__month {
+  flex-direction: row-reverse;
+}
+
+.v-date-picker-controls--variant-classic .v-date-picker-controls__month {
+  flex: 1 0 auto;
+}
+
+.v-date-picker__title {
+  display: inline-block;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-date-picker-header {
+  align-items: flex-end;
+  height: 70px;
+  display: grid;
+  grid-template-areas: "prepend content append";
+  grid-template-columns: min-content minmax(0, 1fr) min-content;
+  overflow: hidden;
+  padding-inline: 24px 12px;
+  padding-bottom: 12px;
+}
+
+.v-date-picker-header__append {
+  grid-area: append;
+}
+
+.v-date-picker-header__prepend {
+  grid-area: prepend;
+  padding-inline-start: 8px;
+}
+
+.v-date-picker-header__content {
+  align-items: center;
+  display: inline-flex;
+  font-size: 32px;
+  line-height: 40px;
+  grid-area: content;
+  justify-content: space-between;
+}
+.v-date-picker-header--clickable .v-date-picker-header__content {
+  cursor: pointer;
+}
+.v-date-picker-header--clickable .v-date-picker-header__content:not(:hover) {
+  opacity: 0.7;
+}
+
+.date-picker-header-transition-enter-active,
+.date-picker-header-reverse-transition-enter-active {
+  transition-duration: 0.3s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.date-picker-header-transition-leave-active,
+.date-picker-header-reverse-transition-leave-active {
+  transition-duration: 0.3s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.date-picker-header-transition-enter-from {
+  transform: translate(0, 100%);
+}
+.date-picker-header-transition-leave-to {
+  opacity: 0;
+  transform: translate(0, -100%);
+}
+
+.date-picker-header-reverse-transition-enter-from {
+  transform: translate(0, -100%);
+}
+.date-picker-header-reverse-transition-leave-to {
+  opacity: 0;
+  transform: translate(0, 100%);
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-date-picker-month {
+  display: flex;
+  justify-content: center;
+  padding: 0 12px 8px;
+  --v-date-picker-month-day-diff: 4px;
+}
+
+.v-date-picker-month__weeks {
+  display: flex;
+  flex-direction: column;
+  column-gap: 4px;
+  font-size: 0.875rem;
+}
+
+.v-date-picker-month__weekday {
+  font-size: 0.875rem;
+}
+
+.v-date-picker-month__days {
+  display: grid;
+  grid-template-columns: repeat(var(--v-date-picker-days-in-week), min-content);
+  column-gap: 4px;
+}
+
+.v-date-picker-month__day {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  height: 40px;
+  width: 40px;
+}
+.v-date-picker-month__day--selected .v-btn {
+  background-color: rgb(var(--v-theme-surface-variant));
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+.v-date-picker-month__day .v-btn.v-date-picker-month__day-btn {
+  --v-btn-height: 24px;
+  --v-btn-size: 0.875rem;
+}
+.v-date-picker-month__day--week {
+  font-size: var(--v-btn-size);
+}
+
+.v-date-picker-month__day--adjacent {
+  opacity: 0.5;
+}
+
+.v-date-picker-month__day--hide-adjacent {
+  opacity: 0;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-date-picker-months {
+  height: 288px;
+}
+
+.v-date-picker-months__content {
+  align-items: center;
+  display: grid;
+  flex: 1 1;
+  height: inherit;
+  justify-content: space-around;
+  grid-template-columns: repeat(2, 1fr);
+  grid-gap: 0px 24px;
+  padding-inline-start: 36px;
+  padding-inline-end: 36px;
+}
+.v-date-picker-months__content .v-btn {
+  text-transform: none;
+  padding-inline-start: 8px;
+  padding-inline-end: 8px;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-date-picker-years {
+  height: 288px;
+  overflow-y: scroll;
+}
+
+.v-date-picker-years__content {
+  display: grid;
+  flex: 1 1;
+  justify-content: space-around;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px 24px;
+  padding-inline: 32px;
+}
+.v-date-picker-years__content .v-btn {
+  padding-inline: 8px;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-picker.v-sheet {
+  display: grid;
+  grid-auto-rows: min-content;
+  grid-template-areas: "title" "header" "body";
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+}
+.v-picker.v-sheet {
+  box-shadow: 0px 0px 0px 0px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 0px 0px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 0px 0px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-picker.v-sheet {
+  border-radius: 4px;
+}
+.v-picker.v-sheet.v-picker--with-actions {
+  grid-template-areas: "title" "header" "body" "actions";
+}
+
+.v-picker__body {
+  grid-area: body;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.v-picker__header {
+  grid-area: header;
+}
+
+.v-picker__actions {
+  grid-area: actions;
+  padding: 0 12px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.v-picker__actions .v-btn {
+  min-width: 48px;
+}
+.v-picker__actions .v-btn:not(:last-child) {
+  margin-inline-end: 8px;
+}
+
+.v-picker--divided .v-picker__header {
+  border-bottom-color: rgba(var(--v-border-color), var(--v-border-opacity));
+  border-bottom-style: solid;
+  border-bottom-width: thin;
+}
+
+.v-picker--landscape {
+  grid-template-areas: "title" "header body" "header body";
+}
+
+.v-picker--landscape.v-picker--with-actions {
+  grid-template-areas: "title" "header body" "header actions";
+}
+
+.v-picker-title {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  grid-area: title;
+  padding-inline: 24px 12px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  font-weight: 400;
+  letter-spacing: 0.1666666667em;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-expansion-panel {
+  background-color: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+.v-expansion-panel:not(:first-child)::after {
+  border-color: rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.v-expansion-panel--disabled .v-expansion-panel-title {
+  color: rgba(var(--v-theme-on-surface), 0.26);
+}
+.v-expansion-panel--disabled .v-expansion-panel-title .v-expansion-panel-title__overlay {
+  opacity: 0.4615384615;
+}
+
+.v-expansion-panels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  list-style-type: none;
+  padding: 0;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+.v-expansion-panels:not(.v-expansion-panels--variant-accordion) > :not(:first-child):not(:last-child):not(.v-expansion-panel--active):not(.v-expansion-panel--before-active) {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+.v-expansion-panels:not(.v-expansion-panels--variant-accordion) > :not(:first-child):not(:last-child):not(.v-expansion-panel--active):not(.v-expansion-panel--after-active) {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+.v-expansion-panels:not(.v-expansion-panels--variant-accordion) > :first-child:not(:last-child):not(.v-expansion-panel--active):not(.v-expansion-panel--before-active) {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+.v-expansion-panels:not(.v-expansion-panels--variant-accordion) > :last-child:not(:first-child):not(.v-expansion-panel--active):not(.v-expansion-panel--after-active) {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+.v-expansion-panels--variant-accordion > :first-child:not(:last-child) {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+.v-expansion-panels--variant-accordion > :last-child:not(:first-child) {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+.v-expansion-panels--variant-accordion > :last-child:not(:first-child) .v-expansion-panel-title--active {
+  border-bottom-left-radius: initial;
+  border-bottom-right-radius: initial;
+}
+.v-expansion-panels--variant-accordion > :not(:first-child):not(:last-child) {
+  border-radius: 0 !important;
+}
+.v-expansion-panels--variant-accordion .v-expansion-panel-title__overlay {
+  transition: 0.3s border-radius cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.v-expansion-panel {
+  flex: 1 0 100%;
+  max-width: 100%;
+  position: relative;
+  transition: 0.3s all cubic-bezier(0.4, 0, 0.2, 1);
+  transition-property: margin-top, border-radius, border, max-width;
+  border-radius: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v-expansion-panel {
+    transition-property: border-radius, border;
+  }
+}
+.v-expansion-panel:not(:first-child)::after {
+  border-top-style: solid;
+  border-top-width: thin;
+  content: "";
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transition: 0.3s opacity cubic-bezier(0.4, 0, 0.2, 1);
+}
+.v-expansion-panel--disabled .v-expansion-panel-title {
+  pointer-events: none;
+}
+.v-expansion-panel--active:not(:first-child),
+.v-expansion-panel--active + .v-expansion-panel {
+  margin-top: 16px;
+}
+.v-expansion-panel--active:not(:first-child)::after,
+.v-expansion-panel--active + .v-expansion-panel::after {
+  opacity: 0;
+}
+.v-expansion-panel--active > .v-expansion-panel-title {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.v-expansion-panel--active > .v-expansion-panel-title:not(.v-expansion-panel-title--static) {
+  min-height: 64px;
+}
+
+.v-expansion-panel__shadow {
+  border-radius: inherit;
+  z-index: -1;
+}
+.v-expansion-panel__shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.v-expansion-panel__shadow {
+  box-shadow: 0px 3px 1px -2px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 2px 2px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 1px 5px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+
+.v-expansion-panel-title {
+  align-items: center;
+  text-align: start;
+  border-radius: inherit;
+  display: flex;
+  font-size: 0.9375rem;
+  line-height: 1;
+  min-height: 48px;
+  outline: none;
+  padding: 16px 24px;
+  position: relative;
+  width: 100%;
+  justify-content: space-between;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .v-expansion-panel-title {
+    transition: 0.3s min-height cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+.v-expansion-panel-title:hover > .v-expansion-panel-title__overlay {
+  opacity: calc(var(--v-hover-opacity) * var(--v-theme-overlay-multiplier));
+}
+.v-expansion-panel-title:focus-visible > .v-expansion-panel-title__overlay {
+  opacity: calc(var(--v-focus-opacity) * var(--v-theme-overlay-multiplier));
+}
+@supports not selector(:focus-visible) {
+  .v-expansion-panel-title:focus > .v-expansion-panel-title__overlay {
+    opacity: calc(var(--v-focus-opacity) * var(--v-theme-overlay-multiplier));
+  }
+}
+.v-expansion-panel-title--focusable.v-expansion-panel-title--active .v-expansion-panel-title__overlay {
+  opacity: calc(var(--v-activated-opacity) * var(--v-theme-overlay-multiplier));
+}
+.v-expansion-panel-title--focusable.v-expansion-panel-title--active:hover .v-expansion-panel-title__overlay {
+  opacity: calc((var(--v-activated-opacity) + var(--v-hover-opacity)) * var(--v-theme-overlay-multiplier));
+}
+.v-expansion-panel-title--focusable.v-expansion-panel-title--active:focus-visible .v-expansion-panel-title__overlay {
+  opacity: calc((var(--v-activated-opacity) + var(--v-focus-opacity)) * var(--v-theme-overlay-multiplier));
+}
+@supports not selector(:focus-visible) {
+  .v-expansion-panel-title--focusable.v-expansion-panel-title--active:focus .v-expansion-panel-title__overlay {
+    opacity: calc((var(--v-activated-opacity) + var(--v-focus-opacity)) * var(--v-theme-overlay-multiplier));
+  }
+}
+
+.v-expansion-panel-title__overlay {
+  background-color: currentColor;
+  border-radius: inherit;
+  opacity: 0;
+}
+.v-expansion-panel-title__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.v-expansion-panel-title__icon {
+  display: inline-flex;
+  margin-bottom: -4px;
+  margin-top: -4px;
+  user-select: none;
+  margin-inline-start: auto;
+}
+
+.v-expansion-panel-text {
+  display: flex;
+}
+.v-expansion-panel-text__wrapper {
+  padding: 8px 24px 16px;
+  flex: 1 1 auto;
+  max-width: 100%;
+}
+
+.v-expansion-panels--variant-accordion > .v-expansion-panel {
+  margin-top: 0;
+}
+.v-expansion-panels--variant-accordion > .v-expansion-panel::after {
+  opacity: 1;
+}
+
+.v-expansion-panels--variant-popout > .v-expansion-panel {
+  max-width: calc(100% - 32px);
+}
+.v-expansion-panels--variant-popout > .v-expansion-panel--active {
+  max-width: calc(100% + 16px);
+}
+
+.v-expansion-panels--variant-inset > .v-expansion-panel {
+  max-width: 100%;
+}
+.v-expansion-panels--variant-inset > .v-expansion-panel--active {
+  max-width: calc(100% - 32px);
+}
+
+.v-expansion-panels--flat > .v-expansion-panel::after {
+  border-top: none;
+}
+.v-expansion-panels--flat > .v-expansion-panel .v-expansion-panel__shadow {
+  display: none;
+}
+
+.v-expansion-panels--tile {
+  border-radius: 0;
+}
+.v-expansion-panels--tile > .v-expansion-panel {
+  border-radius: 0;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-navigation-drawer {
+  -webkit-overflow-scrolling: touch;
+  background: rgb(var(--v-theme-surface));
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 100%;
+  pointer-events: auto;
+  transition-duration: 0.2s;
+  transition-property: box-shadow, transform, visibility, width, height, left, right, top, bottom;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+}
+.v-navigation-drawer {
+  border-color: rgba(var(--v-border-color), var(--v-border-opacity));
+  border-style: solid;
+  border-width: 0;
+}
+.v-navigation-drawer--border {
+  border-width: thin;
+  box-shadow: none;
+}
+.v-navigation-drawer {
+  box-shadow: 0px 0px 0px 0px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 0px 0px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 0px 0px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-navigation-drawer {
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+@media (prefers-reduced-motion: reduce) {
+  .v-navigation-drawer {
+    transition: none;
+  }
+}
+.v-navigation-drawer--rounded {
+  border-radius: 4px;
+}
+.v-navigation-drawer--top {
+  top: 0;
+  border-bottom-width: thin;
+}
+.v-navigation-drawer--bottom {
+  left: 0;
+  border-top-width: thin;
+}
+.v-navigation-drawer--left {
+  top: 0;
+  left: 0;
+  right: auto;
+  border-right-width: thin;
+}
+.v-navigation-drawer--right {
+  top: 0;
+  left: auto;
+  right: 0;
+  border-left-width: thin;
+}
+.v-navigation-drawer--floating {
+  border: none;
+}
+.v-navigation-drawer--temporary.v-navigation-drawer--active {
+  box-shadow: 0px 8px 10px -5px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 16px 24px 2px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 6px 30px 5px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-navigation-drawer--sticky {
+  height: auto;
+  transition: box-shadow, transform, visibility, width, height, left, right;
+}
+.v-navigation-drawer .v-list {
+  overflow: hidden;
+}
+
+.v-navigation-drawer__content {
+  flex: 0 1 auto;
+  height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.v-navigation-drawer__img {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: -1;
+}
+.v-navigation-drawer__img img:not(.v-img__img) {
+  height: inherit;
+  object-fit: cover;
+  width: inherit;
+}
+
+.v-navigation-drawer__scrim {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  opacity: 0.2;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+.v-navigation-drawer__prepend,
+.v-navigation-drawer__append {
+  flex: none;
+  overflow: hidden;
+}/**
+ * src/styles/settings.scss
+ *
+ * Configures SASS variables and Vuetify overwrites
+ */
+.v-snackbar {
+  justify-content: center;
+  z-index: 10000;
+  margin: 8px;
+  margin-inline-end: calc(8px + var(--v-scrollbar-offset));
+  padding: var(--v-layout-top) var(--v-layout-right) var(--v-layout-bottom) var(--v-layout-left);
+}
+.v-snackbar:not(.v-snackbar--center):not(.v-snackbar--top) {
+  align-items: flex-end;
+}
+.v-snackbar__wrapper {
+  align-items: center;
+  display: flex;
+  max-width: 672px;
+  min-height: 48px;
+  min-width: 344px;
+  overflow: hidden;
+  padding: 0;
+}
+.v-snackbar__wrapper {
+  border-radius: 4px;
+}
+.v-snackbar--variant-plain, .v-snackbar--variant-outlined, .v-snackbar--variant-text, .v-snackbar--variant-tonal {
+  background: transparent;
+  color: inherit;
+}
+.v-snackbar--variant-plain {
+  opacity: 0.62;
+}
+.v-snackbar--variant-plain:focus, .v-snackbar--variant-plain:hover {
+  opacity: 1;
+}
+.v-snackbar--variant-plain .v-snackbar__overlay {
+  display: none;
+}
+.v-snackbar--variant-elevated, .v-snackbar--variant-flat {
+  background: rgb(var(--v-theme-surface-variant));
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+.v-snackbar--variant-elevated {
+  box-shadow: 0px 3px 5px -1px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 6px 10px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 1px 18px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-snackbar--variant-flat {
+  box-shadow: 0px 0px 0px 0px var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)), 0px 0px 0px 0px var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)), 0px 0px 0px 0px var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12));
+}
+.v-snackbar--variant-outlined {
+  border: thin solid currentColor;
+}
+.v-snackbar--variant-text .v-snackbar__overlay {
+  background: currentColor;
+}
+.v-snackbar--variant-tonal .v-snackbar__underlay {
+  background: currentColor;
+  opacity: var(--v-activated-opacity);
+  border-radius: inherit;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+.v-snackbar .v-snackbar__underlay {
+  position: absolute;
+}
+
+@media (forced-colors: active) {
+  .v-snackbar__wrapper {
+    border: thick solid;
+  }
+}
+.v-snackbar__content {
+  flex-grow: 1;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.0178571429em;
+  line-height: 1.425;
+  margin-right: auto;
+  padding: 14px 16px;
+  text-align: initial;
+}
+.v-snackbar__actions {
+  align-items: center;
+  align-self: center;
+  display: flex;
+  margin-inline-end: 8px;
+}
+.v-snackbar__actions > .v-btn {
+  padding: 0 8px;
+  min-width: auto;
+}
+.v-snackbar__timer {
+  width: 100%;
+  position: absolute;
+  top: 0;
+}
+.v-snackbar__timer .v-progress-linear {
+  transition: 0.2s linear;
+}
+.v-snackbar--absolute {
+  position: absolute;
+  z-index: 1;
+}
+.v-snackbar--multi-line .v-snackbar__wrapper {
+  min-height: 68px;
+}
+.v-snackbar--vertical .v-snackbar__wrapper {
+  flex-direction: column;
+}
+.v-snackbar--vertical .v-snackbar__wrapper .v-snackbar__actions {
+  align-self: flex-end;
+  margin-bottom: 8px;
+}
+.v-snackbar--center {
+  align-items: center;
+  justify-content: center;
+}
+.v-snackbar--top {
+  align-items: flex-start;
+}
+.v-snackbar--bottom {
+  align-items: flex-end;
+}
+.v-snackbar--left, .v-snackbar--start {
+  justify-content: flex-start;
+}
+.v-snackbar--right, .v-snackbar--end {
+  justify-content: flex-end;
+}
+
+.v-snackbar-transition-enter-active, .v-snackbar-transition-leave-active {
+  transition-duration: 0.15s;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+.v-snackbar-transition-enter-active {
+  transition-property: opacity, transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v-snackbar-transition-enter-active {
+    transition-property: opacity;
+  }
+}
+.v-snackbar-transition-enter-from {
+  opacity: 0;
+  transform: scale(0.8);
+}
+.v-snackbar-transition-leave-active {
+  transition-property: opacity;
+}
+.v-snackbar-transition-leave-to {
+  opacity: 0;
+}
