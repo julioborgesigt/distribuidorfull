@@ -9,6 +9,7 @@ const {
   parseAvisos,
   parseTeor,
   computePrazo,
+  semPrazoEstruturado,
   vinculacaoFromDestinatario,
   vinculacoesDistintas,
 } = require('../../utils/pjeParser');
@@ -190,5 +191,18 @@ describe('pjeParser - computePrazo', () => {
     });
     expect(r.prazo_processual).toBe('');
     expect(r.prazo_vencimento).toBeNull();
+  });
+});
+
+describe('pjeParser - semPrazoEstruturado', () => {
+  test('intimação "sem prazo" (nem dias nem vencimento)', () => {
+    expect(semPrazoEstruturado({ prazo_processual: '', prazo_vencimento: null })).toBe(true);
+    expect(semPrazoEstruturado(null)).toBe(true);
+  });
+
+  test('prazo em dias ou data certa não é "sem prazo"', () => {
+    expect(semPrazoEstruturado({ prazo_processual: '30', prazo_vencimento: '2026-07-15' })).toBe(false);
+    // DATA_CERTA já vencida: dias fica vazio, mas o vencimento existe.
+    expect(semPrazoEstruturado({ prazo_processual: '', prazo_vencimento: '2026-05-01' })).toBe(false);
   });
 });

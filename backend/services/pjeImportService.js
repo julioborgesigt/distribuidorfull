@@ -17,6 +17,7 @@ const {
   diasDesdeDisponibilizacao,
   vinculacoesDistintas,
   mesmaVinculacao,
+  semPrazoEstruturado,
 } = require('../utils/pjeParser');
 const tpu = require('../utils/tpu');
 const logger = require('../utils/logger');
@@ -99,9 +100,17 @@ function avisoToRow(aviso, prazo) {
 // número de dias desde a disponibilização. 0 = abre todos. Avisos mais novos
 // são importados sem prazo (sem ciência) e ganham o prazo num import futuro,
 // quando amadurecerem — aproveitando a janela de 10 dias para ciência.
+//
+// ignorarSemPrazo: descarta as intimações cujo teor veio SEM prazo (o PJe
+// mostra "Prazo: sem prazo"). São, na grande maioria, atos enviados de praxe
+// pelo sistema do emitente, sem nada a cumprir — poluem o painel. A ciência
+// já foi registrada ao abrir o teor (é irreversível); o que este filtro evita
+// é apenas a gravação da linha no painel. Desligue com
+// PJE_IGNORAR_SEM_PRAZO=false (ou ?ignorarSemPrazo=false na rota manual).
 async function coletarRows({
   abrirTeor = true,
   cienciaMinDias = Number(process.env.PJE_CIENCIA_MIN_DIAS) || 0,
+  ignorarSemPrazo = process.env.PJE_IGNORAR_SEM_PRAZO !== 'false',
   unidade,
 } = {}) {
   if (!unidade || unidade.id == null) {
@@ -153,6 +162,7 @@ async function coletarRows({
   let comPrazo = 0;
   let falhasTeor = 0;
   let adiados = 0;
+  let ignoradosSemPrazo = 0;
 
   // DIAGNÓSTICO: registra a decisão tomada para cada aviso (importado, adiado
   // e por quê, falha no teor). Exibido no modal de resultado para depurar
@@ -196,6 +206,17 @@ async function coletarRows({
         prazoDias: teor.prazoDias,
       });
       if (prazo.prazo_processual) comPrazo += 1;
+
+      // Intimação "sem prazo": nada a cumprir, só ciência de praxe. A ciência já
+      // foi registrada acima (irreversível), mas a linha não vai para o painel.
+      if (ignorarSemPrazo && semPrazoEstruturado(prazo)) {
+        ignoradosSemPrazo += 1;
+        detalhe.decisao = 'ignorado (sem prazo)';
+        detalhe.motivo = 'teor sem prazo estruturado — intimação sem prazo a cumprir';
+        avisosDetalhe.push(detalhe);
+        continue;
+      }
+
       detalhe.decisao = 'importado';
       detalhe.motivo = prazo.prazo_processual
         ? `com prazo (${prazo.prazo_processual}d)`
@@ -218,6 +239,7 @@ async function coletarRows({
     unidadeDestino: { id: unidade.id, nome: unidade.nome, nome_pje: unidade.nome_pje || null },
     cienciaMinDias,
     abrirTeor,
+    ignorarSemPrazo,
     avisosRetornadosPeloMni: avisos.length,
     vinculacoesEncontradas: [...new Set(avisos.map(a => a.vinculacao).filter(Boolean))],
     vinculacoesConsideradas: unidadesAviso, // após remover a genérica
@@ -226,7 +248,15 @@ async function coletarRows({
   };
   logger.info('Diagnóstico da importação PJe', diagnostico);
 
-  return { avisos: avisos.length, rows, comPrazo, falhasTeor, adiados, diagnostico };
+  return {
+    avisos: avisos.length,
+    rows,
+    comPrazo,
+    falhasTeor,
+    adiados,
+    ignoradosSemPrazo,
+    diagnostico,
+  };
 }
 
 module.exports = { coletarRows, avisoToRow, registrarLog, acquireImportLock };

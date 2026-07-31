@@ -204,6 +204,15 @@ router.delete('/pje-auth', requireGestor, pjeAuthController.remover);
  *           type: boolean
  *           default: true
  *         description: Se true, abre o teor (dá ciência) para capturar o prazo.
+ *       - in: query
+ *         name: ignorarSemPrazo
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: >
+ *           Se true (padrão), descarta as intimações cujo teor vem sem prazo
+ *           (atos de praxe). A ciência já foi registrada ao abrir o teor; o
+ *           descarte é apenas da gravação no painel.
  *     responses:
  *       200:
  *         description: Importação concluída

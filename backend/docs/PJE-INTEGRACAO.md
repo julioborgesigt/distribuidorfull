@@ -11,7 +11,9 @@ a ter uma **fonte** (`esaj` ou `pje`), exibida como badge e filtrável no painel
 2. Para cada aviso, `consultarTeorComunicacao` obtém o **prazo estruturado**
    (`tipoPrazo` / `dataReferencia` / `prazo`). **Esta chamada REGISTRA CIÊNCIA
    e INICIA O PRAZO** do aviso no PJe.
-3. Os dados são mapeados para o model `Process` e gravados pelo mesmo pipeline
+3. As intimações cujo teor volta **sem prazo** são descartadas (ver
+   [Intimações sem prazo](#intimações-sem-prazo-pje_ignorar_sem_prazo)).
+4. Os dados são mapeados para o model `Process` e gravados pelo mesmo pipeline
    de upsert do CSV (com `fonte = 'pje'`).
 
 > ⚠️ **Ciência automática:** abrir o teor é o comportamento padrão (decisão do
@@ -48,6 +50,7 @@ PJE_MNI_ENDPOINT=https://pje.tjce.jus.br/pje1grau/intercomunicacao   # opcional 
 PJE_MNI_TIMEOUT=30000          # opcional, ms
 PJE_CRON_ABRIR_TEOR=true       # opcional; false = não dá ciência no cron
 PJE_CIENCIA_MIN_DIAS=5         # opcional; só toma ciência de avisos com N+ dias
+PJE_IGNORAR_SEM_PRAZO=true     # opcional (padrão); false = importa também as sem prazo
 
 # Chave de criptografia para as credenciais PJe salvas via painel (AES-256-GCM).
 # Gere com: openssl rand -base64 32
@@ -129,6 +132,28 @@ amadurecem.
 > já ciente retorna erro — ou seja, o prazo só é capturável no momento da ciência.
 > Por isso não há um modo "passivo" (ler prazo sem tomar ciência).
 
+### Intimações sem prazo (`PJE_IGNORAR_SEM_PRAZO`)
+
+Boa parte dos expedientes do PJe chega **sem prazo** (o painel do PJe mostra
+`Prazo: sem prazo`): são atos enviados de praxe, automaticamente, pelo sistema
+do emitente, sem nada a cumprir. Por padrão essas intimações **não entram no
+painel** — a importação as descarta após ler o teor.
+
+- O critério é o resultado de `computePrazo`: sem nº de dias **e** sem data de
+  vencimento (`pjeParser.semPrazoEstruturado`).
+- **A ciência é registrada assim mesmo** — ela acontece ao abrir o teor, que é a
+  única forma de saber se há prazo, e é irreversível. O filtro evita apenas a
+  gravação da linha no painel, não a ciência.
+- Avisos cujo teor **falhou** ao abrir continuam sendo importados: sem o teor não
+  dá para afirmar que não há prazo.
+- Para voltar a importar tudo: `PJE_IGNORAR_SEM_PRAZO=false` no `.env` (vale para
+  painel e cron) ou `?ignorarSemPrazo=false` na rota manual.
+- O modal de resultado e o histórico (`pje_import_logs.ignoradosSemPrazo`) mostram
+  quantas foram ignoradas em cada importação. Requer `npm run db:migrate`.
+
+> Processos sem prazo importados **antes** desta mudança continuam no painel —
+> o filtro só vale para importações novas.
+
 Quando as credenciais estão salvas via painel, os env vars `PJE_CPF`/`PJE_SENHA`
 são ignorados (banco tem prioridade). Quando não há registro no banco, o sistema
 usa os env vars como fallback.
@@ -146,8 +171,8 @@ npm run db:migrate
 
 Cada importação (manual ou cron) grava um registro na tabela `pje_import_logs`
 com: data, quem disparou (nome do usuário ou "Cron automático"), avisos
-encontrados, processos criados/atualizados, com prazo, sem prazo, falhas ao
-abrir teor, duração e status (ok/erro). A migration cria a tabela
+encontrados, processos criados/atualizados, com prazo, sem prazo, ignorados por
+não terem prazo, falhas ao abrir teor, duração e status (ok/erro). A migration cria a tabela
 automaticamente (`npm run db:migrate`).
 
 No painel, o item **"Logs do PJe"** (abaixo de "Importar do PJe") abre o

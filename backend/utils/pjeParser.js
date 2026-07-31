@@ -158,6 +158,15 @@ function computePrazo({ dataIntimacaoISO, tipoPrazo, dataReferencia, prazoDias }
   return out;
 }
 
+// Diz se o resultado de computePrazo ficou SEM prazo — nem nº de dias, nem data
+// de vencimento. É o caso das intimações que o PJe exibe como "Prazo: sem prazo"
+// (ciência de praxe, sem ato a cumprir). Só faz sentido para um teor lido com
+// sucesso: se a consulta do teor falhou, não sabemos se havia prazo.
+function semPrazoEstruturado(prazo) {
+  if (!prazo) return true;
+  return !prazo.prazo_processual && !prazo.prazo_vencimento;
+}
+
 // "Polícia Civil do Ceará" é a vinculação "guarda-chuva" do órgão — aparece
 // junto da delegacia/vara real na maioria dos avisos, por equívoco no
 // cadastro das partes ou na intimação do fórum, e não representa uma unidade
@@ -201,6 +210,7 @@ module.exports = {
   parseAvisos,
   parseTeor,
   computePrazo,
+  semPrazoEstruturado,
   vinculacaoFromDestinatario,
   vinculacoesDistintas,
   mesmaVinculacao,

@@ -560,7 +560,10 @@
             {{ item.adiados ?? 0 }}
           </template>
           <template #item.importados="{ item }">
-            {{ Math.max(0, (item.avisos ?? 0) - (item.adiados ?? 0)) }}
+            {{ Math.max(0, (item.avisos ?? 0) - (item.adiados ?? 0) - (item.ignoradosSemPrazo ?? 0)) }}
+          </template>
+          <template #item.ignoradosSemPrazo="{ item }">
+            {{ item.ignoradosSemPrazo ?? 0 }}
           </template>
           <template #item.duracaoMs="{ item }">
             {{ ((item.duracaoMs ?? 0) / 1000).toFixed(1) }}s
@@ -614,10 +617,15 @@
           Ao importar do PJe o sistema consulta os avisos pendentes e abre as
           intimações que chegaram há 5 dias, para checar o teor e o prazo.
         </p>
-        <p class="mb-0">
+        <p class="mb-2">
           <strong>Abrir a intimação REGISTRA CIÊNCIA e INICIA O PRAZO no PJe.</strong>
           As intimações com menos de 5 dias entram no painel sem prazo e são
           abertas num import futuro.
+        </p>
+        <p class="mb-0">
+          As intimações que o PJe devolve como <strong>"sem prazo"</strong> (atos
+          de praxe, sem nada a cumprir) têm a ciência registrada, mas
+          <strong>não entram no painel</strong>.
         </p>
       </v-card-text>
       <v-card-actions>
@@ -657,6 +665,13 @@
             <v-list-item-title class="text-wrap">Tomados ciência e importados (chegaram há mais de 5 dias)</v-list-item-title>
             <template #append>
               <span class="text-h6">{{ resultadoImportPje.importados ?? 0 }}</span>
+            </template>
+          </v-list-item>
+          <v-divider />
+          <v-list-item>
+            <v-list-item-title class="text-wrap">Ignorados por não terem prazo (ciência tomada, fora do painel)</v-list-item-title>
+            <template #append>
+              <span class="text-h6">{{ resultadoImportPje.ignoradosSemPrazo ?? 0 }}</span>
             </template>
           </v-list-item>
           <v-divider />
@@ -929,6 +944,7 @@
     { title: 'Por', key: 'usuario' },
     { title: 'Pendentes de ciência', key: 'adiados', align: 'center' },
     { title: 'Importados', key: 'importados', align: 'center', sortable: false },
+    { title: 'Sem prazo (ignorados)', key: 'ignoradosSemPrazo', align: 'center' },
     { title: 'Novos', key: 'criados', align: 'center' },
     { title: 'Atualizados', key: 'atualizados', align: 'center' },
     { title: 'Falhas', key: 'falhasTeor', align: 'center' },
