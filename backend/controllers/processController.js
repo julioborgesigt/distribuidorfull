@@ -304,6 +304,12 @@ exports.importPje = async (req, res) => {
     req.query.cienciaMinDias != null
       ? parseInt(req.query.cienciaMinDias, 10) || 0
       : undefined;
+  // Descarte de intimações sem prazo: query tem prioridade; senão usa
+  // PJE_IGNORAR_SEM_PRAZO (default: ignorar).
+  const ignorarSemPrazo =
+    req.query.ignorarSemPrazo != null
+      ? String(req.query.ignorarSemPrazo) !== 'false'
+      : undefined;
 
   // Resolve a unidade de destino (admin da unidade usa a própria; super escolhe
   // via query unidadeId). A credencial e a trava de importação são desta unidade.
@@ -362,22 +368,27 @@ exports.importPje = async (req, res) => {
     usuario = `${usuario} — ${unidadeAlvo.nome}`;
 
     try {
-      const { avisos, rows, comPrazo, falhasTeor, adiados, diagnostico } =
-        await pjeImportService.coletarRows({ abrirTeor, cienciaMinDias, unidade: unidadeAlvo });
+      const { avisos, rows, comPrazo, falhasTeor, adiados, ignoradosSemPrazo, diagnostico } =
+        await pjeImportService.coletarRows({
+          abrirTeor, cienciaMinDias, ignorarSemPrazo, unidade: unidadeAlvo,
+        });
       const { total: totalRows, criados, atualizados } =
         avisos > 0 ? await upsertProcessos(rows, unidadeAlvo.id) : { total: 0, criados: 0, atualizados: 0 };
 
       pjeImportStatus.result = {
         avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados,
-        // avisos que já tinham 5+ dias: tomamos ciência e importamos.
-        importados: Math.max(0, avisos - adiados),
+        ignoradosSemPrazo,
+        // avisos que já tinham 5+ dias: tomamos ciência e importamos (as
+        // intimações sem prazo tiveram ciência, mas não entram no painel).
+        importados: Math.max(0, avisos - adiados - ignoradosSemPrazo),
         unidade: unidadeAlvo.nome,
         // Diagnóstico por aviso (decisão + motivo) para depurar importações
         // que terminam sem erro mas sem nada importado.
         diagnostico,
       };
       logger.info('Importação PJe concluída', {
-        avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados, abrirTeor, userId,
+        avisos, totalRows, criados, atualizados, comPrazo, falhasTeor, adiados,
+        ignoradosSemPrazo, abrirTeor, userId,
         unidadeId: unidadeAlvo.id,
       });
 
@@ -390,6 +401,7 @@ exports.importPje = async (req, res) => {
         comPrazo,
         semPrazo: Math.max(0, avisos - comPrazo),
         adiados,
+        ignoradosSemPrazo,
         falhasTeor,
         duracaoMs: Date.now() - inicio,
         status: 'ok',

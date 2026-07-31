@@ -58,6 +58,13 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 0
     },
+    // Intimações descartadas por virem SEM prazo no teor (ciência tomada, mas
+    // não gravadas no painel). Ver PJE_IGNORAR_SEM_PRAZO.
+    ignoradosSemPrazo: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
     // Falhas ao abrir o teor de avisos individuais.
     falhasTeor: {
       type: DataTypes.INTEGER,
